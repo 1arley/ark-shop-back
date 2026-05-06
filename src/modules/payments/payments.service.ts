@@ -1,15 +1,19 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PaymentsRepository } from './payments.repository';
 import { PaymentProviderFactory } from './payment-provider.factory';
 import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
+import { MercadoPagoProvider } from './providers/mercado-pago.provider';
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly paymentsRepository: PaymentsRepository,
     private readonly providerFactory: PaymentProviderFactory,
     private readonly configService: ConfigService,
+    private readonly mercadoPagoProvider: MercadoPagoProvider,
   ) {}
 
   async createPayment(
