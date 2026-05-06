@@ -36,13 +36,13 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger configuration
-  const config = new DocumentBuilder()
-    .setTitle('SeedaBit NestJS Template API')
-    .setDescription(
-      'Template backend production-ready com autenticação JWT, Prisma e PostgreSQL',
-    )
-    .setVersion('1.0.0')
+// Swagger configuration
+const config = new DocumentBuilder()
+.setTitle("D'Ark Games Store API")
+.setDescription(
+  'D\'Ark Games Store - Digital game keys marketplace with secure transactions and instant delivery',
+)
+.setVersion('1.0.0')
     .addBearerAuth(
       {
         type: 'http',
