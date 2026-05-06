@@ -13,6 +13,7 @@ import { OrdersModule } from '@/modules/orders/orders.module';
 import { PaymentsModule } from '@/modules/payments/payments.module';
 import { CategoriesModule } from '@/modules/categories/categories.module';
 import { AdminModule } from '@/modules/admin/admin.module';
+import { CartModule } from '@/modules/cart/cart.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AdminModule } from '@/modules/admin/admin.module';
     PaymentsModule,
     CategoriesModule,
     AdminModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],
