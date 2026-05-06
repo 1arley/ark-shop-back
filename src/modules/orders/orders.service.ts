@@ -87,14 +87,13 @@ export class OrdersService {
       );
     }
 
-    // Collect all keys from order items
-    const keys = order.items
-      .filter((item) => item.key && item.key.decryptedKey)
-      .map((item) => ({
-        productName: item.product.name,
-        key: item.key.decryptedKey,
-        deliveredAt: item.key.deliveredAt,
-      }));
+    // Keys are delivered by admin via separate endpoint
+    // This endpoint just returns order info
+    return {
+      orderId: order.id,
+      status: order.status,
+      message: 'Keys will be available after delivery by admin',
+    };
 
     return {
       orderId: order.id,
