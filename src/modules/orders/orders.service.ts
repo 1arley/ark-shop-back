@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { OrdersRepository } from './orders.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, KeyStatus } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
@@ -92,35 +92,14 @@ export class OrdersService {
       .filter((item) => item.key && item.key.status === KeyStatus.DELIVERED)
       .map((item) => ({
         productName: item.product.name,
-        keyId: item.key.id,
-        deliveredAt: item.key.deliveredAt,
+        keyId: item.key!.id,
+        deliveredAt: item.key!.deliveredAt,
       }));
 
     return {
       orderId: order.id,
       status: order.status,
       keys: deliveredKeys,
-    };
-  }
-
-    if (order.status !== OrderStatus.DELIVERED) {
-      throw new BadRequestException(
-        'Order not delivered yet. Keys will be available after delivery.',
-      );
-    }
-
-    // Keys are delivered by admin via separate endpoint
-    // This endpoint just returns order info
-    return {
-      orderId: order.id,
-      status: order.status,
-      message: 'Keys will be available after delivery by admin',
-    };
-
-    return {
-      orderId: order.id,
-      status: order.status,
-      keys,
     };
   }
 }
