@@ -5,6 +5,7 @@ import { PaymentsRepository } from './payments.repository';
 import { PaymentProviderFactory } from './payment-provider.factory';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { MercadoPagoProvider } from './providers/mercado-pago.provider';
+import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
 
 @Module({
   imports: [PrismaModule],
@@ -14,6 +15,7 @@ import { MercadoPagoProvider } from './providers/mercado-pago.provider';
     PaymentsRepository,
     PaymentProviderFactory,
     MercadoPagoProvider,
+    MercadoPagoWebhookHandler,
   ],
   exports: [PaymentsService, PaymentsRepository, PaymentProviderFactory, MercadoPagoProvider],
 })

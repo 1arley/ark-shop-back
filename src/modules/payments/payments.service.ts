@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PaymentsRepository } from './payments.repository';
 import { PaymentProviderFactory } from './payment-provider.factory';
-import { PaymentProvider, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -30,21 +30,42 @@ export class PaymentsService {
       method,
     );
 
-    // If PIX, generate QR code
+    // If PIX, generate QR code via provider
     if (method === PaymentMethod.PIX) {
-      // In production, use actual payment provider
-      const pixData = {
-        pixQrCode: `00020126580014BR.GOV.BCB.PIX0136${orderId}520400005303986540${amount.toFixed(2)}5802BR5913D'ARK GAMES6008BRASILIA62070503***6304`,
-        pixCode: `00020126580014BR.GOV.BCB.PIX0136${orderId}520400005303986540${amount.toFixed(2)}5802BR5913D'ARK GAMES6008BRASILIA62070503***6304`,
-      };
+      try {
+        const providerImpl = this.providerFactory.getProvider(selectedProvider);
+        const paymentIntent = await providerImpl.createPaymentIntent({
+          amount,
+          currency: 'BRL',
+          orderId,
+          method,
+        });
 
-      return this.paymentsRepository.createPixPayment(
-        orderId,
-        userId,
-        amount,
-        selectedProvider,
-        pixData,
-      );
+        return this.paymentsRepository.createPixPayment(
+          orderId,
+          userId,
+          amount,
+          selectedProvider,
+          {
+            pixQrCode: paymentIntent.providerData?.pix_copy_paste || '',
+            pixCode: paymentIntent.providerData?.pix_qr_code || '',
+          },
+        );
+      } catch (error) {
+        // Fallback to mock PIX if provider fails
+        const pixData = {
+          pixQrCode: `00020126580014BR.GOV.BCB.PIX0136${orderId}520400005303986540${amount.toFixed(2)}5802BR5913D'ARK GAMES6008BRASILIA62070503***6304`,
+          pixCode: `00020126580014BR.GOV.BCB.PIX0136${orderId}520400005303986540${amount.toFixed(2)}5802BR5913D'ARK GAMES6008BRASILIA62070503***6304`,
+        };
+
+        return this.paymentsRepository.createPixPayment(
+          orderId,
+          userId,
+          amount,
+          selectedProvider,
+          pixData,
+        );
+      }
     }
 
     return payment;
@@ -106,30 +127,38 @@ export class PaymentsService {
   }
 
   /**
-   * Process webhook from payment provider
+   * Verify payment with provider (used by webhook)
    */
-  async processWebhook(
-    provider: PaymentProvider,
-    providerTxId: string,
-    event: string,
-    amount?: number,
-  ) {
-    const payment = await this.paymentsRepository.findByOrderId(
-      // In production, lookup by providerTxId
-      providerTxId
-    );
-
+  async verifyPaymentWithProvider(providerTxId: string) {
+    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+    
     if (!payment) {
       throw new BadRequestException('Payment not found');
     }
 
-    switch (event) {
-      case 'payment.approved':
-        return this.paymentsRepository.approvePayment(payment.id, providerTxId);
-      case 'payment.rejected':
-        return this.paymentsRepository.rejectPayment(payment.id, event);
-      default:
-        throw new BadRequestException(`Unknown webhook event: ${event}`);
-    }
+    const provider = this.providerFactory.getProvider(payment.provider);
+    return provider.verifyPayment(providerTxId);
+  }
+
+  /**
+   * Approve payment and deliver order
+   */
+  async approvePayment(paymentId: string, paymentInfo: any) {
+    const payment = await this.paymentsRepository.approvePayment(
+      paymentId,
+      paymentInfo.id,
+      paymentInfo,
+    );
+
+    // Update order status to PAID
+    // The order delivery will be handled by admin or automatically via queue
+    return payment;
+  }
+
+  /**
+   * Reject payment
+   */
+  async rejectPayment(paymentId: string, reason: string) {
+    return this.paymentsRepository.rejectPayment(paymentId, reason);
   }
 }

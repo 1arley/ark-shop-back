@@ -189,4 +189,14 @@ export class PaymentsRepository {
       },
     };
   }
+
+  async findByProviderTxId(providerTxId: string) {
+    return this.prisma.payment.findUnique({
+      where: { providerTxId },
+      include: {
+        order: true,
+        user: true,
+      },
+    });
+  }
 }

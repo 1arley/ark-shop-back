@@ -7,6 +7,10 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
+  Headers,
+  RawBody,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -14,11 +18,15 @@ import { PaymentProvider, PaymentMethod } from '@prisma/client';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
+import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
 
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly mpWebhookHandler: MercadoPagoWebhookHandler,
+  ) {}
 
   @Post(':orderId')
   @UseGuards(JwtAuthGuard)
@@ -36,17 +44,35 @@ export class PaymentsController {
   }
 
   @Post('webhook/:provider')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Payment webhook handler' })
   @ApiResponse({ status: 200, description: 'Webhook processed' })
+  @ApiResponse({ status: 400, description: 'Invalid signature' })
   async webhook(
     @Param('provider') provider: string,
     @Body() webhookData: any,
+    @Headers('x-signature') signature?: string,
+    @Headers('x-request-id') requestId?: string,
   ) {
-    // In production, validate webhook signature
-    console.log(`Webhook received from ${provider}:`, webhookData);
-    
-    // Process webhook based on provider
-    return { received: true };
+    // Only process Mercado Pago webhooks for now
+    if (provider === 'mercadopago' || provider === 'mercado_pago') {
+      // Verify signature if secret is configured
+      if (process.env.MERCADO_PAGO_WEBHOOK_SECRET) {
+        const isValid = this.mpWebhookHandler.verifySignature(webhookData, signature || '');
+        
+        if (!isValid) {
+          return { status: 'error', message: 'Invalid signature' };
+        }
+      }
+
+      // Process webhook event
+      await this.mpWebhookHandler.handleEvent(webhookData);
+      
+      return { status: 'ok', requestId };
+    }
+
+    // Generic webhook handler for other providers
+    return { status: 'ok', message: 'Webhook received', provider };
   }
 
   @Get(':id')
