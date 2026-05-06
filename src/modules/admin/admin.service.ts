@@ -86,12 +86,12 @@ export class AdminService {
 
       const product = await this.prisma.product.create({
         data: {
-          name: `Game ${i + 1} - ${category.name}`,
-          description: `Amazing ${category.name.toLowerCase()} game #${i + 1}`,
+          name: `Game ${i + 1} - ${category!.name}`,
+          description: `Amazing ${category!.name.toLowerCase()} game #${i + 1}`,
           price: Math.floor(Math.random() * 50) + 9.99,
           stock: keysPerProduct,
           isActive: true,
-          categoryId: category.id,
+          categoryId: category!.id,
         },
       });
 

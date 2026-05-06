@@ -70,18 +70,19 @@ enum NotificationStatus {
 // USER MODULE
 // ============================
 model User {
-  id              String            @id @default(uuid())
-  email           String            @unique
-  password        String
-  name            String?
-  role            String            @default("USER")
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  refreshTokens   RefreshToken[]
-  orders          Order[]
-  payments        Payment[]
-  wallet          Wallet?
-  notifications   Notification[]
+  id String @id @default(uuid())
+  email String @unique
+  password String
+  name String?
+  role String @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  refreshTokens RefreshToken[]
+  orders Order[]
+  payments Payment[]
+  wallet Wallet?
+  notifications Notification[]
+  cart Cart?
 
   @@index([email])
   @@index([role])
@@ -277,6 +278,33 @@ model Notification {
 
   @@index([userId])
   @@index([status])
+}
+
+// ============================
+// CART MODULE
+// ============================
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        String  @id @default(uuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  quantity  Int     @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
 }
 
 // ============================

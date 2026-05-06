@@ -123,13 +123,6 @@ export class AdminRepository {
     const recentOrders = await this.prisma.order.findMany({
       take: 10,
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
         items: {
           include: {
             product: true,
@@ -160,7 +153,7 @@ export class AdminRepository {
     const formatStats = (
       stats: Array<{ _count: number; status?: string }>,
       status?: string,
-    ) => stats.find((s) => s.status === status?._count) || 0;
+    ) => stats.find((s: any) => s.status === status)?._count || 0;
 
     return {
       revenue: {
