@@ -85,9 +85,6 @@ export class AntifraudRepository {
   async getRecentFraudLogs(limit: number = 100) {
     return this.prisma.fraudLog.findMany({
       take: limit,
-      include: {
-        user: true,
-      },
       orderBy: {
         createdAt: 'desc',
       },

@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentMethod, PaymentProvider } from '@prisma/client';
-import { MercadoPagoProvider } from './mercado-pago.provider';
+import { MercadoPagoProvider } from './providers/mercado-pago.provider';
 
 export interface PaymentIntent {
   id: string;

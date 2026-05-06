@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { OrderStatus, PaymentStatus, KeyStatus } from '@prisma/client';
 
-interface DashboardStats {
+export interface DashboardStats {
   revenue: {
     total: number;
     today: number;
@@ -205,9 +205,6 @@ export class AdminRepository {
       this.prisma.fraudLog.findMany({
         skip,
         take: limit,
-        include: {
-          user: true,
-        },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.fraudLog.count(),

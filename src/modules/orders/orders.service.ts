@@ -87,6 +87,28 @@ export class OrdersService {
       );
     }
 
+    // Collect delivered keys from order items
+    const deliveredKeys = order.items
+      .filter((item) => item.key && item.key.status === KeyStatus.DELIVERED)
+      .map((item) => ({
+        productName: item.product.name,
+        keyId: item.key.id,
+        deliveredAt: item.key.deliveredAt,
+      }));
+
+    return {
+      orderId: order.id,
+      status: order.status,
+      keys: deliveredKeys,
+    };
+  }
+
+    if (order.status !== OrderStatus.DELIVERED) {
+      throw new BadRequestException(
+        'Order not delivered yet. Keys will be available after delivery.',
+      );
+    }
+
     // Keys are delivered by admin via separate endpoint
     // This endpoint just returns order info
     return {

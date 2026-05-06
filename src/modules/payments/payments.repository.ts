@@ -191,7 +191,8 @@ export class PaymentsRepository {
   }
 
   async findByProviderTxId(providerTxId: string) {
-    return this.prisma.payment.findUnique({
+    // Find by providerTxId using findFirst since it's not a unique index
+    return this.prisma.payment.findFirst({
       where: { providerTxId },
       include: {
         order: true,
