@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { BullModule } from '@nestjs/bull';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { PrismaModule } from '@/prisma/prisma.module';
@@ -20,6 +21,9 @@ import { CartModule } from '@/modules/cart/cart.module';
     ConfigModule.forRoot({
       envFilePath: ['.env', '.env.local', '.env.test'],
       isGlobal: true,
+    }),
+    BullModule.registerQueue({
+      name: 'email',
     }),
     PrismaModule,
     AuthModule,
