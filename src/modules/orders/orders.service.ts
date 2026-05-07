@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/com
 import { OrdersRepository } from './orders.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, KeyStatus } from '@prisma/client';
-import { Queue } from 'bull';
+import type { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 
 @Injectable()
