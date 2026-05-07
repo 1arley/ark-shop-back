@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 import { PaymentsRepository } from './payments.repository';
@@ -6,6 +6,7 @@ import { PaymentProviderFactory } from './payment-provider.factory';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { MercadoPagoProvider } from './providers/mercado-pago.provider';
 import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
+import { RawBodyMiddleware } from '@/common/middleware/raw-body.middleware';
 
 @Module({
   imports: [PrismaModule],
@@ -19,4 +20,11 @@ import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handl
   ],
   exports: [PaymentsService, PaymentsRepository, PaymentProviderFactory, MercadoPagoProvider],
 })
-export class PaymentsModule {}
+export class PaymentsModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Apply raw body middleware only to webhook endpoints
+    consumer
+      .apply(RawBodyMiddleware)
+      .forRoutes({ path: 'payments/webhook/:provider', method: RequestMethod.POST });
+  }
+}
