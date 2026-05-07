@@ -6,34 +6,319 @@ datasource db {
   provider = "postgresql"
 }
 
+// ============================
+// USER & AUTH ENUMS
+// ============================
 enum Role {
   USER
   ADMIN
   SUPERADMIN
 }
-  
 
-model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
-  password     String
-  name         String?
-  role         String        @default("USER")
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  refreshTokens RefreshToken[]
+enum KeyStatus {
+  AVAILABLE
+  RESERVED
+  DELIVERED
+  ARCHIVED
 }
 
+enum OrderStatus {
+  PENDING
+  AWAITING_PAYMENT
+  PAID
+  PROCESSING
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
 
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  MERCADO_PAGO
+  STRIPE
+  ASAAS
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  BOLETO
+  BANK_TRANSFER
+}
+
+enum NotificationType {
+  EMAIL
+  DISCORD
+  TELEGRAM
+  WEBHOOK
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ============================
+// USER MODULE
+// ============================
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  password String
+  name String?
+  role String @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  refreshTokens RefreshToken[]
+  orders Order[]
+  payments Payment[]
+  wallet Wallet?
+  notifications Notification[]
+  cart Cart?
+
+  @@index([email])
+  @@index([role])
+}
 
 model RefreshToken {
-  id           String   @id @default(cuid())
-  token        String   @unique
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+// ============================
+// WALLET MODULE
+// ============================
+model Wallet {
+  id            String                @id @default(uuid())
+  userId        String                @unique
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance       Decimal               @default(0) @db.Decimal(10, 2)
+  cashback      Decimal               @default(0) @db.Decimal(10, 2)
+  transactions  WalletTransaction[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type        String
+  amount      Decimal  @db.Decimal(10, 2)
+  description String?
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  @@index([walletId])
+  @@index([referenceId])
+}
+
+// ============================
+// PRODUCTS MODULE
+// ============================
+model Product {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal   @db.Decimal(10, 2)
+  stock       Int       @default(0)
+  isActive    Boolean   @default(true)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  keys        Key[]
+  orderItems  OrderItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model Category {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  parentId    String?
+  parent      Category?    @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[]   @relation("CategoryHierarchy")
+  products    Product[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([parentId])
+}
+
+// ============================
+// KEYS MODULE
+// ============================
+model Key {
+  id          String     @id @default(uuid())
+  productId   String
+  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  keyData     String
+  status      KeyStatus  @default(AVAILABLE)
+  orderItemId String?    @unique
+  orderItem   OrderItem? @relation("OrderItemKey")
+  deliveredAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([productId])
+  @@index([status])
+  @@index([orderItemId])
+}
+
+// ============================
+// ORDERS MODULE
+// ============================
+model Order {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  status        OrderStatus @default(PENDING)
+  total         Decimal     @db.Decimal(10, 2)
+  items         OrderItem[]
+  payment       Payment?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  keyId     String? @unique
+  key       Key?    @relation("OrderItemKey", fields: [keyId], references: [id], onDelete: SetNull)
+  quantity  Int     @default(1)
+  price     Decimal @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ============================
+// PAYMENTS MODULE
+// ============================
+model Payment {
+  id              String          @id @default(uuid())
+  orderId         String          @unique
+  order           Order           @relation(fields: [orderId], references: [id])
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  provider        PaymentProvider
+  providerTxId    String?
+  amount          Decimal         @db.Decimal(10, 2)
+  status          PaymentStatus   @default(PENDING)
+  method          PaymentMethod
+  pixQrCode       String?
+  pixCode         String?
+  webhookData     Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([providerTxId])
+}
+
+// ============================
+// ANTIFRAUD MODULE
+// ============================
+model FraudLog {
+  id                String   @id @default(uuid())
+  userId            String?
+  orderId           String?
+  riskScore         Int
+  riskLevel         String
+  checks            Json
+  ipAddress         String?
+  deviceFingerprint String?
+  decision          String
+  reason            String?
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([orderId])
+}
+
+// ============================
+// NOTIFICATIONS MODULE
+// ============================
+model Notification {
+  id        String             @id @default(uuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  status    NotificationStatus @default(PENDING)
+  subject   String?
+  content   String
+  metadata  Json?
+  sentAt    DateTime?
+  createdAt DateTime           @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================
+// CART MODULE
+// ============================
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        String  @id @default(uuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  quantity  Int     @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+// ============================
+// SELLERS MODULE (Marketplace)
+// ============================
+model Seller {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  companyName String
+  document    String
+  commission  Decimal  @default(10) @db.Decimal(5, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId])
 }
