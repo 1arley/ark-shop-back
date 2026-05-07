@@ -18,13 +18,7 @@ export class AntifraudService {
   ) {}
 
   async analyzeRisk(input: RiskAnalysisInput) {
-    const {
-      userId,
-      orderId,
-      ipAddress,
-      deviceFingerprint,
-      amount = 0,
-    } = input;
+    const { userId, orderId, ipAddress, deviceFingerprint, amount = 0 } = input;
 
     const checks = {
       ipReputation: true,
@@ -52,7 +46,9 @@ export class AntifraudService {
         await this.antifraudRepository.checkDeviceBlacklist(deviceFingerprint);
       if (isBlacklisted) {
         riskScore += 30;
-        reason = reason ? reason + '; Blacklisted device' : 'Blacklisted device';
+        reason = reason
+          ? reason + '; Blacklisted device'
+          : 'Blacklisted device';
       }
     }
 
@@ -84,7 +80,8 @@ export class AntifraudService {
     }
 
     // Determine risk level and decision
-    const riskLevel = riskScore >= 70 ? 'HIGH' : riskScore >= 30 ? 'MEDIUM' : 'LOW';
+    const riskLevel =
+      riskScore >= 70 ? 'HIGH' : riskScore >= 30 ? 'MEDIUM' : 'LOW';
 
     let decision: 'APPROVED' | 'MANUAL_REVIEW' | 'REJECTED' = 'APPROVED';
 

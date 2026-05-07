@@ -29,7 +29,10 @@ export interface PaymentProviderInterface {
 
 @Injectable()
 export class PaymentProviderFactory {
-  private readonly providers = new Map<PaymentProvider, PaymentProviderInterface>();
+  private readonly providers = new Map<
+    PaymentProvider,
+    PaymentProviderInterface
+  >();
 
   constructor(
     private readonly configService: ConfigService,
@@ -72,23 +75,34 @@ export class PaymentProviderFactory {
     return this.mercadoPagoProvider.verifyPayment(providerTxId);
   }
 
-  private async refundMercadoPagoPayment(providerTxId: string, amount?: number) {
+  private async refundMercadoPagoPayment(
+    providerTxId: string,
+    amount?: number,
+  ) {
     return this.mercadoPagoProvider.refundPayment(providerTxId, amount);
   }
 
   getProvider(provider: PaymentProvider): PaymentProviderInterface {
     const providerImpl = this.providers.get(provider);
-    
+
     if (!providerImpl) {
-      throw new BadRequestException(`Payment provider ${provider} not available`);
+      throw new BadRequestException(
+        `Payment provider ${provider} not available`,
+      );
     }
-    
+
     return providerImpl;
   }
 
   getDefaultProvider(): PaymentProvider {
-    const defaultProvider = this.configService.get<string>('PAYMENT_DEFAULT_PROVIDER', 'MERCADO_PAGO');
-    return PaymentProvider[defaultProvider as keyof typeof PaymentProvider] || PaymentProvider.MERCADO_PAGO;
+    const defaultProvider = this.configService.get<string>(
+      'PAYMENT_DEFAULT_PROVIDER',
+      'MERCADO_PAGO',
+    );
+    return (
+      PaymentProvider[defaultProvider as keyof typeof PaymentProvider] ||
+      PaymentProvider.MERCADO_PAGO
+    );
   }
 
   getRegisteredProviders(): PaymentProvider[] {

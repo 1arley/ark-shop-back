@@ -1,6 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
+import {
+  PaymentProvider,
+  PaymentMethod,
+  PaymentStatus,
+  OrderStatus,
+} from '@prisma/client';
 import { PaymentProviderFactory } from './payment-provider.factory';
 
 @Injectable()
@@ -158,7 +167,11 @@ export class PaymentsRepository {
     });
   }
 
-  async getPaymentsByUser(userId: string, page: number = 1, limit: number = 10) {
+  async getPaymentsByUser(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     const skip = (page - 1) * limit;
 
     const [payments, total] = await this.prisma.$transaction([

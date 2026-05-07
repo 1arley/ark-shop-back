@@ -7,10 +7,14 @@ export class KeysEncryptionProvider {
   private readonly encryptionKey: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.encryptionKey = this.configService.get<string>('KEYS_ENCRYPTION_KEY') || 'default-key-change-in-production';
-    
+    this.encryptionKey =
+      this.configService.get<string>('KEYS_ENCRYPTION_KEY') ||
+      'default-key-change-in-production';
+
     if (this.encryptionKey === 'default-key-change-in-production') {
-      console.warn('⚠️  WARNING: Using default encryption key. Set KEYS_ENCRYPTION_KEY environment variable in production!');
+      console.warn(
+        '⚠️  WARNING: Using default encryption key. Set KEYS_ENCRYPTION_KEY environment variable in production!',
+      );
     }
   }
 
@@ -19,7 +23,10 @@ export class KeysEncryptionProvider {
    */
   encrypt(data: string): string {
     try {
-      const encrypted = CryptoJS.AES.encrypt(data, this.encryptionKey).toString();
+      const encrypted = CryptoJS.AES.encrypt(
+        data,
+        this.encryptionKey,
+      ).toString();
       return encrypted;
     } catch (error) {
       throw new BadRequestException('Failed to encrypt key data');
@@ -33,11 +40,11 @@ export class KeysEncryptionProvider {
     try {
       const bytes = CryptoJS.AES.decrypt(encryptedData, this.encryptionKey);
       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-      
+
       if (!decrypted) {
         throw new Error('Decryption resulted in empty string');
       }
-      
+
       return decrypted;
     } catch (error) {
       throw new BadRequestException('Failed to decrypt key data');
@@ -62,11 +69,12 @@ export class KeysEncryptionProvider {
    * Generate a secure random key (for testing/demo purposes)
    */
   generateSecureKey(length: number = 32): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
-    let result = ''
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    let result = '';
     for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length))
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return result
+    return result;
   }
 }

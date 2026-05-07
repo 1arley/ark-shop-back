@@ -14,7 +14,7 @@ export interface MercadoPagoPayment {
 
 /**
  * Mercado Pago Payment Provider
- * 
+ *
  * Official API: https://www.mercadopago.com.br/developers/pt/reference
  * Base URL: https://api.mercadopago.com
  */
@@ -25,9 +25,13 @@ export class MercadoPagoProvider {
   private readonly logger = new Logger(MercadoPagoProvider.name);
 
   constructor(private readonly configService: ConfigService) {
-    this.accessToken = this.configService.get<string>('MERCADO_PAGO_ACCESS_TOKEN') || '';
-    
-    if (!this.accessToken || this.accessToken === 'your-mercado-pago-access-token') {
+    this.accessToken =
+      this.configService.get<string>('MERCADO_PAGO_ACCESS_TOKEN') || '';
+
+    if (
+      !this.accessToken ||
+      this.accessToken === 'your-mercado-pago-access-token'
+    ) {
       this.logger.warn('⚠️  MERCADO_PAGO_ACCESS_TOKEN not configured properly');
     }
   }
@@ -35,13 +39,13 @@ export class MercadoPagoProvider {
   private getHeaders() {
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.accessToken}`,
+      Authorization: `Bearer ${this.accessToken}`,
     };
   }
 
   /**
    * Create a PIX payment
-   * 
+   *
    * @see https://www.mercadopago.com.br/developers/pt/reference/payments/_payments/_post
    */
   async createPayment(data: {
@@ -79,7 +83,9 @@ export class MercadoPagoProvider {
 
       const payment = response.data;
 
-      this.logger.log(`Payment created: ${payment.id}, Status: ${payment.status}`);
+      this.logger.log(
+        `Payment created: ${payment.id}, Status: ${payment.status}`,
+      );
 
       return {
         id: payment.id,
@@ -91,8 +97,10 @@ export class MercadoPagoProvider {
         pix_copy_paste: payment.point_of_interaction?.qr_data?.qr_code,
       };
     } catch (error: any) {
-      this.logger.error(`Mercado Pago error: ${error.response?.data?.message || error.message}`);
-      
+      this.logger.error(
+        `Mercado Pago error: ${error.response?.data?.message || error.message}`,
+      );
+
       throw new BadRequestException(
         `Failed to create payment: ${error.response?.data?.message || error.message}`,
       );
@@ -101,7 +109,7 @@ export class MercadoPagoProvider {
 
   /**
    * Get payment details
-   * 
+   *
    * @see https://www.mercadopago.com.br/developers/pt/reference/payments/_payments_id/get
    */
   async getPayment(paymentId: string): Promise<MercadoPagoPayment> {
@@ -127,7 +135,9 @@ export class MercadoPagoProvider {
         pix_copy_paste: payment.point_of_interaction?.qr_data?.qr_code,
       };
     } catch (error: any) {
-      this.logger.error(`Failed to fetch payment: ${error.response?.data?.message || error.message}`);
+      this.logger.error(
+        `Failed to fetch payment: ${error.response?.data?.message || error.message}`,
+      );
       throw new BadRequestException(
         `Failed to fetch payment: ${error.response?.data?.message || error.message}`,
       );
@@ -136,12 +146,14 @@ export class MercadoPagoProvider {
 
   /**
    * Refund a payment
-   * 
+   *
    * @see https://www.mercadopago.com.br/developers/pt/reference/payments/_payments_id/refunds/_post
    */
   async refundPayment(paymentId: string, amount?: number): Promise<any> {
     try {
-      this.logger.log(`Refunding payment: ${paymentId}, Amount: ${amount || 'full'}`);
+      this.logger.log(
+        `Refunding payment: ${paymentId}, Amount: ${amount || 'full'}`,
+      );
 
       const response = await axios.post(
         `${this.baseUrl}/v1/payments/${paymentId}/refunds`,
@@ -156,7 +168,9 @@ export class MercadoPagoProvider {
       this.logger.log(`Refund successful: ${response.data.id}`);
       return response.data;
     } catch (error: any) {
-      this.logger.error(`Refund failed: ${error.response?.data?.message || error.message}`);
+      this.logger.error(
+        `Refund failed: ${error.response?.data?.message || error.message}`,
+      );
       throw new BadRequestException(
         `Refund failed: ${error.response?.data?.message || error.message}`,
       );
@@ -185,7 +199,7 @@ export class MercadoPagoProvider {
 
   /**
    * Search payments by external_reference (order ID)
-   * 
+   *
    * @see https://www.mercadopago.com.br/developers/pt/reference/payments/_payments_search/get
    */
   async searchPayments(params: {
@@ -198,17 +212,16 @@ export class MercadoPagoProvider {
     try {
       this.logger.log(`Searching payments: ${JSON.stringify(params)}`);
 
-      const response = await axios.get(
-        `${this.baseUrl}/v1/payments/search`,
-        {
-          params,
-          headers: this.getHeaders(),
-        },
-      );
+      const response = await axios.get(`${this.baseUrl}/v1/payments/search`, {
+        params,
+        headers: this.getHeaders(),
+      });
 
       return response.data;
     } catch (error: any) {
-      this.logger.error(`Search failed: ${error.response?.data?.message || error.message}`);
+      this.logger.error(
+        `Search failed: ${error.response?.data?.message || error.message}`,
+      );
       throw new BadRequestException(
         `Search failed: ${error.response?.data?.message || error.message}`,
       );

@@ -11,7 +11,9 @@ export class CreateCategoryDto {
   @IsOptional()
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Parent category ID (for subcategories)' })
+  @ApiPropertyOptional({
+    description: 'Parent category ID (for subcategories)',
+  })
   @IsUUID()
   @IsOptional()
   parentId?: string;

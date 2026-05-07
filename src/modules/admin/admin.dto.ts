@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsUUID, IsBoolean, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsBoolean,
+  IsNumber,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class BulkImportKeysDto {
@@ -6,7 +13,9 @@ export class BulkImportKeysDto {
   @IsUUID()
   productId!: string;
 
-  @ApiProperty({ description: 'Keys to import (one per line or comma-separated)' })
+  @ApiProperty({
+    description: 'Keys to import (one per line or comma-separated)',
+  })
   @IsString()
   keysText!: string;
 
@@ -17,13 +26,19 @@ export class BulkImportKeysDto {
 }
 
 export class GenerateDemoDataDto {
-  @ApiPropertyOptional({ description: 'Number of products to create', default: 5 })
+  @ApiPropertyOptional({
+    description: 'Number of products to create',
+    default: 5,
+  })
   @IsNumber()
   @Min(1)
   @IsOptional()
   productsCount?: number = 5;
 
-  @ApiPropertyOptional({ description: 'Number of keys per product', default: 10 })
+  @ApiPropertyOptional({
+    description: 'Number of keys per product',
+    default: 10,
+  })
   @IsNumber()
   @Min(1)
   @IsOptional()

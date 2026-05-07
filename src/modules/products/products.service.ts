@@ -35,7 +35,11 @@ export class ProductsService {
     return this.productsRepository.delete(id);
   }
 
-  async findByCategory(categoryId: string, page: number = 1, limit: number = 10) {
+  async findByCategory(
+    categoryId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     return this.productsRepository.findByCategory(categoryId, page, limit);
   }
 }

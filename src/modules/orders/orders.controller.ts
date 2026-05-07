@@ -11,7 +11,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
@@ -78,12 +83,16 @@ export class OrdersController {
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     // Users can only view their own orders
     const order = await this.ordersService.findById(id);
-    
+
     // Check ownership (unless admin)
-    if (order.user.id !== user.sub && user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
+    if (
+      order.user.id !== user.sub &&
+      user.role !== 'ADMIN' &&
+      user.role !== 'SUPERADMIN'
+    ) {
       throw new Error('Forbidden: You can only view your own orders');
     }
-    
+
     return order;
   }
 
@@ -94,10 +103,7 @@ export class OrdersController {
   @ApiOperation({ summary: 'Update order status (admin)' })
   @ApiResponse({ status: 200, description: 'Order status updated' })
   @ApiResponse({ status: 400, description: 'Invalid status transition' })
-  updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: string,
-  ) {
+  updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.ordersService.updateStatus(id, status as any);
   }
 
@@ -109,12 +115,12 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: 'Cannot cancel order' })
   async cancel(@Param('id') id: string, @CurrentUser() user: any) {
     const order = await this.ordersService.findById(id);
-    
+
     // Users can only cancel their own orders
     if (order.user.id !== user.sub) {
       throw new Error('Forbidden: You can only cancel your own orders');
     }
-    
+
     return this.ordersService.cancel(id);
   }
 

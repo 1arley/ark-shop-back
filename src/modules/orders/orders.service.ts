@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { OrdersRepository } from './orders.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, KeyStatus } from '@prisma/client';
@@ -83,7 +87,9 @@ export class OrdersService {
 
     // Verify ownership
     if (order.user.id !== userId) {
-      throw new ForbiddenException('You can only download keys from your own orders');
+      throw new ForbiddenException(
+        'You can only download keys from your own orders',
+      );
     }
 
     if (order.status !== OrderStatus.DELIVERED) {

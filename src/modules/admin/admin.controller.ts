@@ -9,7 +9,12 @@ import {
   UseGuards,
   ParseBoolPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
@@ -87,10 +92,11 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate demo data' })
   @ApiResponse({ status: 201, description: 'Demo data generated' })
-  generateDemo(
-    @Body() dto: GenerateDemoDataDto = new GenerateDemoDataDto(),
-  ) {
-    return this.adminService.generateDemoData(dto.productsCount, dto.keysPerProduct);
+  generateDemo(@Body() dto: GenerateDemoDataDto = new GenerateDemoDataDto()) {
+    return this.adminService.generateDemoData(
+      dto.productsCount,
+      dto.keysPerProduct,
+    );
   }
 
   @Post('clear-demo')

@@ -25,17 +25,22 @@ export class EmailService {
     const smtpUser = this.configService.get('SMTP_USER');
     const smtpPass = this.configService.get('SMTP_PASS');
 
-    this.from = this.configService.get('EMAIL_FROM', 'D\'Ark Games Store <noreply@darkgames.com>');
+    this.from = this.configService.get(
+      'EMAIL_FROM',
+      "D'Ark Games Store <noreply@darkgames.com>",
+    );
 
     // Configure transporter
     this.transporter = nodemailer.createTransport({
       host: smtpHost || 'smtp.mailtrap.io', // Default to Mailtrap for testing
       port: smtpPort ? parseInt(smtpPort) : 2525,
       secure: false,
-      auth: smtpHost ? {
-        user: smtpUser,
-        pass: smtpPass,
-      } : undefined,
+      auth: smtpHost
+        ? {
+            user: smtpUser,
+            pass: smtpPass,
+          }
+        : undefined,
     });
 
     // Verify connection configuration
@@ -86,11 +91,15 @@ export class EmailService {
 
         <h3>Order Items:</h3>
         <ul>
-          ${items.map(item => `
+          ${items
+            .map(
+              (item) => `
             <li>
               ${item.product.name} x ${item.quantity} - $${item.price.toFixed(2)}
             </li>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </ul>
 
         <p style="margin-top: 30px;">
@@ -110,7 +119,7 @@ Total: $${order.total.toFixed(2)}
 Status: ${order.status}
 
 Items:
-${items.map(item => `- ${item.product.name} x ${item.quantity} - $${item.price.toFixed(2)}`).join('\n')}
+${items.map((item) => `- ${item.product.name} x ${item.quantity} - $${item.price.toFixed(2)}`).join('\n')}
 
 Thank you for shopping with D'Ark Games Store!
     `;
@@ -140,12 +149,16 @@ Thank you for shopping with D'Ark Games Store!
 
         <h3>Your Keys:</h3>
         <div style="background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 15px;">
-          ${keys.map(k => `
+          ${keys
+            .map(
+              (k) => `
             <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
               <strong>${k.productName}</strong><br>
               <code style="background: #f0f0f0; padding: 5px 10px; display: inline-block; margin-top: 5px;">${k.key}</code>
             </div>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </div>
 
         <p style="margin-top: 20px; color: #e74c3c;">
@@ -163,7 +176,7 @@ Order #: ${order.id}
 Date: ${new Date(order.createdAt).toLocaleDateString()}
 
 Your Keys:
-${keys.map(k => `${k.productName}: ${k.key}`).join('\n')}
+${keys.map((k) => `${k.productName}: ${k.key}`).join('\n')}
 
 Important: Keep your keys safe! Once revealed, keys cannot be replaced.
 
@@ -178,7 +191,11 @@ Enjoy your games!
     });
   }
 
-  async sendPasswordReset(to: string, resetToken: string, email: string): Promise<boolean> {
+  async sendPasswordReset(
+    to: string,
+    resetToken: string,
+    email: string,
+  ): Promise<boolean> {
     const resetUrl = `${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     const html = `

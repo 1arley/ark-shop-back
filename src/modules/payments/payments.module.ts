@@ -18,13 +18,19 @@ import { RawBodyMiddleware } from '@/common/middleware/raw-body.middleware';
     MercadoPagoProvider,
     MercadoPagoWebhookHandler,
   ],
-  exports: [PaymentsService, PaymentsRepository, PaymentProviderFactory, MercadoPagoProvider],
+  exports: [
+    PaymentsService,
+    PaymentsRepository,
+    PaymentProviderFactory,
+    MercadoPagoProvider,
+  ],
 })
 export class PaymentsModule {
   configure(consumer: MiddlewareConsumer) {
     // Apply raw body middleware only to webhook endpoints
-    consumer
-      .apply(RawBodyMiddleware)
-      .forRoutes({ path: 'payments/webhook/:provider', method: RequestMethod.POST });
+    consumer.apply(RawBodyMiddleware).forRoutes({
+      path: 'payments/webhook/:provider',
+      method: RequestMethod.POST,
+    });
   }
 }

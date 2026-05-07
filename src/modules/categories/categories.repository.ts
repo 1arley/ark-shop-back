@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto/create-category.dto';
+import {
+  CreateCategoryDto,
+  UpdateCategoryDto,
+} from './dto/create-category.dto';
 
 @Injectable()
 export class CategoriesRepository {
@@ -88,9 +91,7 @@ export class CategoriesRepository {
     }
 
     if (category._count.products > 0 || category._count.children > 0) {
-      throw new Error(
-        'Cannot delete category with products or subcategories',
-      );
+      throw new Error('Cannot delete category with products or subcategories');
     }
 
     return this.prisma.category.delete({

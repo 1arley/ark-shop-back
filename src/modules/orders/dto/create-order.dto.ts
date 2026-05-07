@@ -34,7 +34,15 @@ export class CreateOrderDto {
 
 export class UpdateOrderStatusDto {
   @ApiProperty({
-    enum: ['PENDING', 'AWAITING_PAYMENT', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED', 'REFUNDED'],
+    enum: [
+      'PENDING',
+      'AWAITING_PAYMENT',
+      'PAID',
+      'PROCESSING',
+      'DELIVERED',
+      'CANCELLED',
+      'REFUNDED',
+    ],
   })
   @IsEnum([
     'PENDING',

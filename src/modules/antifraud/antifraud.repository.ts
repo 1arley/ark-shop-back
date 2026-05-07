@@ -55,9 +55,7 @@ export class AntifraudRepository {
 
     if (payments.length === 0) return 1;
 
-    const successCount = payments.filter(
-      (p) => p.status === 'APPROVED',
-    ).length;
+    const successCount = payments.filter((p) => p.status === 'APPROVED').length;
 
     return successCount / payments.length;
   }

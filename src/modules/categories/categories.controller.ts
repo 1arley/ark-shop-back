@@ -8,9 +8,17 @@ import {
   Delete,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto/create-category.dto';
+import {
+  CreateCategoryDto,
+  UpdateCategoryDto,
+} from './dto/create-category.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
@@ -71,7 +79,10 @@ export class CategoriesController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete category' })
   @ApiResponse({ status: 200, description: 'Category deleted' })
-  @ApiResponse({ status: 400, description: 'Cannot delete (has products or subcategories)' })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot delete (has products or subcategories)',
+  })
   remove(@Param('id') id: string) {
     return this.categoriesService.delete(id);
   }

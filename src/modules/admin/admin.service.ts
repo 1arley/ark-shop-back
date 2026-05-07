@@ -113,8 +113,7 @@ export class AdminService {
   }
 
   private generateDemoKey(): string {
-    const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let key = '';
     for (let i = 0; i < 4; i++) {
       if (i > 0) key += '-';

@@ -1,7 +1,12 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PaymentsRepository } from './payments.repository';
 import { PaymentProviderFactory } from './payment-provider.factory';
-import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
+import {
+  PaymentProvider,
+  PaymentMethod,
+  PaymentStatus,
+  OrderStatus,
+} from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { MercadoPagoProvider } from './providers/mercado-pago.provider';
 
@@ -23,7 +28,8 @@ export class PaymentsService {
     provider?: PaymentProvider,
     method: PaymentMethod = PaymentMethod.PIX,
   ) {
-    const selectedProvider = provider || this.providerFactory.getDefaultProvider();
+    const selectedProvider =
+      provider || this.providerFactory.getDefaultProvider();
 
     // If PIX, generate QR code directly (no duplicate payment record)
     if (method === PaymentMethod.PIX) {
@@ -81,7 +87,9 @@ export class PaymentsService {
     const payment = await this.paymentsRepository.findById(paymentId);
 
     if (payment.status !== PaymentStatus.PENDING) {
-      throw new BadRequestException(`Payment already processed (status: ${payment.status})`);
+      throw new BadRequestException(
+        `Payment already processed (status: ${payment.status})`,
+      );
     }
 
     // Verify payment with provider
@@ -89,10 +97,17 @@ export class PaymentsService {
     const verification = await provider.verifyPayment(providerTxId);
 
     if (verification.status === 'approved') {
-      return this.paymentsRepository.approvePayment(paymentId, providerTxId, webhookData);
+      return this.paymentsRepository.approvePayment(
+        paymentId,
+        providerTxId,
+        webhookData,
+      );
     }
 
-    return this.paymentsRepository.rejectPayment(paymentId, 'Payment not approved');
+    return this.paymentsRepository.rejectPayment(
+      paymentId,
+      'Payment not approved',
+    );
   }
 
   async refundPayment(paymentId: string, amount?: number) {
@@ -107,7 +122,10 @@ export class PaymentsService {
     }
 
     const provider = this.providerFactory.getProvider(payment.provider);
-    const refundResult = await provider.refundPayment(payment.providerTxId, amount);
+    const refundResult = await provider.refundPayment(
+      payment.providerTxId,
+      amount,
+    );
 
     return {
       payment: await this.paymentsRepository.updatePaymentStatus(
@@ -136,8 +154,9 @@ export class PaymentsService {
    * Verify payment with provider (used by webhook)
    */
   async verifyPaymentWithProvider(providerTxId: string) {
-    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
-    
+    const payment =
+      await this.paymentsRepository.findByProviderTxId(providerTxId);
+
     if (!payment) {
       throw new BadRequestException('Payment not found');
     }
@@ -172,20 +191,26 @@ export class PaymentsService {
    * Approve payment by provider transaction ID
    */
   async approvePaymentByProviderTxId(providerTxId: string, paymentInfo: any) {
-    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+    const payment =
+      await this.paymentsRepository.findByProviderTxId(providerTxId);
 
     if (!payment) {
       throw new BadRequestException('Payment not found');
     }
 
-    return this.paymentsRepository.approvePayment(payment.id, providerTxId, paymentInfo);
+    return this.paymentsRepository.approvePayment(
+      payment.id,
+      providerTxId,
+      paymentInfo,
+    );
   }
 
   /**
    * Reject payment by provider transaction ID
    */
   async rejectPaymentByProviderTxId(providerTxId: string, reason: string) {
-    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+    const payment =
+      await this.paymentsRepository.findByProviderTxId(providerTxId);
 
     if (!payment) {
       throw new BadRequestException('Payment not found');
@@ -198,7 +223,8 @@ export class PaymentsService {
    * Refund payment by provider transaction ID
    */
   async refundPaymentByProviderTxId(providerTxId: string, amount?: number) {
-    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+    const payment =
+      await this.paymentsRepository.findByProviderTxId(providerTxId);
 
     if (!payment) {
       throw new BadRequestException('Payment not found');

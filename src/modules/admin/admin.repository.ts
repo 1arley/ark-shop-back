@@ -167,8 +167,10 @@ export class AdminRepository {
         pending: orderStats.find((s) => s.status === 'PENDING')?._count || 0,
         processing:
           orderStats.find((s) => s.status === 'PROCESSING')?._count || 0,
-        completed: orderStats.find((s) => s.status === 'DELIVERED')?._count || 0,
-        cancelled: orderStats.find((s) => s.status === 'CANCELLED')?._count || 0,
+        completed:
+          orderStats.find((s) => s.status === 'DELIVERED')?._count || 0,
+        cancelled:
+          orderStats.find((s) => s.status === 'CANCELLED')?._count || 0,
       },
       products: {
         total: productStats.reduce((acc, curr) => acc + curr._count, 0),
@@ -189,9 +191,12 @@ export class AdminRepository {
       payments: {
         total: paymentStats.reduce((acc, curr) => acc + curr._count, 0),
         pending: paymentStats.find((p) => p.status === 'PENDING')?._count || 0,
-        approved: paymentStats.find((p) => p.status === 'APPROVED')?._count || 0,
-        rejected: paymentStats.find((p) => p.status === 'REJECTED')?._count || 0,
-        refunded: paymentStats.find((p) => p.status === 'REFUNDED')?._count || 0,
+        approved:
+          paymentStats.find((p) => p.status === 'APPROVED')?._count || 0,
+        rejected:
+          paymentStats.find((p) => p.status === 'REJECTED')?._count || 0,
+        refunded:
+          paymentStats.find((p) => p.status === 'REFUNDED')?._count || 0,
       },
       recentOrders: recentOrders,
       topProducts: topProducts,

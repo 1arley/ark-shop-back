@@ -121,7 +121,11 @@ export class ProductsRepository {
     });
   }
 
-  async findByCategory(categoryId: string, page: number = 1, limit: number = 10) {
+  async findByCategory(
+    categoryId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     const skip = (page - 1) * limit;
 
     const [products, total] = await this.prisma.$transaction([

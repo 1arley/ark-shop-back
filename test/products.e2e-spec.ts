@@ -21,7 +21,7 @@ describe('Products E2E', () => {
 
     app = moduleFixture.createNestApplication();
     prisma = new PrismaClient();
-    
+
     await app.init();
   });
 
@@ -83,12 +83,10 @@ describe('Products E2E', () => {
 
     it('should return products after creation', async () => {
       // Create a product first
-      await request(app.getHttpServer())
-        .post('/api/products')
-        .send({
-          name: 'Test Product',
-          price: 29.99,
-        });
+      await request(app.getHttpServer()).post('/api/products').send({
+        name: 'Test Product',
+        price: 29.99,
+      });
 
       return request(app.getHttpServer())
         .get('/api/products')

@@ -12,9 +12,13 @@ import {
   ParseUUIDPipe,
   Headers,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
-import { PaymentProvider, PaymentMethod } from '@prisma/client';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
@@ -113,10 +117,7 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Refund payment' })
   @ApiResponse({ status: 200, description: 'Payment refunded' })
   @ApiResponse({ status: 400, description: 'Cannot refund' })
-  refundPayment(
-    @Param('id') id: string,
-    @Body('amount') amount?: number,
-  ) {
+  refundPayment(@Param('id') id: string, @Body('amount') amount?: number) {
     return this.paymentsService.refundPayment(id, amount);
   }
 

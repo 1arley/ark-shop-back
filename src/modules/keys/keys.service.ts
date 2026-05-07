@@ -36,17 +36,21 @@ export class KeysService {
 
   async deliverKey(keyId: string) {
     const key = await this.keysRepository.deliverKey(keyId);
-    
+
     // Decrypt and return the key data
     const decryptedKey = await this.keysRepository.getKeyData(keyId);
-    
+
     return {
       ...key,
       decryptedKey, // Only returned on delivery
     };
   }
 
-  async getProductKeys(productId: string, page: number = 1, limit: number = 50) {
+  async getProductKeys(
+    productId: string,
+    page: number = 1,
+    limit: number = 50,
+  ) {
     return this.keysRepository.findByProduct(productId, page, limit);
   }
 
@@ -62,10 +66,10 @@ export class KeysService {
    * Generate demo keys for testing
    */
   async generateDemoKeys(productId: string, quantity: number = 10) {
-    const keys = Array.from({ length: quantity }, () => 
-      this.encryptionProvider.generateSecureKey(24)
+    const keys = Array.from({ length: quantity }, () =>
+      this.encryptionProvider.generateSecureKey(24),
     );
-    
+
     return this.importKeys(productId, keys);
   }
 }
