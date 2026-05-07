@@ -104,8 +104,12 @@ export class PaymentsService {
       throw new BadRequestException('Can only refund approved payments');
     }
 
+    if (!payment.providerTxId) {
+      throw new BadRequestException('Payment missing provider transaction ID');
+    }
+
     const provider = this.providerFactory.getProvider(payment.provider);
-    const refundResult = await provider.refundPayment(payment.providerTxId!, amount);
+    const refundResult = await provider.refundPayment(payment.providerTxId, amount);
 
     return {
       payment: await this.paymentsRepository.updatePaymentStatus(
@@ -164,5 +168,44 @@ export class PaymentsService {
    */
   async rejectPayment(paymentId: string, reason: string) {
     return this.paymentsRepository.rejectPayment(paymentId, reason);
+  }
+
+  /**
+   * Approve payment by provider transaction ID
+   */
+  async approvePaymentByProviderTxId(providerTxId: string, paymentInfo: any) {
+    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+
+    if (!payment) {
+      throw new BadRequestException('Payment not found');
+    }
+
+    return this.paymentsRepository.approvePayment(payment.id, providerTxId, paymentInfo);
+  }
+
+  /**
+   * Reject payment by provider transaction ID
+   */
+  async rejectPaymentByProviderTxId(providerTxId: string, reason: string) {
+    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+
+    if (!payment) {
+      throw new BadRequestException('Payment not found');
+    }
+
+    return this.paymentsRepository.rejectPayment(payment.id, reason);
+  }
+
+  /**
+   * Refund payment by provider transaction ID
+   */
+  async refundPaymentByProviderTxId(providerTxId: string, amount?: number) {
+    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+
+    if (!payment) {
+      throw new BadRequestException('Payment not found');
+    }
+
+    return this.refundPayment(payment.id, amount);
   }
 }

@@ -8,7 +8,6 @@ import {
   ParseIntPipe,
   UseGuards,
   Headers,
-  RawBody,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -19,6 +18,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -37,10 +37,11 @@ export class PaymentsController {
   createPayment(
     @Param('orderId') orderId: string,
     @Body('amount') amount: number,
+    @CurrentUser() user: { id: string },
     @Body('provider') provider?: PaymentProvider,
     @Body('method') method: PaymentMethod = PaymentMethod.PIX,
   ) {
-    return this.paymentsService.createPayment(orderId, 'user-id', amount, provider, method);
+    return this.paymentsService.createPayment(orderId, user.id, amount, provider, method);
   }
 
   @Post('webhook/:provider')
@@ -57,9 +58,13 @@ export class PaymentsController {
     // Only process Mercado Pago webhooks for now
     if (provider === 'mercadopago' || provider === 'mercado_pago') {
       // Verify signature if secret is configured
+      // Note: For production, configure RAW body parsing to verify signatures properly
       if (process.env.MERCADO_PAGO_WEBHOOK_SECRET) {
-        const isValid = this.mpWebhookHandler.verifySignature(webhookData, signature || '');
-        
+        const isValid = this.mpWebhookHandler.verifySignature(
+          JSON.stringify(webhookData),
+          signature || '',
+        );
+
         if (!isValid) {
           return { status: 'error', message: 'Invalid signature' };
         }
@@ -67,7 +72,7 @@ export class PaymentsController {
 
       // Process webhook event
       await this.mpWebhookHandler.handleEvent(webhookData);
-      
+
       return { status: 'ok', requestId };
     }
 
