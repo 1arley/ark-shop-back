@@ -220,25 +220,26 @@ model OrderItem {
 // PAYMENTS MODULE
 // ============================
 model Payment {
-  id              String          @id @default(uuid())
-  orderId         String          @unique
-  order           Order           @relation(fields: [orderId], references: [id])
-  userId          String
-  user            User            @relation(fields: [userId], references: [id])
-  provider        PaymentProvider
-  providerTxId    String?
-  amount          Decimal         @db.Decimal(10, 2)
-  status          PaymentStatus   @default(PENDING)
-  method          PaymentMethod
-  pixQrCode       String?
-  pixCode         String?
-  webhookData     Json?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+ id String @id @default(uuid())
+ orderId String @unique
+ order Order @relation(fields: [orderId], references: [id])
+ userId String
+ user User @relation(fields: [userId], references: [id])
+ provider PaymentProvider
+ providerTxId String?
+ amount Decimal @db.Decimal(10, 2)
+ status PaymentStatus @default(PENDING)
+ method PaymentMethod
+ pixQrCode String?
+ pixCode String?
+ webhookData Json?
+ rejectionReason String?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
 
-  @@index([orderId])
-  @@index([userId])
-  @@index([providerTxId])
+ @@index([orderId])
+ @@index([userId])
+ @@index([providerTxId])
 }
 
 // ============================

@@ -145,7 +145,10 @@ export class PaymentsRepository {
     return this.prisma.$transaction(async (tx) => {
       await tx.payment.update({
         where: { id },
-        data: { status: PaymentStatus.REJECTED },
+        data: {
+          status: PaymentStatus.REJECTED,
+          ...(reason && { rejectionReason: reason }),
+        },
       });
 
       await tx.order.update({
