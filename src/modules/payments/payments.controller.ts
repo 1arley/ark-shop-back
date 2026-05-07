@@ -7,9 +7,10 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
-  Headers,
   HttpCode,
   HttpStatus,
+  ParseUUIDPipe,
+  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -19,6 +20,8 @@ import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { RawBody } from '@/common/decorators/raw-body.decorator';
+import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -35,13 +38,17 @@ export class PaymentsController {
   @ApiResponse({ status: 201, description: 'Payment created' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   createPayment(
-    @Param('orderId') orderId: string,
-    @Body('amount') amount: number,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Body() createPaymentDto: CreatePaymentDto,
     @CurrentUser() user: { id: string },
-    @Body('provider') provider?: PaymentProvider,
-    @Body('method') method: PaymentMethod = PaymentMethod.PIX,
   ) {
-    return this.paymentsService.createPayment(orderId, user.id, amount, provider, method);
+    return this.paymentsService.createPayment(
+      orderId,
+      user.id,
+      createPaymentDto.amount,
+      createPaymentDto.provider,
+      createPaymentDto.method,
+    );
   }
 
   @Post('webhook/:provider')
@@ -51,17 +58,17 @@ export class PaymentsController {
   @ApiResponse({ status: 400, description: 'Invalid signature' })
   async webhook(
     @Param('provider') provider: string,
-    @Body() webhookData: any,
+    @Body() webhookData: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    @RawBody() rawBody: Buffer,
     @Headers('x-signature') signature?: string,
     @Headers('x-request-id') requestId?: string,
   ) {
     // Only process Mercado Pago webhooks for now
     if (provider === 'mercadopago' || provider === 'mercado_pago') {
       // Verify signature if secret is configured
-      // Note: For production, configure RAW body parsing to verify signatures properly
       if (process.env.MERCADO_PAGO_WEBHOOK_SECRET) {
         const isValid = this.mpWebhookHandler.verifySignature(
-          JSON.stringify(webhookData),
+          rawBody,
           signature || '',
         );
 
