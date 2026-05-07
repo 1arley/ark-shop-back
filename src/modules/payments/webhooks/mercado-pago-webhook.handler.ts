@@ -23,8 +23,7 @@ export class MercadoPagoWebhookHandler {
   /**
    * Verify webhook signature
    * Mercado Pago sends X-Signature header with HMAC-SHA256 signature
-   * Note: For production, use Mercado Pago's public key to verify signatures
-   * This implementation uses a shared secret for simplicity
+   * Uses raw body buffer for accurate signature verification
    */
   verifySignature(rawBody: string | Buffer, signature: string): boolean {
     if (!signature) {
@@ -39,9 +38,12 @@ export class MercadoPagoWebhookHandler {
     }
 
     try {
+      // Ensure we're working with a Buffer
+      const bodyBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody);
+
       // Compute expected signature using raw body
       const expectedSignature = createHmac('sha256', this.webhookSecret)
-        .update(rawBody)
+        .update(bodyBuffer)
         .digest('hex');
 
       const isValid = expectedSignature === signature;
@@ -97,11 +99,17 @@ export class MercadoPagoWebhookHandler {
   }
 
   private async handlePaymentCreated(data: any) {
-    // Mercado Pago sends payment ID in data.id
-    const { id: providerPaymentId } = data;
+    // Validate data structure
+    if (!data || typeof data !== 'object') {
+      this.logger.warn('Invalid webhook data structure');
+      throw new Error('Invalid webhook data');
+    }
 
-    if (!providerPaymentId) {
-      this.logger.warn('Payment ID missing in webhook data');
+    // Safe type checking for payment ID
+    const providerPaymentId = typeof data.id === 'string' ? data.id : String(data.id || '');
+
+    if (!providerPaymentId || providerPaymentId === 'undefined' || providerPaymentId === 'null') {
+      this.logger.warn('Payment ID missing or invalid in webhook data');
       throw new Error('Payment ID missing');
     }
 
@@ -117,11 +125,17 @@ export class MercadoPagoWebhookHandler {
   }
 
   private async handlePaymentUpdated(data: any) {
-    // Mercado Pago sends payment ID in data.id
-    const { id: providerPaymentId } = data;
+    // Validate data structure
+    if (!data || typeof data !== 'object') {
+      this.logger.warn('Invalid webhook data structure');
+      throw new Error('Invalid webhook data');
+    }
 
-    if (!providerPaymentId) {
-      this.logger.warn('Payment ID missing in webhook data');
+    // Safe type checking for payment ID
+    const providerPaymentId = typeof data.id === 'string' ? data.id : String(data.id || '');
+
+    if (!providerPaymentId || providerPaymentId === 'undefined' || providerPaymentId === 'null') {
+      this.logger.warn('Payment ID missing or invalid in webhook data');
       throw new Error('Payment ID missing');
     }
 
@@ -146,11 +160,17 @@ export class MercadoPagoWebhookHandler {
   }
 
   private async handlePaymentDeleted(data: any) {
-    // Mercado Pago sends payment ID in data.id
-    const { id: providerPaymentId } = data;
+    // Validate data structure
+    if (!data || typeof data !== 'object') {
+      this.logger.warn('Invalid webhook data structure');
+      throw new Error('Invalid webhook data');
+    }
 
-    if (!providerPaymentId) {
-      this.logger.warn('Payment ID missing in webhook data');
+    // Safe type checking for payment ID
+    const providerPaymentId = typeof data.id === 'string' ? data.id : String(data.id || '');
+
+    if (!providerPaymentId || providerPaymentId === 'undefined' || providerPaymentId === 'null') {
+      this.logger.warn('Payment ID missing or invalid in webhook data');
       throw new Error('Payment ID missing');
     }
 
