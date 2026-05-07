@@ -13,6 +13,6 @@ export const RawBody = createParamDecorator(
     const request = ctx
       .switchToHttp()
       .getRequest() as unknown as RequestWithRawBody;
-    return request.rawBody as Buffer;
+    return request.rawBody!;
   },
 );

@@ -10,7 +10,9 @@ export class CreatePaymentDto {
 
   @ApiPropertyOptional({
     description: 'Payment provider',
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     enum: PaymentProvider,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     example: PaymentProvider.MERCADO_PAGO,
   })
   @IsEnum(PaymentProvider)
@@ -19,8 +21,11 @@ export class CreatePaymentDto {
 
   @ApiPropertyOptional({
     description: 'Payment method',
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     enum: PaymentMethod,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     example: PaymentMethod.PIX,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     default: PaymentMethod.PIX,
   })
   @IsEnum(PaymentMethod)
