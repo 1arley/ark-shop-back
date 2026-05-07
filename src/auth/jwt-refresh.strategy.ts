@@ -47,6 +47,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
       orderBy: {
         createdAt: 'desc',
       },
+      take: 10,
     });
 
     if (refreshTokens.length === 0) {
