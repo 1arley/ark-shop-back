@@ -25,16 +25,7 @@ export class PaymentsService {
   ) {
     const selectedProvider = provider || this.providerFactory.getDefaultProvider();
 
-    // Create payment record
-    const payment = await this.paymentsRepository.createPayment(
-      orderId,
-      userId,
-      amount,
-      selectedProvider,
-      method,
-    );
-
-    // If PIX, generate QR code via provider
+    // If PIX, generate QR code directly (no duplicate payment record)
     if (method === PaymentMethod.PIX) {
       try {
         const providerImpl = this.providerFactory.getProvider(selectedProvider);
@@ -72,7 +63,14 @@ export class PaymentsService {
       }
     }
 
-    return payment;
+    // For other payment methods, create standard payment record
+    return this.paymentsRepository.createPayment(
+      orderId,
+      userId,
+      amount,
+      selectedProvider,
+      method,
+    );
   }
 
   async processPayment(
