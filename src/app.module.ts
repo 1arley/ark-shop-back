@@ -6,6 +6,9 @@ import { AppService } from '@/app.service';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { AuthModule } from '@/auth/auth.module';
 import { UserModule } from '@/user/user.module';
+import { LoggerModule } from '@/logger/logger.module';
+import { MetricsModule } from '@/metrics/metrics.module';
+import { HealthModule } from '@/health/health.module';
 
 // D'Ark Games Store Modules
 import { ProductsModule } from '@/modules/products/products.module';
@@ -43,6 +46,9 @@ import { AntifraudModule } from '@/modules/antifraud/antifraud.module';
       name: 'email',
     }),
     PrismaModule,
+    LoggerModule,
+    MetricsModule,
+    HealthModule,
     AuthModule,
     UserModule,
     // D'Ark Games Store Modules
