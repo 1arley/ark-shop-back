@@ -1,18 +1,17 @@
 import { PrismaClient } from '@prisma/client';
-import * as crypto from 'crypto-js';
+import * as CryptoJS from 'crypto-js'; // ← era "* as crypto", mas usado como CryptoJS
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-const ENCRYPTION_KEY =
-  process.env.KEYS_ENCRYPTION_KEY || 'default-key-change-in-production';
+const ENCRYPTION_KEY = process.env.KEYS_ENCRYPTION_KEY || 'default-key-change-in-production';
 
 function encryptKey(data: string): string {
   return CryptoJS.AES.encrypt(data, ENCRYPTION_KEY).toString();
 }
 
 function generateDemoKey(): string {
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let key = '';
   for (let i = 0; i < 4; i++) {
     if (i > 0) key += '-';
@@ -26,7 +25,6 @@ function generateDemoKey(): string {
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // Create categories
   const categories = [
     'Action',
     'Adventure',
@@ -41,22 +39,22 @@ async function main() {
   console.log('📁 Creating categories...');
   const createdCategories = [];
   for (const categoryName of categories) {
-    const category = await prisma.category.create({
-      data: {
+    const category = await prisma.category.upsert({
+      where: { id: categoryName.toLowerCase() }, // evita duplicatas em re-seeds
+      create: {
         name: categoryName,
         description: `${categoryName} games`,
       },
+      update: {},
     });
     createdCategories.push(category);
     console.log(`  ✓ ${categoryName}`);
   }
 
-  // Create products
   console.log('\n🎮 Creating products...');
   const products = [];
   for (let i = 0; i < 5; i++) {
-    const category =
-      createdCategories[Math.floor(Math.random() * createdCategories.length)];
+    const category = createdCategories[Math.floor(Math.random() * createdCategories.length)]!;
 
     const product = await prisma.product.create({
       data: {
@@ -73,7 +71,6 @@ async function main() {
     console.log(`  ✓ ${product.name}`);
   }
 
-  // Create keys for each product
   console.log('\n🔑 Creating keys...');
   for (const product of products) {
     const keys = Array.from({ length: 10 }, () => generateDemoKey());
@@ -91,27 +88,39 @@ async function main() {
     console.log(`  ✓ ${product.name}: 10 keys created`);
   }
 
-  // Create test user
-  console.log('\n👤 Creating test user...');
-  const bcrypt = require('bcrypt');
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  console.log('\n👤 Creating test users...');
+  const adminPassword = await bcrypt.hash('password123', 10);
+  const userPassword = await bcrypt.hash('user123', 10);
 
-  const user = await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: 'admin@darkgames.com' },
+    update: {},
+    create: {
       email: 'admin@darkgames.com',
-      password: hashedPassword,
+      password: adminPassword,
       name: 'Admin User',
       role: 'ADMIN',
     },
   });
+  console.log('  ✓ admin@darkgames.com (senha: password123)');
 
-  console.log(`  ✓ ${user.email} (password: password123)`);
+  await prisma.user.upsert({
+    where: { email: 'user@darkgames.com' },
+    update: {},
+    create: {
+      email: 'user@darkgames.com',
+      password: userPassword,
+      name: 'Regular User',
+      role: 'USER',
+    },
+  });
+  console.log('  ✓ user@darkgames.com (senha: user123)');
 
   console.log('\n✅ Seed completed!');
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error('❌ Seed failed:', e);
     process.exit(1);
   })

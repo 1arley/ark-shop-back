@@ -1,88 +1,65 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Body,
-  Param,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CartService } from './cart.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '@/common/interfaces/request.interface';
 
 @ApiTags('cart')
 @Controller('cart')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user cart' })
   @ApiResponse({ status: 200, description: 'Cart retrieved' })
-  getCart(@CurrentUser() user: any) {
-    return this.cartService.getCart(user.sub);
+  getCart(@CurrentUser() user: AuthenticatedUser) {
+    return this.cartService.getCart(user.id); // ← era user.sub
   }
 
   @Post('items')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Add item to cart' })
   @ApiResponse({ status: 200, description: 'Item added' })
-  addItem(@Body() dto: AddToCartDto, @CurrentUser() user: any) {
-    return this.cartService.addItem(user.sub, dto);
+  addItem(@Body() dto: AddToCartDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.cartService.addItem(user.id, dto); // ← era user.sub
   }
 
   @Patch('items/:productId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update cart item quantity' })
   @ApiResponse({ status: 200, description: 'Item updated' })
   updateItem(
     @Param('productId') productId: string,
     @Body() dto: UpdateCartItemDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     if (dto.quantity !== undefined) {
-      return this.cartService.updateItem(user.sub, productId, dto.quantity);
+      return this.cartService.updateItem(user.id, productId, dto.quantity); // ← era user.sub
     }
-    return this.cartService.getCart(user.sub);
+    return this.cartService.getCart(user.id);
   }
 
   @Delete('items/:productId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove item from cart' })
   @ApiResponse({ status: 200, description: 'Item removed' })
-  removeItem(@Param('productId') productId: string, @CurrentUser() user: any) {
-    return this.cartService.removeItem(user.sub, productId);
+  removeItem(@Param('productId') productId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.cartService.removeItem(user.id, productId); // ← era user.sub
   }
 
   @Delete()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Clear cart' })
   @ApiResponse({ status: 200, description: 'Cart cleared' })
-  clearCart(@CurrentUser() user: any) {
-    this.cartService.clearCart(user.sub);
-    return { message: 'Cart cleared' };
+  clearCart(@CurrentUser() user: AuthenticatedUser) {
+    return this.cartService.clearCart(user.id); // ← era user.sub, agora retorna Promise
   }
 
   @Get('count')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get cart item count' })
   @ApiResponse({ status: 200, description: 'Count retrieved' })
-  getCount(@CurrentUser() user: any) {
-    return { count: this.cartService.getItemsCount(user.sub) };
+  async getCount(@CurrentUser() user: AuthenticatedUser) {
+    const count = await this.cartService.getItemsCount(user.id); // ← era user.sub
+    return { count };
   }
 }

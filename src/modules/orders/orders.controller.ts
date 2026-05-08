@@ -10,19 +10,16 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '@/common/interfaces/request.interface';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -37,14 +34,10 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body() createOrderDto: CreateOrderDto,
-    @CurrentUser() user: any,
-  ) {
-    // User can only create orders for themselves
+  create(@Body() createOrderDto: CreateOrderDto, @CurrentUser() user: AuthenticatedUser) {
     return this.ordersService.create({
       ...createOrderDto,
-      userId: user.sub,
+      userId: user.id, // ← era user.sub (undefined)
     });
   }
 
@@ -53,14 +46,12 @@ export class OrdersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user orders' })
   @ApiResponse({ status: 200, description: 'List of orders' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
   findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Query('page', ParseIntPipe) page: number = 1,
     @Query('limit', ParseIntPipe) limit: number = 10,
   ) {
-    // Users can only see their own orders
-    return this.ordersService.findByUser(user.sub, page, limit);
+    return this.ordersService.findByUser(user.id, page, limit); // ← era user.sub
   }
 
   @Get('recent')
@@ -80,17 +71,15 @@ export class OrdersController {
   @ApiResponse({ status: 200, description: 'Order found' })
   @ApiResponse({ status: 404, description: 'Order not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not your order' })
-  async findOne(@Param('id') id: string, @CurrentUser() user: any) {
-    // Users can only view their own orders
+  async findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     const order = await this.ordersService.findById(id);
 
-    // Check ownership (unless admin)
     if (
-      order.user.id !== user.sub &&
+      order.user.id !== user.id && // ← era user.sub
       user.role !== 'ADMIN' &&
       user.role !== 'SUPERADMIN'
     ) {
-      throw new Error('Forbidden: You can only view your own orders');
+      throw new ForbiddenException('You can only view your own orders');
     }
 
     return order;
@@ -113,12 +102,12 @@ export class OrdersController {
   @ApiOperation({ summary: 'Cancel order' })
   @ApiResponse({ status: 200, description: 'Order cancelled' })
   @ApiResponse({ status: 400, description: 'Cannot cancel order' })
-  async cancel(@Param('id') id: string, @CurrentUser() user: any) {
+  async cancel(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     const order = await this.ordersService.findById(id);
 
-    // Users can only cancel their own orders
-    if (order.user.id !== user.sub) {
-      throw new Error('Forbidden: You can only cancel your own orders');
+    if (order.user.id !== user.id) {
+      // ← era user.sub
+      throw new ForbiddenException('You can only cancel your own orders');
     }
 
     return this.ordersService.cancel(id);
@@ -131,7 +120,7 @@ export class OrdersController {
   @ApiOperation({ summary: 'Deliver order keys (admin)' })
   @ApiResponse({ status: 200, description: 'Order delivered' })
   @ApiResponse({ status: 400, description: 'Cannot deliver order' })
-  async deliver(@Param('id') id: string) {
+  deliver(@Param('id') id: string) {
     return this.ordersService.deliverOrder(id);
   }
 
@@ -142,7 +131,7 @@ export class OrdersController {
   @ApiResponse({ status: 200, description: 'Keys downloaded' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not your order' })
   @ApiResponse({ status: 400, description: 'Order not delivered yet' })
-  async downloadKeys(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.ordersService.downloadKeys(id, user.sub);
+  downloadKeys(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.ordersService.downloadKeys(id, user.id); // ← era user.sub
   }
 }
