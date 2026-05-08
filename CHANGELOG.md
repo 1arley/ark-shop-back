@@ -1,0 +1,32 @@
+# 1.0.0 (2026-05-08)
+
+### Bug Fixes
+
+- add BullModule configuration for email queue ([86c76a6](https://github.com/1arley/ark-shop-back/commit/86c76a623e141f712f43f5c7673f81b08de538c8))
+- change job runners to use ubuntu-latest instead of self-hosted ([7671a9e](https://github.com/1arley/ark-shop-back/commit/7671a9e94882da7a4ff61927bfdeb9e87849b8c8))
+- corrigir imports e métodos faltando para build ([d245b55](https://github.com/1arley/ark-shop-back/commit/d245b556c74781240825ea851c50b1002b8ae6cf))
+- error lint changes needed ([5210150](https://github.com/1arley/ark-shop-back/commit/521015004f7b835b2eb773842131f5287cf8ad89))
+- implement critical delivery flow and fix authorization gaps ([586273a](https://github.com/1arley/ark-shop-back/commit/586273acff275de3305d74faaddf9ce4b792978a))
+- import BullModule in OrdersModule for email queue ([e3c8559](https://github.com/1arley/ark-shop-back/commit/e3c8559f067e48063bf10ffc1fb67c3e922d33ed))
+- prevent duplicate payment record creation for PIX method ([61e9cd9](https://github.com/1arley/ark-shop-back/commit/61e9cd9db4d183fe0b28d8b1f08ce4a5c18cb681))
+- remove decryptedKey references, keys delivered by admin ([f1bc0d1](https://github.com/1arley/ark-shop-back/commit/f1bc0d126f36255543047b885c1ba68a0d0d09b8))
+- resolve all TypeScript compilation errors ([8ddd444](https://github.com/1arley/ark-shop-back/commit/8ddd444109171d57a094c4707b500d3832126b8b))
+- resolve remaining lint errors in payments module ([d2106ab](https://github.com/1arley/ark-shop-back/commit/d2106ab5d8330ad48d420141956f506049f84d2c))
+- resolve TypeScript errors in admin and payments modules ([56da87f](https://github.com/1arley/ark-shop-back/commit/56da87f10c1cb33a6a850649a3b6a75e9867736b))
+- resolve TypeScript errors in email processor ([b994a9f](https://github.com/1arley/ark-shop-back/commit/b994a9f8e3ad0406d9d661ce6e84a53e60378341))
+- rewrite orders.service.ts to fix corruption ([10b55c4](https://github.com/1arley/ark-shop-back/commit/10b55c44643862d963c6f9c4e7e6587e22f954a2))
+- update repository URLs in package.json to reflect the correct project ([2fe5525](https://github.com/1arley/ark-shop-back/commit/2fe55256359905f188d51401da9f794d124242f9))
+
+### Features
+
+- add categories, admin dashboard, and antifraud modules ([a59b015](https://github.com/1arley/ark-shop-back/commit/a59b0156db0eaaaee03d76c947054c37664d4de3))
+- add DTO validation for create payment endpoint ([ce25164](https://github.com/1arley/ark-shop-back/commit/ce25164b9e0b9b284cc79143b4fb1febd9f61817))
+- add raw body middleware for webhook signature verification ([c3b2197](https://github.com/1arley/ark-shop-back/commit/c3b2197894d84aff2a05d277f0e17689114d39d6))
+- add rejection reason field to Payment model ([9e5d38b](https://github.com/1arley/ark-shop-back/commit/9e5d38b082d71897422a7a6b46270f89ca34af13))
+- add safe type checking in webhook handlers ([a20ed36](https://github.com/1arley/ark-shop-back/commit/a20ed366fa8bea36e91a2a37a9b7d942f9c7d9f1))
+- add shopping cart and Mercado Pago integration ([7da802e](https://github.com/1arley/ark-shop-back/commit/7da802e30def454df41c5a1e9a561389d86ed8ea))
+- implement email notification system ([72ed86f](https://github.com/1arley/ark-shop-back/commit/72ed86fbd626f2f9fd3d5d39f538e51e8e606979))
+- implement Mercado Pago webhooks with signature verification ([14b2981](https://github.com/1arley/ark-shop-back/commit/14b29818493908273f638818dd332c4dbba9f6ec))
+- implement real Mercado Pago payment integration ([ab0c0ff](https://github.com/1arley/ark-shop-back/commit/ab0c0ffa1f382b586af65ccfacbbf7a514da076f))
+- initialize database schema with wallet, order, product, and payment management tables ([3053dae](https://github.com/1arley/ark-shop-back/commit/3053dae4f52820838ede6322ae0d1571074a3a08))
+- update app module with cart support and add production docs ([3e37e0e](https://github.com/1arley/ark-shop-back/commit/3e37e0e63f5fa9cb185e338026636fae7ac2ef8b))
