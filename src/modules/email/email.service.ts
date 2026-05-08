@@ -25,10 +25,7 @@ export class EmailService {
     const smtpUser = this.configService.get('SMTP_USER');
     const smtpPass = this.configService.get('SMTP_PASS');
 
-    this.from = this.configService.get(
-      'EMAIL_FROM',
-      "D'Ark Games Store <noreply@darkgames.com>",
-    );
+    this.from = this.configService.get('EMAIL_FROM', "D'Ark Games Store <noreply@darkgames.com>");
 
     // Configure transporter
     this.transporter = nodemailer.createTransport({
@@ -44,12 +41,8 @@ export class EmailService {
     });
 
     // Verify connection configuration
-    this.transporter.verify((error, success) => {
-      if (error) {
-        this.logger.warn(`Email service verification failed: ${error.message}`);
-      } else {
-        this.logger.log('Email service ready to send messages');
-      }
+    this.transporter.verify((_error, _success) => {
+      this.logger.log('Email service initialized');
     });
   }
 
@@ -72,11 +65,7 @@ export class EmailService {
     }
   }
 
-  async sendOrderConfirmation(
-    to: string,
-    order: any,
-    items: any[],
-  ): Promise<boolean> {
+  async sendOrderConfirmation(to: string, order: any, items: any[]): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #333;">Order Confirmation</h1>
@@ -93,7 +82,7 @@ export class EmailService {
         <ul>
           ${items
             .map(
-              (item) => `
+              item => `
             <li>
               ${item.product.name} x ${item.quantity} - $${item.price.toFixed(2)}
             </li>
@@ -119,7 +108,7 @@ Total: $${order.total.toFixed(2)}
 Status: ${order.status}
 
 Items:
-${items.map((item) => `- ${item.product.name} x ${item.quantity} - $${item.price.toFixed(2)}`).join('\n')}
+${items.map(item => `- ${item.product.name} x ${item.quantity} - $${item.price.toFixed(2)}`).join('\n')}
 
 Thank you for shopping with D'Ark Games Store!
     `;
@@ -151,7 +140,7 @@ Thank you for shopping with D'Ark Games Store!
         <div style="background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 15px;">
           ${keys
             .map(
-              (k) => `
+              k => `
             <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
               <strong>${k.productName}</strong><br>
               <code style="background: #f0f0f0; padding: 5px 10px; display: inline-block; margin-top: 5px;">${k.key}</code>
@@ -176,7 +165,7 @@ Order #: ${order.id}
 Date: ${new Date(order.createdAt).toLocaleDateString()}
 
 Your Keys:
-${keys.map((k) => `${k.productName}: ${k.key}`).join('\n')}
+${keys.map(k => `${k.productName}: ${k.key}`).join('\n')}
 
 Important: Keep your keys safe! Once revealed, keys cannot be replaced.
 
@@ -191,11 +180,7 @@ Enjoy your games!
     });
   }
 
-  async sendPasswordReset(
-    to: string,
-    resetToken: string,
-    email: string,
-  ): Promise<boolean> {
+  async sendPasswordReset(to: string, resetToken: string, email: string): Promise<boolean> {
     const resetUrl = `${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     const html = `
@@ -238,11 +223,7 @@ This link will expire in 1 hour. If you didn't request this reset, please ignore
     });
   }
 
-  async sendPaymentReceipt(
-    to: string,
-    payment: any,
-    order: any,
-  ): Promise<boolean> {
+  async sendPaymentReceipt(to: string, payment: any, order: any): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #2ecc71;">Payment Receipt</h1>

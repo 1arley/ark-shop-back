@@ -1,11 +1,6 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { KeysEncryptionProvider } from './keys-encryption.provider';
-import { KeyStatus } from '@prisma/client';
 
 export interface ImportKeysResult {
   imported: number;
@@ -35,10 +30,7 @@ export class KeysRepository {
     });
   }
 
-  async createBatch(
-    productId: string,
-    keys: string[],
-  ): Promise<ImportKeysResult> {
+  async createBatch(productId: string, keys: string[]): Promise<ImportKeysResult> {
     const result: ImportKeysResult = {
       imported: 0,
       failed: 0,
@@ -51,9 +43,7 @@ export class KeysRepository {
         result.imported++;
       } catch (error: any) {
         result.failed++;
-        result.errors.push(
-          `Failed to import key: ${error.message || 'Unknown error'}`,
-        );
+        result.errors.push(`Failed to import key: ${error.message || 'Unknown error'}`);
       }
     }
 
@@ -121,9 +111,7 @@ export class KeysRepository {
     }
 
     if (key.status !== KeyStatus.AVAILABLE) {
-      throw new BadRequestException(
-        `Key is not available (current status: ${key.status})`,
-      );
+      throw new BadRequestException(`Key is not available (current status: ${key.status})`);
     }
 
     return this.prisma.key.update({

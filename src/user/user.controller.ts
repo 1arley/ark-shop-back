@@ -1,22 +1,10 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Req,
-  Query,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserService } from '@/user/user.service';
 import { ApiGetUserMe } from '@/user/swagger/user.get.me.swagger';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { ApiFindAllUsers } from '@/user/swagger/user.get.findAll.swagger';
-import {
-  DEFAULT_PAGE,
-  DEFAULT_PAGE_SIZE,
-  parsePageParam,
-} from '@/common/constants';
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, parsePageParam } from '@/common/constants';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
 
 @ApiTags('user')

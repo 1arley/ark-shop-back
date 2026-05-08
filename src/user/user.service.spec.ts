@@ -21,10 +21,7 @@ describe('UserService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UserService,
-        { provide: PrismaService, useValue: mockPrismaService },
-      ],
+      providers: [UserService, { provide: PrismaService, useValue: mockPrismaService }],
     }).compile();
 
     service = module.get<UserService>(UserService);
@@ -76,9 +73,7 @@ describe('UserService', () => {
         email: createUserDto.email,
       });
 
-      await expect(service.create(createUserDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(service.create(createUserDto)).rejects.toThrow(ConflictException);
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
@@ -198,10 +193,7 @@ describe('UserService', () => {
           updatedAt: new Date(),
         }));
 
-      mockPrismaService.$transaction.mockResolvedValue([
-        users.slice(0, 10),
-        25,
-      ]);
+      mockPrismaService.$transaction.mockResolvedValue([users.slice(0, 10), 25]);
 
       const result = await service.findAll(1, 10);
 
@@ -264,9 +256,7 @@ describe('UserService', () => {
     it('should throw NotFoundException if user not found by email', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.findByEmail('notfound@example.com')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findByEmail('notfound@example.com')).rejects.toThrow(NotFoundException);
     });
   });
 });

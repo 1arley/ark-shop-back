@@ -29,10 +29,7 @@ export interface PaymentProviderInterface {
 
 @Injectable()
 export class PaymentProviderFactory {
-  private readonly providers = new Map<
-    PaymentProvider,
-    PaymentProviderInterface
-  >();
+  private readonly providers = new Map<PaymentProvider, PaymentProviderInterface>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -75,10 +72,7 @@ export class PaymentProviderFactory {
     return this.mercadoPagoProvider.verifyPayment(providerTxId);
   }
 
-  private async refundMercadoPagoPayment(
-    providerTxId: string,
-    amount?: number,
-  ) {
+  private async refundMercadoPagoPayment(providerTxId: string, amount?: number) {
     return this.mercadoPagoProvider.refundPayment(providerTxId, amount);
   }
 
@@ -86,9 +80,7 @@ export class PaymentProviderFactory {
     const providerImpl = this.providers.get(provider);
 
     if (!providerImpl) {
-      throw new BadRequestException(
-        `Payment provider ${provider} not available`,
-      );
+      throw new BadRequestException(`Payment provider ${provider} not available`);
     }
 
     return providerImpl;

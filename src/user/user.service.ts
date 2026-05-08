@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateUserDto } from '@/dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
@@ -64,7 +60,7 @@ export class UserService {
       this.prisma.user.count(),
     ]);
 
-    const safeUsers = users.map((user) => {
+    const safeUsers = users.map(user => {
       const { password: _, ...userWithoutPassword } = user;
       return userWithoutPassword;
     });

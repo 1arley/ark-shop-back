@@ -59,25 +59,17 @@ describe('AuthController', () => {
     });
 
     it('should propagate ConflictException when email already exists', async () => {
-      mockAuthService.register.mockRejectedValue(
-        new ConflictException('Email já cadastrado.'),
-      );
+      mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
-      await expect(controller.register(registerDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(controller.register(registerDto)).rejects.toThrow(ConflictException);
       expect(authService.register).toHaveBeenCalledWith(registerDto);
     });
 
     it('should handle validation errors from service', async () => {
       const invalidDto = { ...registerDto, email: 'invalid-email' };
-      mockAuthService.register.mockRejectedValue(
-        new ConflictException('Email já cadastrado.'),
-      );
+      mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
-      await expect(controller.register(invalidDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(controller.register(invalidDto)).rejects.toThrow(ConflictException);
     });
   });
 
@@ -110,25 +102,17 @@ describe('AuthController', () => {
     });
 
     it('should propagate UnauthorizedException when credentials are invalid', async () => {
-      mockAuthService.login.mockRejectedValue(
-        new UnauthorizedException('Credenciais inválidas.'),
-      );
+      mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
-      await expect(controller.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
       expect(authService.login).toHaveBeenCalledWith(loginDto);
     });
 
     it('should handle empty email or password', async () => {
       const emptyDto: LoginDto = { email: '', password: '' };
-      mockAuthService.login.mockRejectedValue(
-        new UnauthorizedException('Credenciais inválidas.'),
-      );
+      mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
-      await expect(controller.login(emptyDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(controller.login(emptyDto)).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -149,9 +133,7 @@ describe('AuthController', () => {
 
       mockAuthService.refreshTokens.mockResolvedValue(mockResponse);
 
-      const result = await controller.refreshTokens(
-        mockRequest as unknown as AuthenticatedRequest,
-      );
+      const result = await controller.refreshTokens(mockRequest as unknown as AuthenticatedRequest);
 
       expect(result).toEqual(mockResponse);
       expect(authService.refreshTokens).toHaveBeenCalledWith('1');
@@ -163,9 +145,7 @@ describe('AuthController', () => {
       // In real scenario, the guard would reject this before reaching the controller.
       // Without the guard, accessing null.id throws a TypeError.
       await expect(
-        controller.refreshTokens(
-          invalidRequest as unknown as AuthenticatedRequest,
-        ),
+        controller.refreshTokens(invalidRequest as unknown as AuthenticatedRequest),
       ).rejects.toThrow(TypeError);
     });
 
@@ -183,9 +163,7 @@ describe('AuthController', () => {
       );
 
       await expect(
-        controller.refreshTokens(
-          mockRequest as unknown as AuthenticatedRequest,
-        ),
+        controller.refreshTokens(mockRequest as unknown as AuthenticatedRequest),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
@@ -199,20 +177,14 @@ describe('AuthController', () => {
     };
 
     it('should not expose sensitive data in error messages', async () => {
-      mockAuthService.register.mockRejectedValue(
-        new ConflictException('Email já cadastrado.'),
-      );
+      mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
       try {
         await controller.register(registerDto);
       } catch (error) {
-        expect((error as { message?: string }).message).not.toContain(
-          'password',
-        );
+        expect((error as { message?: string }).message).not.toContain('password');
         expect((error as { message?: string }).message).not.toContain('hashed');
-        expect((error as { message?: string }).message).toBe(
-          'Email já cadastrado.',
-        );
+        expect((error as { message?: string }).message).toBe('Email já cadastrado.');
       }
     });
 
@@ -224,13 +196,9 @@ describe('AuthController', () => {
         password: 'wrongpassword',
       };
 
-      mockAuthService.login.mockRejectedValue(
-        new UnauthorizedException('Credenciais inválidas.'),
-      );
+      mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
-      await expect(controller.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
       // The error message should be generic, not specific about whether
       // email exists or password is wrong
       expect(authService.login).toHaveBeenCalledWith(loginDto);

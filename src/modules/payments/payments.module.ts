@@ -18,12 +18,7 @@ import { RawBodyMiddleware } from '@/common/middleware/raw-body.middleware';
     MercadoPagoProvider,
     MercadoPagoWebhookHandler,
   ],
-  exports: [
-    PaymentsService,
-    PaymentsRepository,
-    PaymentProviderFactory,
-    MercadoPagoProvider,
-  ],
+  exports: [PaymentsService, PaymentsRepository, PaymentProviderFactory, MercadoPagoProvider],
 })
 export class PaymentsModule {
   configure(consumer: MiddlewareConsumer) {

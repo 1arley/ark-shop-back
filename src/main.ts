@@ -14,7 +14,7 @@ async function bootstrap() {
 
   // CORS configuration
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()) || '*',
+    origin: process.env.CORS_ORIGIN?.split(',').map(s => s.trim()) || '*',
     credentials: process.env.CORS_CREDENTIALS === 'true',
   });
 
@@ -70,12 +70,8 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  console.log(
-    `\n🚀 Application is running on: http://localhost:${port}/${apiPrefix}`,
-  );
-  console.log(
-    `📚 Swagger documentation: http://localhost:${port}/${swaggerPath}\n`,
-  );
+  console.log(`\n🚀 Application is running on: http://localhost:${port}/${apiPrefix}`);
+  console.log(`📚 Swagger documentation: http://localhost:${port}/${swaggerPath}\n`);
 }
 
 void bootstrap();

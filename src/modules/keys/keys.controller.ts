@@ -9,12 +9,7 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { KeysService } from './keys.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
@@ -33,10 +28,7 @@ export class KeysController {
   @ApiResponse({ status: 201, description: 'Keys imported successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  importKeys(
-    @Body('productId') productId: string,
-    @Body('keys') keys: string[],
-  ) {
+  importKeys(@Body('productId') productId: string, @Body('keys') keys: string[]) {
     return this.keysService.importKeys(productId, keys);
   }
 

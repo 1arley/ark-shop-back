@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { OrderStatus, KeyStatus } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -43,7 +39,7 @@ export class OrdersRepository {
         status: OrderStatus.PENDING,
         total,
         items: {
-          create: items.map((item) => ({
+          create: items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
             price: 0, // Will be updated when payment is processed
@@ -139,9 +135,7 @@ export class OrdersRepository {
     };
 
     if (!validTransitions[order.status].includes(status)) {
-      throw new BadRequestException(
-        `Invalid status transition from ${order.status} to ${status}`,
-      );
+      throw new BadRequestException(`Invalid status transition from ${order.status} to ${status}`);
     }
 
     return this.prisma.order.update({

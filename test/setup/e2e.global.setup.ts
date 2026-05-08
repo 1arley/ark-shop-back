@@ -46,18 +46,13 @@ export default async function () {
 
     // Run migrations on E2E test database using db push
     console.log('Running migrations on E2E test database...');
-    const dbPath = path
-      .resolve(__dirname, '../../test/database/e2e.db')
-      .replace(/\\/g, '/');
+    const dbPath = path.resolve(__dirname, '../../test/database/e2e.db').replace(/\\/g, '/');
     const dbUrl = `file:${dbPath}`;
     console.log(`Using database URL: ${dbUrl}`);
     // Use --schema to specify schema file directly (no force-reset since we already deleted the file)
-    execSync(
-      `npx prisma db push --schema="prisma/schema.test.prisma" --url="${dbUrl}"`,
-      {
-        stdio: 'inherit',
-      },
-    );
+    execSync(`npx prisma db push --schema="prisma/schema.test.prisma" --url="${dbUrl}"`, {
+      stdio: 'inherit',
+    });
 
     // Seed the E2E test database using prisma db seed
     console.log('Seeding E2E test database...');

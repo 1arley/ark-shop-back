@@ -12,12 +12,7 @@ import {
   ParseUUIDPipe,
   Headers,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
@@ -71,10 +66,7 @@ export class PaymentsController {
     if (provider === 'mercadopago' || provider === 'mercado_pago') {
       // Verify signature if secret is configured
       if (process.env.MERCADO_PAGO_WEBHOOK_SECRET) {
-        const isValid = this.mpWebhookHandler.verifySignature(
-          rawBody,
-          signature || '',
-        );
+        const isValid = this.mpWebhookHandler.verifySignature(rawBody, signature || '');
 
         if (!isValid) {
           return { status: 'error', message: 'Invalid signature' };

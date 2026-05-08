@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as CryptoJS from 'crypto-js';
 
@@ -8,8 +8,7 @@ export class KeysEncryptionProvider {
 
   constructor(private readonly configService: ConfigService) {
     this.encryptionKey =
-      this.configService.get<string>('KEYS_ENCRYPTION_KEY') ||
-      'default-key-change-in-production';
+      this.configService.get<string>('KEYS_ENCRYPTION_KEY') || 'default-key-change-in-production';
 
     if (this.encryptionKey === 'default-key-change-in-production') {
       console.warn(
@@ -23,12 +22,9 @@ export class KeysEncryptionProvider {
    */
   encrypt(data: string): string {
     try {
-      const encrypted = CryptoJS.AES.encrypt(
-        data,
-        this.encryptionKey,
-      ).toString();
+      const encrypted = CryptoJS.AES.encrypt(data, this.encryptionKey).toString();
       return encrypted;
-    } catch (error) {
+    } catch (_error) {
       throw new BadRequestException('Failed to encrypt key data');
     }
   }
@@ -46,7 +42,7 @@ export class KeysEncryptionProvider {
       }
 
       return decrypted;
-    } catch (error) {
+    } catch (_error) {
       throw new BadRequestException('Failed to decrypt key data');
     }
   }
@@ -55,22 +51,21 @@ export class KeysEncryptionProvider {
    * Encrypt multiple keys in batch
    */
   encryptBatch(keys: string[]): string[] {
-    return keys.map((key) => this.encrypt(key));
+    return keys.map(key => this.encrypt(key));
   }
 
   /**
    * Decrypt multiple keys in batch
    */
   decryptBatch(encryptedKeys: string[]): string[] {
-    return encryptedKeys.map((key) => this.decrypt(key));
+    return encryptedKeys.map(key => this.decrypt(key));
   }
 
   /**
    * Generate a secure random key (for testing/demo purposes)
    */
   generateSecureKey(length: number = 32): string {
-    const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
     let result = '';
     for (let i = 0; i < length; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));

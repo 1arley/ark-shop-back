@@ -18,9 +18,7 @@ export class EmailProcessor {
       await this.emailService.sendOrderConfirmation(to, order, items);
       this.logger.log(`Order confirmation sent to ${to}`);
     } catch (error: any) {
-      this.logger.error(
-        `Failed to send order confirmation: ${error.message || error}`,
-      );
+      this.logger.error(`Failed to send order confirmation: ${error.message || error}`);
       throw error;
     }
   }
@@ -34,9 +32,7 @@ export class EmailProcessor {
       await this.emailService.sendKeyDelivery(to, order, keys);
       this.logger.log(`Keys delivered to ${to}`);
     } catch (error: any) {
-      this.logger.error(
-        `Failed to send key delivery: ${error.message || error}`,
-      );
+      this.logger.error(`Failed to send key delivery: ${error.message || error}`);
       throw error;
     }
   }
@@ -50,9 +46,7 @@ export class EmailProcessor {
       await this.emailService.sendPasswordReset(to, resetToken, email);
       this.logger.log(`Password reset sent to ${to}`);
     } catch (error: any) {
-      this.logger.error(
-        `Failed to send password reset: ${error.message || error}`,
-      );
+      this.logger.error(`Failed to send password reset: ${error.message || error}`);
       throw error;
     }
   }
@@ -66,9 +60,7 @@ export class EmailProcessor {
       await this.emailService.sendPaymentReceipt(to, payment, order);
       this.logger.log(`Payment receipt sent to ${to}`);
     } catch (error: any) {
-      this.logger.error(
-        `Failed to send payment receipt: ${error.message || error}`,
-      );
+      this.logger.error(`Failed to send payment receipt: ${error.message || error}`);
       throw error;
     }
   }

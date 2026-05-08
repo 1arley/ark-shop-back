@@ -69,10 +69,7 @@ describe('AuthService', () => {
 
       const result = await service.register(registerDto);
 
-      expect(result).toHaveProperty(
-        'message',
-        'Usuário cadastrado com sucesso.',
-      );
+      expect(result).toHaveProperty('message', 'Usuário cadastrado com sucesso.');
       expect(result).toHaveProperty('user');
       expect(result.user.email).toBe(registerDto.email);
       expect(result.user).not.toHaveProperty('password');
@@ -91,9 +88,7 @@ describe('AuthService', () => {
         email: registerDto.email,
       });
 
-      await expect(service.register(registerDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
   });
@@ -130,9 +125,7 @@ describe('AuthService', () => {
 
     it('deve lançar UnauthorizedException se usuário não existe', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
     });
 
     it('deve lançar UnauthorizedException se senha estiver incorreta', async () => {
@@ -144,9 +137,7 @@ describe('AuthService', () => {
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
-      await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -184,9 +175,7 @@ describe('AuthService', () => {
 
     it('deve lançar UnauthorizedException se usuário não existir', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      await expect(service.validateUser('999')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.validateUser('999')).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -210,9 +199,7 @@ describe('AuthService', () => {
 
     it('deve lançar UnauthorizedException se userId não existir', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      await expect(service.refreshTokens('999')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.refreshTokens('999')).rejects.toThrow(UnauthorizedException);
     });
   });
 });

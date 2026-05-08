@@ -2,11 +2,6 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { KeysRepository } from './keys.repository';
 import { KeysEncryptionProvider } from './keys-encryption.provider';
 
-interface ImportKeysDto {
-  productId: string;
-  keys: string[];
-}
-
 @Injectable()
 export class KeysService {
   constructor(
@@ -46,11 +41,7 @@ export class KeysService {
     };
   }
 
-  async getProductKeys(
-    productId: string,
-    page: number = 1,
-    limit: number = 50,
-  ) {
+  async getProductKeys(productId: string, page: number = 1, limit: number = 50) {
     return this.keysRepository.findByProduct(productId, page, limit);
   }
 

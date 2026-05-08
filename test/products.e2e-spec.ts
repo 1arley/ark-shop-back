@@ -49,7 +49,7 @@ describe('Products E2E', () => {
           description: 'Test Description',
         })
         .expect(201)
-        .expect((res) => {
+        .expect(res => {
           expect(res.body).toHaveProperty('id');
           expect(res.body.name).toBe('Test Product');
           expect(res.body.price).toBe(29.99);
@@ -57,10 +57,7 @@ describe('Products E2E', () => {
     });
 
     it('should fail validation without name', () => {
-      return request(app.getHttpServer())
-        .post('/api/products')
-        .send({ price: 29.99 })
-        .expect(400);
+      return request(app.getHttpServer()).post('/api/products').send({ price: 29.99 }).expect(400);
     });
 
     it('should fail validation without price', () => {
@@ -76,7 +73,7 @@ describe('Products E2E', () => {
       return request(app.getHttpServer())
         .get('/api/products')
         .expect(200)
-        .expect((res) => {
+        .expect(res => {
           expect(res.body.data).toEqual([]);
         });
     });
@@ -91,7 +88,7 @@ describe('Products E2E', () => {
       return request(app.getHttpServer())
         .get('/api/products')
         .expect(200)
-        .expect((res) => {
+        .expect(res => {
           expect(res.body.data).toHaveLength(1);
           expect(res.body.data[0].name).toBe('Test Product');
         });
@@ -100,39 +97,33 @@ describe('Products E2E', () => {
 
   describe('GET /api/products/:id', () => {
     it('should return product by id', async () => {
-      const createResponse = await request(app.getHttpServer())
-        .post('/api/products')
-        .send({
-          name: 'Test Product',
-          price: 29.99,
-        });
+      const createResponse = await request(app.getHttpServer()).post('/api/products').send({
+        name: 'Test Product',
+        price: 29.99,
+      });
 
       const productId = createResponse.body.id;
 
       return request(app.getHttpServer())
         .get(`/api/products/${productId}`)
         .expect(200)
-        .expect((res) => {
+        .expect(res => {
           expect(res.body.id).toBe(productId);
           expect(res.body.name).toBe('Test Product');
         });
     });
 
     it('should return 404 for non-existent product', () => {
-      return request(app.getHttpServer())
-        .get('/api/products/non-existent-id')
-        .expect(404);
+      return request(app.getHttpServer()).get('/api/products/non-existent-id').expect(404);
     });
   });
 
   describe('PATCH /api/products/:id', () => {
     it('should update product', async () => {
-      const createResponse = await request(app.getHttpServer())
-        .post('/api/products')
-        .send({
-          name: 'Test Product',
-          price: 29.99,
-        });
+      const createResponse = await request(app.getHttpServer()).post('/api/products').send({
+        name: 'Test Product',
+        price: 29.99,
+      });
 
       const productId = createResponse.body.id;
 
@@ -140,7 +131,7 @@ describe('Products E2E', () => {
         .patch(`/api/products/${productId}`)
         .send({ name: 'Updated Name' })
         .expect(200)
-        .expect((res) => {
+        .expect(res => {
           expect(res.body.name).toBe('Updated Name');
         });
     });
@@ -148,18 +139,14 @@ describe('Products E2E', () => {
 
   describe('DELETE /api/products/:id', () => {
     it('should delete product', async () => {
-      const createResponse = await request(app.getHttpServer())
-        .post('/api/products')
-        .send({
-          name: 'Test Product',
-          price: 29.99,
-        });
+      const createResponse = await request(app.getHttpServer()).post('/api/products').send({
+        name: 'Test Product',
+        price: 29.99,
+      });
 
       const productId = createResponse.body.id;
 
-      return request(app.getHttpServer())
-        .delete(`/api/products/${productId}`)
-        .expect(200);
+      return request(app.getHttpServer()).delete(`/api/products/${productId}`).expect(200);
     });
   });
 });

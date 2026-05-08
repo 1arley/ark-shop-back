@@ -54,10 +54,7 @@ export class ProductsRepository {
       ...(isActive !== undefined && { isActive }),
       ...(categoryId && { categoryId }),
       ...(search && {
-        OR: [
-          { name: { contains: search } },
-          { description: { contains: search } },
-        ],
+        OR: [{ name: { contains: search } }, { description: { contains: search } }],
       }),
     };
 
@@ -121,11 +118,7 @@ export class ProductsRepository {
     });
   }
 
-  async findByCategory(
-    categoryId: string,
-    page: number = 1,
-    limit: number = 10,
-  ) {
+  async findByCategory(categoryId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
 
     const [products, total] = await this.prisma.$transaction([

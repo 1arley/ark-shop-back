@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { OrderStatus, PaymentStatus, KeyStatus } from '@prisma/client';
+import { PaymentStatus } from '@prisma/client';
 
 export interface DashboardStats {
   revenue: {
@@ -150,10 +150,8 @@ export class AdminRepository {
       },
     });
 
-    const formatStats = (
-      stats: Array<{ _count: number; status?: string }>,
-      status?: string,
-    ) => stats.find((s: any) => s.status === status)?._count || 0;
+    const _formatStats = (stats: Array<{ _count: number; status?: string }>, status?: string) =>
+      stats.find((s: any) => s.status === status)?._count || 0;
 
     return {
       revenue: {
@@ -164,25 +162,22 @@ export class AdminRepository {
       },
       orders: {
         total: totalOrders,
-        pending: orderStats.find((s) => s.status === 'PENDING')?._count || 0,
-        processing:
-          orderStats.find((s) => s.status === 'PROCESSING')?._count || 0,
-        completed:
-          orderStats.find((s) => s.status === 'DELIVERED')?._count || 0,
-        cancelled:
-          orderStats.find((s) => s.status === 'CANCELLED')?._count || 0,
+        pending: orderStats.find(s => s.status === 'PENDING')?._count || 0,
+        processing: orderStats.find(s => s.status === 'PROCESSING')?._count || 0,
+        completed: orderStats.find(s => s.status === 'DELIVERED')?._count || 0,
+        cancelled: orderStats.find(s => s.status === 'CANCELLED')?._count || 0,
       },
       products: {
         total: productStats.reduce((acc, curr) => acc + curr._count, 0),
-        active: productStats.find((p) => p.isActive === true)?._count || 0,
-        inactive: productStats.find((p) => p.isActive === false)?._count || 0,
+        active: productStats.find(p => p.isActive === true)?._count || 0,
+        inactive: productStats.find(p => p.isActive === false)?._count || 0,
         lowStock: lowStockProducts,
       },
       keys: {
         total: keyStats.reduce((acc, curr) => acc + curr._count, 0),
-        available: keyStats.find((k) => k.status === 'AVAILABLE')?._count || 0,
-        reserved: keyStats.find((k) => k.status === 'RESERVED')?._count || 0,
-        delivered: keyStats.find((k) => k.status === 'DELIVERED')?._count || 0,
+        available: keyStats.find(k => k.status === 'AVAILABLE')?._count || 0,
+        reserved: keyStats.find(k => k.status === 'RESERVED')?._count || 0,
+        delivered: keyStats.find(k => k.status === 'DELIVERED')?._count || 0,
       },
       users: {
         total: totalUsers,
@@ -190,13 +185,10 @@ export class AdminRepository {
       },
       payments: {
         total: paymentStats.reduce((acc, curr) => acc + curr._count, 0),
-        pending: paymentStats.find((p) => p.status === 'PENDING')?._count || 0,
-        approved:
-          paymentStats.find((p) => p.status === 'APPROVED')?._count || 0,
-        rejected:
-          paymentStats.find((p) => p.status === 'REJECTED')?._count || 0,
-        refunded:
-          paymentStats.find((p) => p.status === 'REFUNDED')?._count || 0,
+        pending: paymentStats.find(p => p.status === 'PENDING')?._count || 0,
+        approved: paymentStats.find(p => p.status === 'APPROVED')?._count || 0,
+        rejected: paymentStats.find(p => p.status === 'REJECTED')?._count || 0,
+        refunded: paymentStats.find(p => p.status === 'REFUNDED')?._count || 0,
       },
       recentOrders: recentOrders,
       topProducts: topProducts,

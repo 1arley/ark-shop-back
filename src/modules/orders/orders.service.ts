@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { OrdersRepository } from './orders.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, KeyStatus } from '@prisma/client';
@@ -67,9 +63,7 @@ export class OrdersService {
         );
 
         if (!availableKey) {
-          throw new BadRequestException(
-            `No available keys for product: ${item.product.name}`,
-          );
+          throw new BadRequestException(`No available keys for product: ${item.product.name}`);
         }
       }
     }
@@ -87,9 +81,7 @@ export class OrdersService {
 
     // Verify ownership
     if (order.user.id !== userId) {
-      throw new ForbiddenException(
-        'You can only download keys from your own orders',
-      );
+      throw new ForbiddenException('You can only download keys from your own orders');
     }
 
     if (order.status !== OrderStatus.DELIVERED) {
@@ -100,8 +92,8 @@ export class OrdersService {
 
     // Collect delivered keys from order items
     const deliveredKeys = order.items
-      .filter((item) => item.key && item.key.status === KeyStatus.DELIVERED)
-      .map((item) => ({
+      .filter(item => item.key && item.key.status === KeyStatus.DELIVERED)
+      .map(item => ({
         productName: item.product.name,
         keyId: item.key!.id,
         deliveredAt: item.key!.deliveredAt,

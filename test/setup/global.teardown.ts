@@ -17,10 +17,7 @@ export default async function () {
   }
 
   // Clean up test database journal if exists
-  const testDbJournalPath = path.join(
-    __dirname,
-    '../../test/database/test.db-journal',
-  );
+  const testDbJournalPath = path.join(__dirname, '../../test/database/test.db-journal');
   if (fs.existsSync(testDbJournalPath)) {
     try {
       fs.unlinkSync(testDbJournalPath);

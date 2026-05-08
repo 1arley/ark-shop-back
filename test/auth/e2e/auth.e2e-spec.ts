@@ -1,9 +1,5 @@
 import request from 'supertest';
-import {
-  getApp,
-  getPrismaService,
-  createTestUser,
-} from '@test/setup/e2e.setup';
+import { getApp, getPrismaService, createTestUser } from '@test/setup/e2e.setup';
 import * as bcrypt from 'bcrypt';
 
 // Definição de tipos para as respostas da API
@@ -295,13 +291,9 @@ describe('AuthController (e2e)', () => {
     it('should return 401 Unauthorized without refresh token', async () => {
       const app = getApp();
 
-      const response = await request(app.getHttpServer())
-        .post('/auth/refresh')
-        .expect(401);
+      const response = await request(app.getHttpServer()).post('/auth/refresh').expect(401);
 
-      expect((response.body as ErrorResponse).message).toContain(
-        'Unauthorized',
-      );
+      expect((response.body as ErrorResponse).message).toContain('Unauthorized');
     });
 
     it('should return 401 Unauthorized with invalid refresh token', async () => {
@@ -312,9 +304,7 @@ describe('AuthController (e2e)', () => {
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
 
-      expect((response.body as ErrorResponse).message).toContain(
-        'Unauthorized',
-      );
+      expect((response.body as ErrorResponse).message).toContain('Unauthorized');
     });
 
     it('should return 401 Unauthorized with expired refresh token', async () => {
@@ -328,9 +318,7 @@ describe('AuthController (e2e)', () => {
         .set('Authorization', `Bearer ${expiredToken}`)
         .expect(401);
 
-      expect((response.body as ErrorResponse).message).toContain(
-        'Unauthorized',
-      );
+      expect((response.body as ErrorResponse).message).toContain('Unauthorized');
     });
 
     it('should prevent refresh token reuse after rotation', async () => {
@@ -356,9 +344,7 @@ describe('AuthController (e2e)', () => {
         .set('Authorization', `Bearer ${refreshToken}`)
         .expect(401);
 
-      expect((oldTokenResponse.body as ErrorResponse).message).toContain(
-        'Refresh token inválido',
-      );
+      expect((oldTokenResponse.body as ErrorResponse).message).toContain('Refresh token inválido');
     });
   });
 
@@ -389,7 +375,7 @@ describe('AuthController (e2e)', () => {
           }),
         );
 
-      const responses = await Promise.allSettled(requests.map((req) => req));
+      const responses = await Promise.allSettled(requests.map(req => req));
       expect(responses).toHaveLength(5);
       for (const response of responses) {
         if (response.status === 'rejected') {
@@ -440,9 +426,7 @@ describe('AuthController (e2e)', () => {
         .send(registerDto)
         .expect(201);
 
-      expect((registerResponse.body as RegisterResponse).user.email).toBe(
-        registerDto.email,
-      );
+      expect((registerResponse.body as RegisterResponse).user.email).toBe(registerDto.email);
 
       const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')
@@ -452,8 +436,7 @@ describe('AuthController (e2e)', () => {
         })
         .expect(200);
 
-      const { access_token, refresh_token } =
-        loginResponse.body as LoginResponse;
+      const { access_token, refresh_token } = loginResponse.body as LoginResponse;
       expect(access_token).toBeDefined();
       expect(refresh_token).toBeDefined();
 
@@ -462,8 +445,7 @@ describe('AuthController (e2e)', () => {
         .set('Authorization', `Bearer ${refresh_token}`)
         .expect(201);
 
-      const newAccessToken = (refreshResponse.body as RefreshResponse)
-        .access_token;
+      const newAccessToken = (refreshResponse.body as RefreshResponse).access_token;
       expect(newAccessToken).toBeDefined();
     });
 
@@ -485,7 +467,7 @@ describe('AuthController (e2e)', () => {
             });
         });
 
-      const responses = await Promise.allSettled(requests.map((req) => req));
+      const responses = await Promise.allSettled(requests.map(req => req));
       for (const response of responses) {
         expect(response.status).toBe('fulfilled');
         if (response.status === 'fulfilled') {

@@ -3,7 +3,6 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { AdminRepository } from './admin.repository';
 import { KeysService } from '@/modules/keys/keys.service';
 import { ProductsService } from '@/modules/products/products.service';
-import { GenerateDemoDataDto } from './admin.dto';
 
 @Injectable()
 export class AdminService {
@@ -36,13 +35,13 @@ export class AdminService {
     if (isCsv) {
       keys = keysText
         .split('\n')
-        .map((k) => k.trim())
-        .filter((k) => k.length > 0);
+        .map(k => k.trim())
+        .filter(k => k.length > 0);
     } else {
       keys = keysText
         .split(/[,\n]/)
-        .map((k) => k.trim())
-        .filter((k) => k.length > 0);
+        .map(k => k.trim())
+        .filter(k => k.length > 0);
     }
 
     if (keys.length === 0) {
@@ -81,8 +80,7 @@ export class AdminService {
 
     // Create products
     for (let i = 0; i < productsCount; i++) {
-      const category =
-        createdCategories[Math.floor(Math.random() * createdCategories.length)];
+      const category = createdCategories[Math.floor(Math.random() * createdCategories.length)];
 
       const product = await this.prisma.product.create({
         data: {
@@ -98,9 +96,7 @@ export class AdminService {
       products.push(product);
 
       // Generate keys for this product
-      const keys = Array.from({ length: keysPerProduct }, () =>
-        this.generateDemoKey(),
-      );
+      const keys = Array.from({ length: keysPerProduct }, () => this.generateDemoKey());
 
       await this.keysService.importKeys(product.id, keys);
     }

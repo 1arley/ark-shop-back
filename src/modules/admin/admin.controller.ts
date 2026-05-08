@@ -3,23 +3,17 @@ import {
   Get,
   Post,
   Body,
-  Param,
   Query,
   ParseIntPipe,
   UseGuards,
   ParseBoolPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
-import { BulkImportKeysDto, GenerateDemoDataDto } from './admin.dto';
+import { GenerateDemoDataDto } from './admin.dto';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -93,10 +87,7 @@ export class AdminController {
   @ApiOperation({ summary: 'Generate demo data' })
   @ApiResponse({ status: 201, description: 'Demo data generated' })
   generateDemo(@Body() dto: GenerateDemoDataDto = new GenerateDemoDataDto()) {
-    return this.adminService.generateDemoData(
-      dto.productsCount,
-      dto.keysPerProduct,
-    );
+    return this.adminService.generateDemoData(dto.productsCount, dto.keysPerProduct);
   }
 
   @Post('clear-demo')

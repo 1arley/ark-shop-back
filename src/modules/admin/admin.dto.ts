@@ -1,11 +1,4 @@
-import {
-  IsString,
-  IsOptional,
-  IsUUID,
-  IsBoolean,
-  IsNumber,
-  Min,
-} from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsBoolean, IsNumber, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class BulkImportKeysDto {

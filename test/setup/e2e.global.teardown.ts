@@ -17,10 +17,7 @@ export default async function () {
   }
 
   // Clean up E2E test database journal if exists
-  const testDbJournalPath = path.join(
-    __dirname,
-    '../../test/database/e2e.db-journal',
-  );
+  const testDbJournalPath = path.join(__dirname, '../../test/database/e2e.db-journal');
   if (fs.existsSync(testDbJournalPath)) {
     try {
       fs.unlinkSync(testDbJournalPath);

@@ -17,8 +17,7 @@ export class MercadoPagoWebhookHandler {
     private readonly paymentsService: PaymentsService,
     private readonly configService: ConfigService,
   ) {
-    this.webhookSecret =
-      this.configService.get<string>('MERCADO_PAGO_WEBHOOK_SECRET') || '';
+    this.webhookSecret = this.configService.get<string>('MERCADO_PAGO_WEBHOOK_SECRET') || '';
   }
 
   /**
@@ -40,9 +39,7 @@ export class MercadoPagoWebhookHandler {
 
     try {
       // Ensure we're working with a Buffer
-      const bodyBuffer = Buffer.isBuffer(rawBody)
-        ? rawBody
-        : Buffer.from(rawBody);
+      const bodyBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody);
 
       // Compute expected signature using raw body
       const expectedSignature = createHmac('sha256', this.webhookSecret)
@@ -109,14 +106,9 @@ export class MercadoPagoWebhookHandler {
     }
 
     // Safe type checking for payment ID
-    const providerPaymentId =
-      typeof data.id === 'string' ? data.id : String(data.id || '');
+    const providerPaymentId = typeof data.id === 'string' ? data.id : String(data.id || '');
 
-    if (
-      !providerPaymentId ||
-      providerPaymentId === 'undefined' ||
-      providerPaymentId === 'null'
-    ) {
+    if (!providerPaymentId || providerPaymentId === 'undefined' || providerPaymentId === 'null') {
       this.logger.warn('Payment ID missing or invalid in webhook data');
       throw new Error('Payment ID missing');
     }
@@ -124,15 +116,11 @@ export class MercadoPagoWebhookHandler {
     this.logger.log(`Payment created: ${providerPaymentId}`);
 
     // Verify payment status with Mercado Pago using provider's payment ID
-    const paymentInfo =
-      await this.paymentsService.verifyPaymentWithProvider(providerPaymentId);
+    const paymentInfo = await this.paymentsService.verifyPaymentWithProvider(providerPaymentId);
 
     if (paymentInfo.status === 'approved') {
       // Find our internal payment ID and approve
-      await this.paymentsService.approvePaymentByProviderTxId(
-        providerPaymentId,
-        paymentInfo,
-      );
+      await this.paymentsService.approvePaymentByProviderTxId(providerPaymentId, paymentInfo);
     }
   }
 
@@ -144,14 +132,9 @@ export class MercadoPagoWebhookHandler {
     }
 
     // Safe type checking for payment ID
-    const providerPaymentId =
-      typeof data.id === 'string' ? data.id : String(data.id || '');
+    const providerPaymentId = typeof data.id === 'string' ? data.id : String(data.id || '');
 
-    if (
-      !providerPaymentId ||
-      providerPaymentId === 'undefined' ||
-      providerPaymentId === 'null'
-    ) {
+    if (!providerPaymentId || providerPaymentId === 'undefined' || providerPaymentId === 'null') {
       this.logger.warn('Payment ID missing or invalid in webhook data');
       throw new Error('Payment ID missing');
     }
@@ -159,15 +142,11 @@ export class MercadoPagoWebhookHandler {
     this.logger.log(`Payment updated: ${providerPaymentId}`);
 
     // Re-verify payment status
-    const paymentInfo =
-      await this.paymentsService.verifyPaymentWithProvider(providerPaymentId);
+    const paymentInfo = await this.paymentsService.verifyPaymentWithProvider(providerPaymentId);
 
     switch (paymentInfo.status) {
       case 'approved':
-        await this.paymentsService.approvePaymentByProviderTxId(
-          providerPaymentId,
-          paymentInfo,
-        );
+        await this.paymentsService.approvePaymentByProviderTxId(providerPaymentId, paymentInfo);
         break;
       case 'rejected':
       case 'expired':
@@ -178,9 +157,7 @@ export class MercadoPagoWebhookHandler {
         );
         break;
       case 'refunded':
-        await this.paymentsService.refundPaymentByProviderTxId(
-          providerPaymentId,
-        );
+        await this.paymentsService.refundPaymentByProviderTxId(providerPaymentId);
         break;
     }
   }
@@ -193,23 +170,15 @@ export class MercadoPagoWebhookHandler {
     }
 
     // Safe type checking for payment ID
-    const providerPaymentId =
-      typeof data.id === 'string' ? data.id : String(data.id || '');
+    const providerPaymentId = typeof data.id === 'string' ? data.id : String(data.id || '');
 
-    if (
-      !providerPaymentId ||
-      providerPaymentId === 'undefined' ||
-      providerPaymentId === 'null'
-    ) {
+    if (!providerPaymentId || providerPaymentId === 'undefined' || providerPaymentId === 'null') {
       this.logger.warn('Payment ID missing or invalid in webhook data');
       throw new Error('Payment ID missing');
     }
 
     this.logger.log(`Payment deleted: ${providerPaymentId}`);
-    await this.paymentsService.rejectPaymentByProviderTxId(
-      providerPaymentId,
-      'deleted',
-    );
+    await this.paymentsService.rejectPaymentByProviderTxId(providerPaymentId, 'deleted');
   }
 
   /**
@@ -233,26 +202,17 @@ export class MercadoPagoWebhookHandler {
       if (handlerFn) {
         await handlerFn();
       }
-      this.logger.log(
-        `Retry attempt ${attempt} succeeded for event: ${eventId}`,
-      );
-    } catch (error: any) {
+      this.logger.log(`Retry attempt ${attempt} succeeded for event: ${eventId}`);
+    } catch (_error: any) {
       const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s, 16s, 32s
-      this.logger.warn(
-        `Retry ${attempt} failed for event ${eventId}, waiting ${delay}ms`,
-      );
+      this.logger.warn(`Retry ${attempt} failed for event ${eventId}, waiting ${delay}ms`);
 
       await this.sleep(delay);
-      return this.retryWithBackoff(
-        eventId,
-        attempt + 1,
-        maxAttempts,
-        handlerFn,
-      );
+      return this.retryWithBackoff(eventId, attempt + 1, maxAttempts, handlerFn);
     }
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

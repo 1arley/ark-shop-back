@@ -1,14 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsService } from '../products.service';
 import { ProductsRepository } from '../products.repository';
-import { PrismaService } from '@/prisma/prisma.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 
 describe('ProductsService', () => {
   let service: ProductsService;
   let repository: ProductsRepository;
 
-  const mockPrismaService = {
+  const _mockPrismaService = {
     product: {
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -63,9 +62,7 @@ describe('ProductsService', () => {
         updatedAt: new Date(),
       };
 
-      jest
-        .spyOn(repository, 'create')
-        .mockResolvedValue(expectedProduct as any);
+      jest.spyOn(repository, 'create').mockResolvedValue(expectedProduct as any);
 
       const result = await service.create(createProductDto as any);
       expect(result).toEqual(expectedProduct);
@@ -82,9 +79,7 @@ describe('ProductsService', () => {
         price: 29.99,
       };
 
-      jest
-        .spyOn(repository, 'findById')
-        .mockResolvedValue(expectedProduct as any);
+      jest.spyOn(repository, 'findById').mockResolvedValue(expectedProduct as any);
 
       const result = await service.findOne(productId);
       expect(result).toEqual(expectedProduct);
@@ -92,13 +87,9 @@ describe('ProductsService', () => {
     });
 
     it('should throw NotFoundException if product not found', async () => {
-      jest
-        .spyOn(repository, 'findById')
-        .mockRejectedValue(new NotFoundException());
+      jest.spyOn(repository, 'findById').mockRejectedValue(new NotFoundException());
 
-      await expect(service.findOne('invalid-id')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findOne('invalid-id')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -117,9 +108,7 @@ describe('ProductsService', () => {
         },
       };
 
-      jest
-        .spyOn(repository, 'findAll')
-        .mockResolvedValue(expectedResponse as any);
+      jest.spyOn(repository, 'findAll').mockResolvedValue(expectedResponse as any);
 
       const result = await service.findAll(1, 10);
       expect(result).toEqual(expectedResponse);

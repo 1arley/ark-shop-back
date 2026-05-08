@@ -32,8 +32,7 @@ export class AntifraudService {
 
     // Check IP reputation
     if (ipAddress) {
-      checks.ipReputation =
-        await this.antifraudRepository.checkIPReputation(ipAddress);
+      checks.ipReputation = await this.antifraudRepository.checkIPReputation(ipAddress);
       if (!checks.ipReputation) {
         riskScore += 40;
         reason = 'Blacklisted IP';
@@ -42,22 +41,16 @@ export class AntifraudService {
 
     // Check device fingerprint
     if (deviceFingerprint) {
-      const isBlacklisted =
-        await this.antifraudRepository.checkDeviceBlacklist(deviceFingerprint);
+      const isBlacklisted = await this.antifraudRepository.checkDeviceBlacklist(deviceFingerprint);
       if (isBlacklisted) {
         riskScore += 30;
-        reason = reason
-          ? reason + '; Blacklisted device'
-          : 'Blacklisted device';
+        reason = reason ? reason + '; Blacklisted device' : 'Blacklisted device';
       }
     }
 
     // Velocity check (orders in last 24 hours)
     if (userId) {
-      const orderCount = await this.antifraudRepository.getUserOrderCount(
-        userId,
-        24,
-      );
+      const orderCount = await this.antifraudRepository.getUserOrderCount(userId, 24);
       if (orderCount > 5) {
         checks.velocityCheck = false;
         riskScore += 20;
@@ -65,8 +58,7 @@ export class AntifraudService {
       }
 
       // Payment success rate
-      const successRate =
-        await this.antifraudRepository.getUserPaymentSuccessRate(userId);
+      const successRate = await this.antifraudRepository.getUserPaymentSuccessRate(userId);
       if (successRate < 0.5) {
         riskScore += 15;
         reason = reason ? reason + '; Low success rate' : 'Low success rate';
@@ -80,8 +72,7 @@ export class AntifraudService {
     }
 
     // Determine risk level and decision
-    const riskLevel =
-      riskScore >= 70 ? 'HIGH' : riskScore >= 30 ? 'MEDIUM' : 'LOW';
+    const riskLevel = riskScore >= 70 ? 'HIGH' : riskScore >= 30 ? 'MEDIUM' : 'LOW';
 
     let decision: 'APPROVED' | 'MANUAL_REVIEW' | 'REJECTED' = 'APPROVED';
 
@@ -116,6 +107,6 @@ export class AntifraudService {
   }
 
   async getFraudLogs(limit: number = 100) {
-    return this.antifraudRepository.getRecentFraudLogs(limit);
+    return await this.antifraudRepository.getRecentFraudLogs(limit);
   }
 }

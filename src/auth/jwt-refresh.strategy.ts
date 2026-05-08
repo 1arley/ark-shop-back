@@ -8,10 +8,7 @@ import { Request } from 'express';
 import * as crypto from 'crypto';
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(
-  Strategy,
-  'jwt-refresh',
-) {
+export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
   constructor(
     private configService: ConfigService,
     private prisma: PrismaService,
@@ -51,15 +48,10 @@ export class JwtRefreshStrategy extends PassportStrategy(
     });
 
     if (refreshTokens.length === 0) {
-      throw new UnauthorizedException(
-        'Nenhum refresh token válido encontrado.',
-      );
+      throw new UnauthorizedException('Nenhum refresh token válido encontrado.');
     }
 
-    const tokenHash = crypto
-      .createHash('sha256')
-      .update(refreshToken)
-      .digest('hex');
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     let tokenValid = false;
     for (const storedToken of refreshTokens) {
       if (tokenHash === storedToken.token) {
@@ -69,9 +61,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     }
 
     if (!tokenValid) {
-      throw new UnauthorizedException(
-        'Refresh token inválido ou não corresponde ao usuário.',
-      );
+      throw new UnauthorizedException('Refresh token inválido ou não corresponde ao usuário.');
     }
 
     return {

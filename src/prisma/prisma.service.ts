@@ -5,10 +5,7 @@ import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { Pool } from 'pg';
 
 @Injectable()
-export class PrismaService
-  extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
-{
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
     const provider = process.env.DATABASE_PROVIDER || 'postgresql';
 
