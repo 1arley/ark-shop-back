@@ -1,3 +1,13 @@
+# [1.1.0](https://github.com/1arley/ark-shop-back/compare/v1.0.0...v1.1.0) (2026-05-08)
+
+### Bug Fixes
+
+- apply prettier formatting to health controller and app module ([64c2831](https://github.com/1arley/ark-shop-back/commit/64c2831a76020dd876d451e9e04e21ae37b3efbe))
+
+### Features
+
+- add health check, logger, and metrics modules ([2af5377](https://github.com/1arley/ark-shop-back/commit/2af53774afd2eb731cb5865ce9bd1e81f2ca1dba))
+
 # 1.0.0 (2026-05-08)
 
 ### Bug Fixes
