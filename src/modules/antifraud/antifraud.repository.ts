@@ -60,4 +60,55 @@ export class AntifraudRepository {
       averageRiskScore: logs.reduce((acc, log) => acc + log.riskScore, 0) / logs.length || 0,
     };
   }
+
+  checkIPReputation(_ipAddress: string): Promise<boolean> {
+    // TODO: Implement actual IP reputation check
+    return Promise.resolve(true);
+  }
+
+  checkDeviceBlacklist(_deviceFingerprint: string): Promise<boolean> {
+    // TODO: Implement actual device blacklist check
+    return Promise.resolve(false);
+  }
+
+  async getUserOrderCount(userId: string, hours: number = 24): Promise<number> {
+    const orders = await this.prisma.order.count({
+      where: {
+        userId,
+        createdAt: {
+          gte: new Date(Date.now() - hours * 60 * 60 * 1000),
+        },
+      },
+    });
+    return orders;
+  }
+
+  async getUserPaymentSuccessRate(userId: string): Promise<number> {
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        order: {
+          userId,
+        },
+      },
+      select: {
+        status: true,
+      },
+    });
+
+    if (payments.length === 0) {
+      return 1;
+    }
+
+    const successCount = payments.filter(p => p.status === 'APPROVED').length;
+    return successCount / payments.length;
+  }
+
+  async getRecentFraudLogs(limit: number = 100) {
+    return this.prisma.fraudLog.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+    });
+  }
 }

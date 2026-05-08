@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { KeysEncryptionProvider } from './keys-encryption.provider';
+import { KeyStatus } from '@prisma/client';
 
 export interface ImportKeysResult {
   imported: number;
