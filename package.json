@@ -121,12 +121,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/seedabit/nestjs-template.git"
+    "url": "git+https://github.com/1arley/ark-shop-back.git"
   },
   "keywords": [],
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/seedabit/nestjs-template/issues"
+    "url": "https://github.com/1arley/ark-shop-back/issues"
   },
-  "homepage": "https://github.com/seedabit/nestjs-template#readme"
+  "homepage": "https://github.com/1arley/ark-shop-back#readme"
 }
