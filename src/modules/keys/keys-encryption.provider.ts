@@ -2,18 +2,43 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as CryptoJS from 'crypto-js';
 
+/**
+ * Keys Encryption Provider
+ * Encrypts/decrypts sensitive key data using AES-256
+ */
 @Injectable()
 export class KeysEncryptionProvider {
   private readonly encryptionKey: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.encryptionKey =
-      this.configService.get<string>('KEYS_ENCRYPTION_KEY') || 'default-key-change-in-production';
+    const encryptionKey = this.configService.get<string>('KEYS_ENCRYPTION_KEY');
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    if (this.encryptionKey === 'default-key-change-in-production') {
+    // Fail-fast in production if no key is configured
+    if (!encryptionKey || encryptionKey === 'default-key-change-in-production') {
+      if (isProduction) {
+        throw new Error(
+          'KEYS_ENCRYPTION_KEY environment variable must be set in production. ' +
+            'Generate a secure random key (min 32 characters) before deploying. ' +
+            "Example: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+        );
+      }
+
+      // Development only - use default key with warning
+      this.encryptionKey = 'default-key-change-in-production';
       console.warn(
-        '⚠️  WARNING: Using default encryption key. Set KEYS_ENCRYPTION_KEY environment variable in production!',
+        '⚠️ WARNING: Using default encryption key for development. ' +
+          'Set KEYS_ENCRYPTION_KEY environment variable in production!',
       );
+    } else {
+      // Validate key strength
+      if (encryptionKey.length < 32) {
+        console.warn(
+          `⚠️ WARNING: KEYS_ENCRYPTION_KEY is less than 32 characters (${encryptionKey.length} chars). ` +
+            'For production use, a key of at least 32 characters is recommended.',
+        );
+      }
+      this.encryptionKey = encryptionKey;
     }
   }
 
@@ -36,11 +61,9 @@ export class KeysEncryptionProvider {
     try {
       const bytes = CryptoJS.AES.decrypt(encryptedData, this.encryptionKey);
       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-
       if (!decrypted) {
         throw new Error('Decryption resulted in empty string');
       }
-
       return decrypted;
     } catch (_error) {
       throw new BadRequestException('Failed to decrypt key data');
