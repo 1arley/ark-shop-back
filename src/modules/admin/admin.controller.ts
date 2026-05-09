@@ -8,6 +8,7 @@ import {
   UseGuards,
   ParseBoolPipe,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
@@ -84,6 +85,7 @@ export class AdminController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth()
+  @SkipThrottle()
   @ApiOperation({ summary: 'Generate demo data' })
   @ApiResponse({ status: 201, description: 'Demo data generated' })
   generateDemo(@Body() dto: GenerateDemoDataDto = new GenerateDemoDataDto()) {

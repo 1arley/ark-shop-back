@@ -1,9 +1,10 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PaymentsRepository } from './payments.repository';
 import { PaymentProviderFactory } from './payment-provider.factory';
-import { PaymentProvider, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { MercadoPagoProvider } from './providers/mercado-pago.provider';
+import { OrdersService } from '@/modules/orders/orders.service';
 
 @Injectable()
 export class PaymentsService {
@@ -14,6 +15,7 @@ export class PaymentsService {
     private readonly providerFactory: PaymentProviderFactory,
     private readonly configService: ConfigService,
     private readonly mercadoPagoProvider: MercadoPagoProvider,
+    private readonly ordersService: OrdersService,
   ) {}
 
   async createPayment(
@@ -121,7 +123,6 @@ export class PaymentsService {
    */
   async verifyPaymentWithProvider(providerTxId: string) {
     const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
-
     if (!payment) {
       throw new BadRequestException('Payment not found');
     }
@@ -140,9 +141,27 @@ export class PaymentsService {
       paymentInfo,
     );
 
-    // Update order status to PAID
-    // The order delivery will be handled by admin or automatically via queue
+    // Update order status to PAID and deliver order automatically
+    await this.deliverOrderByPayment(payment);
+
     return payment;
+  }
+
+  /**
+   * Deliver order after payment approval
+   */
+  private async deliverOrderByPayment(payment: any) {
+    try {
+      const order = await this.ordersService.findById(payment.orderId);
+      if (order && order.status !== OrderStatus.DELIVERED) {
+        this.logger.log(`Delivering order ${order.id} after payment approval`);
+        await this.ordersService.deliverOrder(order.id);
+        this.logger.log(`Order ${order.id} delivered successfully`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to deliver order after payment approval', error);
+      // Don't throw - payment was already approved, delivery failure should not rollback
+    }
   }
 
   /**
@@ -153,16 +172,24 @@ export class PaymentsService {
   }
 
   /**
-   * Approve payment by provider transaction ID
+   * Approve payment by provider transaction ID and deliver order
    */
   async approvePaymentByProviderTxId(providerTxId: string, paymentInfo: any) {
     const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
-
     if (!payment) {
       throw new BadRequestException('Payment not found');
     }
 
-    return this.paymentsRepository.approvePayment(payment.id, providerTxId, paymentInfo);
+    const approvedPayment = await this.paymentsRepository.approvePayment(
+      payment.id,
+      providerTxId,
+      paymentInfo,
+    );
+
+    // Automatically deliver order after payment approval
+    await this.deliverOrderByPayment(approvedPayment);
+
+    return approvedPayment;
   }
 
   /**
@@ -170,7 +197,6 @@ export class PaymentsService {
    */
   async rejectPaymentByProviderTxId(providerTxId: string, reason: string) {
     const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
-
     if (!payment) {
       throw new BadRequestException('Payment not found');
     }
@@ -183,7 +209,6 @@ export class PaymentsService {
    */
   async refundPaymentByProviderTxId(providerTxId: string, amount?: number) {
     const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
-
     if (!payment) {
       throw new BadRequestException('Payment not found');
     }

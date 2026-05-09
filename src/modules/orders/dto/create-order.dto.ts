@@ -13,10 +13,6 @@ export class OrderItemDto {
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ description: 'User ID' })
-  @IsUUID()
-  userId!: string;
-
   @ApiProperty({ type: [OrderItemDto], description: 'Order items' })
   @IsArray()
   @ValidateNested({ each: true })
