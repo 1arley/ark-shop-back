@@ -1,3 +1,16 @@
+# [1.2.0](https://github.com/1arley/ark-shop-back/compare/v1.1.1...v1.2.0) (2026-05-09)
+
+### Bug Fixes
+
+- **cors:** remove dead code ([370e0a9](https://github.com/1arley/ark-shop-back/commit/370e0a9beb809ebc8bde02ae6bb2c3237842a5dc))
+- **main:** remove unused isProduction variable ([145fd58](https://github.com/1arley/ark-shop-back/commit/145fd5840f1f319d85430a49903e04ddbccaae8c))
+- update order creation and retrieval to use userId directly ([367f34e](https://github.com/1arley/ark-shop-back/commit/367f34e76acf476543a8e6f0567d0802fc58b81f))
+
+### Features
+
+- **payments:** automate order delivery upon payment approval ([f9d1194](https://github.com/1arley/ark-shop-back/commit/f9d1194ec24582a4f94be71106b9cebbb5a6bfbe))
+- **throttling:** add ThrottlerModule for rate limiting and configure APP_GUARD ([a2230d0](https://github.com/1arley/ark-shop-back/commit/a2230d0aa73b99dd9e17031e3030e560dadefeeb))
+
 ## [1.1.1](https://github.com/1arley/ark-shop-back/compare/v1.1.0...v1.1.1) (2026-05-09)
 
 ### Bug Fixes
