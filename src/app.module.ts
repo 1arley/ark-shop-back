@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { PrismaModule } from '@/prisma/prisma.module';
@@ -19,6 +21,7 @@ import { CategoriesModule } from '@/modules/categories/categories.module';
 import { AdminModule } from '@/modules/admin/admin.module';
 import { CartModule } from '@/modules/cart/cart.module';
 import { AntifraudModule } from '@/modules/antifraud/antifraud.module';
+import { EmailModule } from '@/modules/email/email.module';
 
 @Module({
   imports: [
@@ -45,6 +48,13 @@ import { AntifraudModule } from '@/modules/antifraud/antifraud.module';
     BullModule.registerQueue({
       name: 'email',
     }),
+    // Rate limiting configuration
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
     PrismaModule,
     LoggerModule,
     MetricsModule,
@@ -60,8 +70,15 @@ import { AntifraudModule } from '@/modules/antifraud/antifraud.module';
     AdminModule,
     CartModule,
     AntifraudModule,
+    EmailModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
