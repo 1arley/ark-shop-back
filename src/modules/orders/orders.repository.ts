@@ -11,8 +11,8 @@ export class OrdersRepository {
     private readonly keysEncryption: KeysEncryptionProvider,
   ) {}
 
-  async create(createOrderDto: CreateOrderDto) {
-    const { userId, items } = createOrderDto;
+  async create(createOrderDto: CreateOrderDto, userId: string) {
+    const { items } = createOrderDto;
 
     // Calculate total and validate products
     let total = 0;

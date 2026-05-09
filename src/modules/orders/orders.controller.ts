@@ -35,10 +35,7 @@ export class OrdersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createOrderDto: CreateOrderDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.ordersService.create({
-      ...createOrderDto,
-      userId: user.id, // ← era user.sub (undefined)
-    });
+    return this.ordersService.create(createOrderDto, user.id);
   }
 
   @Get()
@@ -51,7 +48,7 @@ export class OrdersController {
     @Query('page', ParseIntPipe) page: number = 1,
     @Query('limit', ParseIntPipe) limit: number = 10,
   ) {
-    return this.ordersService.findByUser(user.id, page, limit); // ← era user.sub
+    return this.ordersService.findByUser(user.id, page, limit);
   }
 
   @Get('recent')
@@ -73,15 +70,9 @@ export class OrdersController {
   @ApiResponse({ status: 403, description: 'Forbidden - Not your order' })
   async findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     const order = await this.ordersService.findById(id);
-
-    if (
-      order.user.id !== user.id && // ← era user.sub
-      user.role !== 'ADMIN' &&
-      user.role !== 'SUPERADMIN'
-    ) {
+    if (order.user.id !== user.id && user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
       throw new ForbiddenException('You can only view your own orders');
     }
-
     return order;
   }
 
@@ -104,12 +95,9 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: 'Cannot cancel order' })
   async cancel(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     const order = await this.ordersService.findById(id);
-
     if (order.user.id !== user.id) {
-      // ← era user.sub
       throw new ForbiddenException('You can only cancel your own orders');
     }
-
     return this.ordersService.cancel(id);
   }
 
@@ -132,6 +120,6 @@ export class OrdersController {
   @ApiResponse({ status: 403, description: 'Forbidden - Not your order' })
   @ApiResponse({ status: 400, description: 'Order not delivered yet' })
   downloadKeys(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.ordersService.downloadKeys(id, user.id); // ← era user.sub
+    return this.ordersService.downloadKeys(id, user.id);
   }
 }

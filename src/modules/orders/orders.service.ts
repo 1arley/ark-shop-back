@@ -1,19 +1,23 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { OrdersRepository } from './orders.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, KeyStatus } from '@prisma/client';
 import type { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
+import { KeysService } from '@/modules/keys/keys.service';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private readonly ordersRepository: OrdersRepository,
     @InjectQueue('email') private readonly emailQueue: Queue,
+    private readonly keysService: KeysService,
   ) {}
 
-  async create(createOrderDto: CreateOrderDto) {
-    return this.ordersRepository.create(createOrderDto);
+  async create(createOrderDto: CreateOrderDto, userId: string) {
+    return this.ordersRepository.create(createOrderDto, userId);
   }
 
   async findById(id: string) {
@@ -42,7 +46,6 @@ export class OrdersService {
    */
   async deliverOrder(orderId: string) {
     const order = await this.ordersRepository.findById(orderId);
-
     if (!order) {
       throw new BadRequestException('Order not found');
     }
@@ -61,7 +64,6 @@ export class OrdersService {
           item.productId,
           item.id,
         );
-
         if (!availableKey) {
           throw new BadRequestException(`No available keys for product: ${item.product.name}`);
         }
@@ -75,6 +77,7 @@ export class OrdersService {
   /**
    * Download keys for a delivered order
    * Only the order owner can download keys
+   * Returns decrypted key data
    */
   async downloadKeys(orderId: string, userId: string) {
     const order = await this.ordersRepository.findById(orderId);
@@ -90,14 +93,22 @@ export class OrdersService {
       );
     }
 
-    // Collect delivered keys from order items
-    const deliveredKeys = order.items
-      .filter(item => item.key && item.key.status === KeyStatus.DELIVERED)
-      .map(item => ({
-        productName: item.product.name,
-        keyId: item.key!.id,
-        deliveredAt: item.key!.deliveredAt,
-      }));
+    // Collect delivered keys with decrypted data
+    const deliveredKeys = await Promise.all(
+      order.items
+        .filter(item => item.key && item.key.status === KeyStatus.DELIVERED)
+        .map(async item => {
+          // Get decrypted key data
+          const keyData = await this.keysService.deliverKey(item.key!.id);
+
+          return {
+            productName: item.product.name,
+            keyId: item.key!.id,
+            deliveredAt: item.key!.deliveredAt,
+            decryptedKey: keyData.decryptedKey, // Return the actual key code
+          };
+        }),
+    );
 
     return {
       orderId: order.id,
