@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/1arley/ark-shop-back/compare/v1.1.0...v1.1.1) (2026-05-09)
+
+### Bug Fixes
+
+- **security:** fail-fast on missing encryption key in production ([097e246](https://github.com/1arley/ark-shop-back/commit/097e246559edfb8296ef38d38a5b91a13cdaa397)), closes [#1](https://github.com/1arley/ark-shop-back/issues/1)
+- **security:** implement fail-fast behavior for missing encryption key in production ([bad5498](https://github.com/1arley/ark-shop-back/commit/bad54983c4ccb5f9960dd66dc7f471767cf2e111))
+
 # [1.1.0](https://github.com/1arley/ark-shop-back/compare/v1.0.0...v1.1.0) (2026-05-08)
 
 ### Bug Fixes
