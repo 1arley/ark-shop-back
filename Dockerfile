@@ -23,6 +23,7 @@ RUN npx prisma generate --schema=./prisma/schema.prisma
 ENV DATABASE_URL=""
 
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
+COPY prisma.config.ts ./
 COPY src ./src/
 RUN npm run build
 
