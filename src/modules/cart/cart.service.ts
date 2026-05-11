@@ -39,23 +39,27 @@ export class CartService {
       return { items: [], total: 0, itemCount: 0 };
     }
 
+    // Batch fetch all products in a single query (fixes N+1)
+    const productIds = cart.items.map(item => item.productId);
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        isActive: true,
+        stock: true,
+        description: true,
+      },
+    });
+
+    const productMap = new Map(products.map(p => [p.id, p]));
+
     // Enriquece os itens com dados do produto
-    const itemsWithProducts = await Promise.all(
-      cart.items.map(async item => {
-        const product = await this.prisma.product.findUnique({
-          where: { id: item.productId },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            isActive: true,
-            stock: true,
-            description: true,
-          },
-        });
-        return { ...item, product };
-      }),
-    );
+    const itemsWithProducts = cart.items.map(item => ({
+      ...item,
+      product: productMap.get(item.productId) ?? null,
+    }));
 
     const total = itemsWithProducts.reduce((sum, item) => {
       const price = item.product?.price?.toNumber() ?? 0;

@@ -56,22 +56,8 @@ export class OrdersService {
       );
     }
 
-    // Reserve keys for each order item
-    for (const item of order.items) {
-      if (!item.key) {
-        // Find and reserve an available key for this product
-        const availableKey = await this.ordersRepository.reserveAvailableKey(
-          item.productId,
-          item.id,
-        );
-        if (!availableKey) {
-          throw new BadRequestException(`No available keys for product: ${item.product.name}`);
-        }
-      }
-    }
-
-    // Update order status to delivered
-    return this.ordersRepository.updateStatus(orderId, OrderStatus.DELIVERED);
+    // Wrap key reservation in a transaction to prevent TOCTOU race conditions
+    return this.ordersRepository.deliverOrderAtomic(orderId, order.items);
   }
 
   /**
