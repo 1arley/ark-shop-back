@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AdminRepository } from './admin.repository';
 import { KeysService } from '@/modules/keys/keys.service';
 import { ProductsService } from '@/modules/products/products.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AdminService {
@@ -11,6 +12,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly keysService: KeysService,
     private readonly productsService: ProductsService,
+    private readonly configService: ConfigService,
   ) {}
 
   async getDashboardStats() {
@@ -120,21 +122,29 @@ export class AdminService {
     return key;
   }
 
-  async clearDemoData() {
-    // Delete in order to avoid FK issues
-    await this.prisma.fraudLog.deleteMany();
-    await this.prisma.notification.deleteMany();
-    await this.prisma.walletTransaction.deleteMany();
-    await this.prisma.wallet.deleteMany();
-    await this.prisma.payment.deleteMany();
-    await this.prisma.orderItem.deleteMany();
-    await this.prisma.order.deleteMany();
-    await this.prisma.key.deleteMany();
-    await this.prisma.product.deleteMany();
-    await this.prisma.category.deleteMany();
-    await this.prisma.seller.deleteMany();
-    await this.prisma.refreshToken.deleteMany();
-    await this.prisma.user.deleteMany();
+  async clearDemoData(confirmationToken: string) {
+    const expected = this.configService.get<string>('CLEAR_DEMO_TOKEN');
+
+    if (!expected || confirmationToken !== expected) {
+      throw new ForbiddenException('Invalid or missing confirmation token.');
+    }
+
+    // Delete in order to avoid FK issues — wrapped in a transaction for atomicity
+    await this.prisma.$transaction([
+      this.prisma.fraudLog.deleteMany(),
+      this.prisma.notification.deleteMany(),
+      this.prisma.walletTransaction.deleteMany(),
+      this.prisma.wallet.deleteMany(),
+      this.prisma.payment.deleteMany(),
+      this.prisma.orderItem.deleteMany(),
+      this.prisma.order.deleteMany(),
+      this.prisma.key.deleteMany(),
+      this.prisma.product.deleteMany(),
+      this.prisma.category.deleteMany(),
+      this.prisma.seller.deleteMany(),
+      this.prisma.refreshToken.deleteMany(),
+      this.prisma.user.deleteMany(),
+    ]);
 
     return { message: 'Demo data cleared' };
   }

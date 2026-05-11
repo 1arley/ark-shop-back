@@ -98,7 +98,7 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Clear all demo data (DANGER)' })
   @ApiResponse({ status: 200, description: 'Demo data cleared' })
-  clearDemo() {
-    return this.adminService.clearDemoData();
+  clearDemo(@Body('confirmationToken') confirmationToken: string) {
+    return this.adminService.clearDemoData(confirmationToken);
   }
 }
