@@ -8,7 +8,6 @@ import { OrdersModule } from '@/modules/orders/orders.module';
 import { MercadoPagoProvider } from './providers/mercado-pago.provider';
 import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
 import { RawBodyMiddleware } from '@/common/middleware/raw-body.middleware';
-import { OrdersModule } from '@/modules/orders/orders.module';
 
 @Module({
   imports: [PrismaModule, OrdersModule],
