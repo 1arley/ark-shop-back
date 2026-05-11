@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/1arley/ark-shop-back/compare/v1.4.0...v1.4.1) (2026-05-11)
+
+### Bug Fixes
+
+- @/app.module to ../app.module ([14e2df1](https://github.com/1arley/ark-shop-back/commit/14e2df1dcea851c089bb510a676327c82dbfb53f))
+
 # [1.4.0](https://github.com/1arley/ark-shop-back/compare/v1.3.1...v1.4.0) (2026-05-11)
 
 ### Bug Fixes
