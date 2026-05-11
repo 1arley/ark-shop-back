@@ -11,35 +11,17 @@ export class KeysEncryptionProvider {
   private readonly encryptionKey: string;
 
   constructor(private readonly configService: ConfigService) {
-    const encryptionKey = this.configService.get<string>('KEYS_ENCRYPTION_KEY');
-    const isProduction = process.env.NODE_ENV === 'production';
+    const key = this.configService.get<string>('KEYS_ENCRYPTION_KEY');
 
-    // Fail-fast in production if no key is configured
-    if (!encryptionKey || encryptionKey === 'default-key-change-in-production') {
-      if (isProduction) {
-        throw new Error(
-          'KEYS_ENCRYPTION_KEY environment variable must be set in production. ' +
-            'Generate a secure random key (min 32 characters) before deploying. ' +
-            "Example: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
-        );
-      }
-
-      // Development only - use default key with warning
-      this.encryptionKey = 'default-key-change-in-production';
-      console.warn(
-        '⚠️ WARNING: Using default encryption key for development. ' +
-          'Set KEYS_ENCRYPTION_KEY environment variable in production!',
+    if (!key || key.length < 32) {
+      throw new Error(
+        'KEYS_ENCRYPTION_KEY must be set and at least 32 characters long. ' +
+          'Application startup aborted to prevent insecure key storage. ' +
+          "Generate a secure key: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
       );
-    } else {
-      // Validate key strength
-      if (encryptionKey.length < 32) {
-        console.warn(
-          `⚠️ WARNING: KEYS_ENCRYPTION_KEY is less than 32 characters (${encryptionKey.length} chars). ` +
-            'For production use, a key of at least 32 characters is recommended.',
-        );
-      }
-      this.encryptionKey = encryptionKey;
     }
+
+    this.encryptionKey = key;
   }
 
   /**
