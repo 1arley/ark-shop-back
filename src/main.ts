@@ -1,43 +1,34 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from '@/app.module';
 import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
 
-async function bootstrap() {
+export async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  // Global prefix
   const apiPrefix = process.env.API_PREFIX || 'api';
   app.setGlobalPrefix(apiPrefix);
 
-  // CORS configuration
   const corsOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
     : undefined;
 
   if (!corsOrigins && process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'CORS_ORIGIN must be configured in production. ' +
-        'Set it to a comma-separated list of allowed origins.',
-    );
+    console.warn('CORS_ORIGIN not configured — allowing all origins');
   }
 
   app.enableCors({
-    origin: corsOrigins ?? ['http://localhost:5173', 'http://localhost:3000'],
+    origin: corsOrigins ?? true,
     credentials: process.env.CORS_CREDENTIALS === 'true' || true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
-  // Global filters
   app.useGlobalFilters(new HttpExceptionFilter());
-
-  // Global interceptors
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -49,7 +40,6 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle("D'Ark Games Store API")
     .setDescription(
@@ -80,11 +70,25 @@ async function bootstrap() {
     customCss: '.swagger-ui .topbar { display: none }',
   });
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-
-  console.log(`\n🚀 Application is running on: http://localhost:${port}/${apiPrefix}`);
-  console.log(`📚 Swagger documentation: http://localhost:${port}/${swaggerPath}\n`);
+  await app.init();
+  return app;
 }
 
-void bootstrap();
+async function bootstrap() {
+  try {
+    const app = await createApp();
+    const port = process.env.PORT || 3000;
+    const apiPrefix = process.env.API_PREFIX || 'api';
+    const swaggerPath = process.env.SWAGGER_PATH || 'api/docs';
+    await app.listen(port);
+    console.log(`\n🚀 Application is running on: http://localhost:${port}/${apiPrefix}`);
+    console.log(`📚 Swagger documentation: http://localhost:${port}/${swaggerPath}\n`);
+  } catch (err) {
+    console.error('Failed to start application:', err);
+    process.exit(1);
+  }
+}
+
+if (!process.env.VERCEL) {
+  void bootstrap();
+}

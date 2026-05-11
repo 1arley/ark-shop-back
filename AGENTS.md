@@ -9,7 +9,7 @@ npm run test            # Unit tests (jest.config.mjs, tests *.spec.ts in src/)
 npm run test:unit       # Same as test
 npm run test:e2e        # E2E wrapper: docker up → prisma generate → db push → jest --config test/jest-e2e.json
 npm run test:cov        # Unit tests with coverage
-npm run prisma:generate # npx prisma generate --config-name=default
+npm run prisma:generate # npx prisma generate
 npm run prisma:migrate  # npx prisma migrate dev
 npm run prisma:studio   # npx prisma studio
 npm run seed            # ts-node prisma/seed.ts
@@ -46,7 +46,8 @@ npm run format          # prettier --write src/** test/**
 - **Husky commit-msg:** `npx commitlint` — conventional commits required (feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert)
 - **Semantic release** from `main` (production) and `dev` (prerelease) branches. `npm run release` executes it.
 - **Env:** `.env`, `.env.local`, `.env.test` loaded (in that priority). CI uses `dotenv-cli -e .env.test` before commands.
-- **CORS_ORIGIN** must be set in production or app throws on startup
+- **Vercel:** `api/index.js` + `vercel.json`. Vercel serverless handler lazy-bootstraps NestJS and caches Express instance across warm invocations. `main.ts` exports `createApp()` used by both local dev (`listen()`) and Vercel (handler export). `build` script runs `prisma generate && nest build` — Prisma 7 auto-detects `prisma.config.ts` (no `--config-name` flag).
+- **CORS_ORIGIN** warn (not throw) in production — app starts even if unset
 - **Prettier**: singleQuote, trailingComma: all, printWidth: 100, arrowParens: avoid, endOfLine: lf (but ESLint rule overrides to `auto`)
 - **`prisma generate` required after any schema change.** Build (Dockerfile) generates Prisma client separately as a build stage step
 - **typecheck:** No dedicated `typecheck` script — rely on `nest build` or tsc via IDE
