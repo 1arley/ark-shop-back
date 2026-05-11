@@ -1,177 +1,54 @@
-# D'Ark Games Store - Agent Quick Reference
+# D'Ark Games Store — Agent Quick Reference
 
-## 🚀 Quick Commands
-
-```bash
-npm run start:dev       # Dev server with watch
-npm run lint            # Lint (eslint + prettier)
-npm run test            # Unit tests
-npm run test:e2e        # E2E tests (requires test DB)
-npm run prisma:generate # Regenerate Prisma client
-npm run prisma:migrate  # Run migrations
-npm run docker:up       # Start app + postgres
-npm run docker:down     # Stop containers
-```
-
-**Docker:**
-```bash
-docker compose up -d --build  # Build and start
-docker compose logs app -f    # Follow app logs
-docker compose down -v        # Stop and remove volumes
-```
-
-## 📁 Architecture
-
-**Framework:** NestJS 11 + TypeScript  
-**Database:** PostgreSQL via Prisma ORM  
-**Auth:** JWT (access + refresh tokens)  
-**API Docs:** Swagger at `/api/docs`
-
-**Modules:**
-- `auth/` - JWT authentication
-- `user/` - User management
-- `products/` - Product catalog
-- `keys/` - Encrypted key storage (AES-256)
-- `orders/` - Order processing
-- `payments/` - Payment abstraction
-- `categories/` - Product categories
-- `admin/` - Dashboard & bulk operations
-- `antifraud/` - Risk analysis
-
-**Path aliases:** `@/`, `@utils/`, `@test/`
-
-## 🔑 Key Features
-
-### 1. Products & Keys
-- Products have categories (hierarchical)
-- Keys are encrypted at rest (AES-256)
-- Key status: AVAILABLE → RESERVED → DELIVERED
-- Bulk import via admin API
-
-### 2. Orders & Payments
-- Transaction-safe order creation
-- Payment provider abstraction (Mercado Pago, Stripe, Asaas)
-- PIX support
-- Order status machine
-
-### 3. Admin Dashboard
-- Statistics (revenue, orders, products, keys)
-- User management
-- Fraud logs
-- Bulk key import
-- Demo data generation
-
-### 4. Antifraud
-- IP reputation checks
-- Velocity checks (orders/hour)
-- Device fingerprinting
-- Risk scoring (0-100)
-- Auto-reject high risk
-
-## 📊 Database Models
-
-```
-User → Orders → OrderItems → Product → Keys
-                ↓
-            Payment
-```
-
-**Enums:** Role, KeyStatus, OrderStatus, PaymentStatus, PaymentProvider, PaymentMethod
-
-## 🧪 Testing
+## Commands (from package.json)
 
 ```bash
-npm run test          # Unit tests (no DB)
-npm run test:e2e      # E2E (needs test DB)
-npm run test:all      # Both
+npm run start:dev       # Dev server with watch (nest start --watch)
+npm run lint            # eslint {src,test}/**/*.ts
+npm run test            # Unit tests (jest.config.mjs, tests *.spec.ts in src/)
+npm run test:unit       # Same as test
+npm run test:e2e        # E2E wrapper: docker up → prisma generate → db push → jest --config test/jest-e2e.json
+npm run test:cov        # Unit tests with coverage
+npm run prisma:generate # npx prisma generate --config-name=default
+npm run prisma:migrate  # npx prisma migrate dev
+npm run prisma:studio   # npx prisma studio
+npm run seed            # ts-node prisma/seed.ts
+npm run docker:up       # docker compose up -d  (service: app only; postgres is commented out in docker-compose.yml)
+npm run docker:down     # docker compose down
+npm run docker:test     # Build + run E2E in container (docker-compose.test.yml)
+npm run format          # prettier --write src/** test/**
 ```
 
-**Test DB:** `docker compose -f docker-compose.test.yml up -d`
+## Architecture
 
-## 🔐 Gotchas
+- **Framework:** NestJS 11 + TypeScript, PostgreSQL via Prisma ORM 7
+- **Auth:** JWT access+refresh tokens (Passport strategies in `src/auth/`)
+- **API Docs:** Swagger at `/api/docs`
+- **Path aliases (tsconfig):** `@/*` → `src/*`, `~/*` → `src/*`, `@utils/*` → `src/utils/*`, `@test/*` → `test/*`
+- **Module split:** `src/auth/` and `src/user/` live directly in `src/`; all business modules (products, keys, orders, payments, categories, admin, cart, antifraud, email) live under `src/modules/`
+- **Key models:** User → Order → OrderItems → Product → Key; Order → Payment
+- **Keys encrypted at rest** (AES-256) — never store plaintext
+- **Redis (BullMQ)** for queues (email), configured with `lazyConnect: true` — app starts without Redis
 
-- **Node 22 required** (`.nvmrc`)
-- **Prisma generate** after schema changes
-- **E2E tests** need `.env.test` + separate DB
-- **Husky** runs on commit: lint → prettier
-- **Keys encrypted** - never store plain text
-- **Transactions** for critical operations
+## Testing
 
-## 🛠️ Common Tasks
+- **Unit tests** (`*.spec.ts` alongside source): jest.config.mjs — rootDir = `src/`, no DB needed
+- **E2E tests** (`*.e2e-spec.ts` in `test/`): test/jest-e2e.json (not jest-e2e.config.js). Needs PostgreSQL. Two ways to run:
+  - Local: `npm run test:e2e` — wrapper script starts docker, pushes schema, runs jest, cleans up
+  - Manual: `docker compose -f docker-compose.test.yml up -d`, then `npx dotenv-cli -e .env.test -- npx jest --config test/jest-e2e.json --runInBand --forceExit`
+- CI order (ci.yml): `npm ci` → `prisma generate` → `npm run lint` → `npm test` (unit) or `jest --config test/jest-e2e.json` (E2E)
+- **Note:** `jest-e2e.config.js` at root is unused (stale from refactor). E2E config lives in `test/jest-e2e.json`
 
-### Create Product (Admin)
-```bash
-POST /api/products
-{
-  "name": "Game Name",
-  "price": 59.99,
-  "description": "Description",
-  "categoryId": "uuid" (optional)
-}
-```
+## Conventions & Gotchas
 
-### Import Keys (Admin)
-```bash
-POST /api/admin/keys/import
-{
-  "productId": "uuid",
-  "keysText": "KEY1\nKEY2\nKEY3",
-  "isCsv": false
-}
-```
-
-### Generate Demo Data (Admin)
-```bash
-POST /api/admin/generate-demo
-{
-  "productsCount": 5,
-  "keysPerProduct": 10
-}
-```
-
-### Get Dashboard Stats (Admin)
-```bash
-GET /api/admin/dashboard
-```
-
-## 📚 Documentation
-
-- `QUICKSTART.md` - Developer quick start
-- `ARCHITECTURE_SUMMARY.md` - Full architecture
-- `IMPLEMENTATION_PROGRESS.md` - What's done/TODO
-- `project-plan.md` - Original plan
-- Swagger: `/api/docs`
-
-## 🚨 Common Issues
-
-**"Cannot find module '@prisma/client'"**
-```bash
-npm run prisma:generate
-```
-
-**"Database connection error"**
-```bash
-docker compose up -d postgres
-```
-
-**"Migration file missing"**
-```bash
-# Delete incomplete migration folder
-rm -rf prisma/migrations/20260506000000_*
-```
-
-## 📦 Environment Variables
-
-```bash
-DATABASE_URL=postgresql://...
-JWT_ACCESS_SECRET=change-me
-JWT_REFRESH_SECRET=change-me
-KEYS_ENCRYPTION_KEY=min-32-chars
-PAYMENT_DEFAULT_PROVIDER=MERCADO_PAGO
-```
-
-See `.env.example` for full list.
-
----
-
-*Last updated: May 2026*
+- **Node 22 required** (.nvmrc)
+- **Husky pre-commit:** `npx lint-staged` → eslint --fix + prettier --write on staged _.ts, prettier --write on _.json/\*.md
+- **Husky commit-msg:** `npx commitlint` — conventional commits required (feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert)
+- **Semantic release** from `main` (production) and `dev` (prerelease) branches. `npm run release` executes it.
+- **Env:** `.env`, `.env.local`, `.env.test` loaded (in that priority). CI uses `dotenv-cli -e .env.test` before commands.
+- **CORS_ORIGIN** must be set in production or app throws on startup
+- **Prettier**: singleQuote, trailingComma: all, printWidth: 100, arrowParens: avoid, endOfLine: lf (but ESLint rule overrides to `auto`)
+- **`prisma generate` required after any schema change.** Build (Dockerfile) generates Prisma client separately as a build stage step
+- **typecheck:** No dedicated `typecheck` script — rely on `nest build` or tsc via IDE
+- **Lint rules:** `no-explicit-any` and no-unsafe-\* rules are `warn` (not `error`) to accommodate NestJS patterns. `no-floating-promises` is `error` (unless void). Relaxed rules for test files
+- **Renaming conventions** for tests: `.spec.ts` for unit (collocated), `.e2e-spec.ts` for E2E (in `test/`)
