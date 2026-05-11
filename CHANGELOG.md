@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/1arley/ark-shop-back/compare/v1.3.0...v1.3.1) (2026-05-11)
+
+### Bug Fixes
+
+- enhance security and performance across the backend ([39295ed](https://github.com/1arley/ark-shop-back/commit/39295ed250cd9704f4c426f361f724b0739a8804))
+- minor lint errors ([4e0389e](https://github.com/1arley/ark-shop-back/commit/4e0389ef86d9342a88f5b174f6030104ffcde249))
+
 # [1.3.0](https://github.com/1arley/ark-shop-back/compare/v1.2.0...v1.3.0) (2026-05-11)
 
 ### Bug Fixes
