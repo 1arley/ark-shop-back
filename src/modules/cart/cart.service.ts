@@ -1,12 +1,30 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AddToCartDto } from './dto/cart.dto';
+import { CartItem } from '@prisma/client';
+
+type CartItemWithProduct = CartItem & {
+  product: {
+    id: string;
+    name: string;
+    price: number;
+    isActive: boolean;
+    stock: number;
+    description: string | null;
+  };
+};
+
+export interface CartResponse {
+  items: CartItemWithProduct[];
+  total: number;
+  itemCount: number;
+}
 
 @Injectable()
 export class CartService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Garante que o usuário tem um cart, criando se necessário
+  // Ensure user has a cart, creating if necessary
   private async ensureCart(userId: string) {
     return this.prisma.cart.upsert({
       where: { userId },
@@ -20,45 +38,29 @@ export class CartService {
     });
   }
 
-  async getCart(userId: string) {
+  async getCart(userId: string): Promise<CartResponse> {
     const cart = await this.prisma.cart.findUnique({
       where: { userId },
       include: {
         items: {
           include: {
-            // inclui dados básicos do produto para exibição no frontend
-            cart: false,
+            // Include product data to avoid N+1 query
+            product: true,
           },
           orderBy: { createdAt: 'asc' },
         },
       },
     });
 
-    // Busca produtos separadamente para não complicar a query
     if (!cart) {
       return { items: [], total: 0, itemCount: 0 };
     }
 
-    // Enriquece os itens com dados do produto
-    const itemsWithProducts = await Promise.all(
-      cart.items.map(async item => {
-        const product = await this.prisma.product.findUnique({
-          where: { id: item.productId },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            isActive: true,
-            stock: true,
-            description: true,
-          },
-        });
-        return { ...item, product };
-      }),
-    );
+    // Use already included product data - no additional queries needed
+    const itemsWithProducts = cart.items as unknown as CartItemWithProduct[];
 
     const total = itemsWithProducts.reduce((sum, item) => {
-      const price = item.product?.price?.toNumber() ?? 0;
+      const price = item.product?.price ? Number(item.product.price) : 0;
       return sum + price * item.quantity;
     }, 0);
 

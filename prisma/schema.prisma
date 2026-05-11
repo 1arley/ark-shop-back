@@ -132,21 +132,22 @@ model WalletTransaction {
 // PRODUCTS MODULE
 // ============================
 model Product {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  price       Decimal   @db.Decimal(10, 2)
-  stock       Int       @default(0)
-  isActive    Boolean   @default(true)
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
-  keys        Key[]
-  orderItems  OrderItem[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+id String @id @default(uuid())
+name String
+description String?
+price Decimal @db.Decimal(10, 2)
+stock Int @default(0)
+isActive Boolean @default(true)
+categoryId String?
+category Category? @relation(fields: [categoryId], references: [id])
+keys Key[]
+orderItems OrderItem[]
+cartItems CartItem[]
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 
-  @@index([categoryId])
-  @@index([isActive])
+@@index([categoryId])
+@@index([isActive])
 }
 
 model Category {
@@ -296,16 +297,17 @@ model Cart {
 }
 
 model CartItem {
-  id        String  @id @default(uuid())
-  cartId    String
-  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String
-  quantity  Int     @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+id String @id @default(uuid())
+cartId String
+cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+productId String
+product Product @relation(fields: [productId], references: [id])
+quantity Int @default(1)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 
-  @@index([cartId])
-  @@index([productId])
+@@index([cartId])
+@@index([productId])
 }
 
 // ============================

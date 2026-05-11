@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as CryptoJS from 'crypto-js';
+import { randomInt } from 'crypto';
 
 /**
  * Keys Encryption Provider
@@ -12,34 +13,33 @@ export class KeysEncryptionProvider {
 
   constructor(private readonly configService: ConfigService) {
     const encryptionKey = this.configService.get<string>('KEYS_ENCRYPTION_KEY');
-    const isProduction = process.env.NODE_ENV === 'production';
 
-    // Fail-fast in production if no key is configured
-    if (!encryptionKey || encryptionKey === 'default-key-change-in-production') {
-      if (isProduction) {
-        throw new Error(
-          'KEYS_ENCRYPTION_KEY environment variable must be set in production. ' +
-            'Generate a secure random key (min 32 characters) before deploying. ' +
-            "Example: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
-        );
-      }
-
-      // Development only - use default key with warning
-      this.encryptionKey = 'default-key-change-in-production';
-      console.warn(
-        '⚠️ WARNING: Using default encryption key for development. ' +
-          'Set KEYS_ENCRYPTION_KEY environment variable in production!',
+    // CRITICAL: Always require encryption key - no fallbacks
+    if (!encryptionKey) {
+      throw new Error(
+        'KEYS_ENCRYPTION_KEY environment variable is required. ' +
+          'Generate a secure random key (min 32 characters). ' +
+          "Example: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
       );
-    } else {
-      // Validate key strength
-      if (encryptionKey.length < 32) {
-        console.warn(
-          `⚠️ WARNING: KEYS_ENCRYPTION_KEY is less than 32 characters (${encryptionKey.length} chars). ` +
-            'For production use, a key of at least 32 characters is recommended.',
-        );
-      }
-      this.encryptionKey = encryptionKey;
     }
+
+    // Validate key is not the placeholder
+    if (encryptionKey === 'default-key-change-in-production') {
+      throw new Error(
+        'KEYS_ENCRYPTION_KEY is set to placeholder value. ' +
+          'Please set a real encryption key (min 32 characters).',
+      );
+    }
+
+    // Validate key strength
+    if (encryptionKey.length < 32) {
+      throw new Error(
+        `KEYS_ENCRYPTION_KEY must be at least 32 characters (got ${encryptionKey.length}). ` +
+          'Use a secure random key for production.',
+      );
+    }
+
+    this.encryptionKey = encryptionKey;
   }
 
   /**
@@ -85,13 +85,15 @@ export class KeysEncryptionProvider {
   }
 
   /**
-   * Generate a secure random key (for testing/demo purposes)
+   * Generate a cryptographically secure random key
+   * Uses crypto.randomInt for secure random number generation
    */
   generateSecureKey(length: number = 32): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
     let result = '';
     for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+      // CRITICAL: Use crypto.randomInt instead of Math.random()
+      result += chars.charAt(randomInt(0, chars.length));
     }
     return result;
   }

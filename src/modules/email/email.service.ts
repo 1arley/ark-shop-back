@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import type { Order, OrderItem, Product, Payment } from '@prisma/client';
 
 export interface EmailOptions {
   to: string;
@@ -13,6 +14,18 @@ export interface EmailOptions {
   }>;
 }
 
+interface OrderWithRelations extends Order {
+  user: { id: string; email: string; name: string | null };
+  items: Array<OrderItem & { product: Product }>;
+  payment: Payment | null;
+}
+
+interface OrderItemWithProduct {
+  product: { name: string };
+  quantity: number;
+  price: number;
+}
+
 @Injectable()
 export class EmailService {
   private readonly transporter: nodemailer.Transporter;
@@ -20,16 +33,16 @@ export class EmailService {
   private readonly from: string;
 
   constructor(private readonly configService: ConfigService) {
-    const smtpHost = this.configService.get('SMTP_HOST');
-    const smtpPort = this.configService.get('SMTP_PORT');
-    const smtpUser = this.configService.get('SMTP_USER');
-    const smtpPass = this.configService.get('SMTP_PASS');
-
-    this.from = this.configService.get('EMAIL_FROM', "D'Ark Games Store <noreply@darkgames.com>");
+    const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const smtpPort = this.configService.get<string>('SMTP_PORT');
+    const smtpUser = this.configService.get<string>('SMTP_USER');
+    const smtpPass = this.configService.get<string>('SMTP_PASS');
+    const emailFrom = this.configService.get<string>('EMAIL_FROM');
+    this.from = emailFrom ?? "D'Ark Games Store <noreply@darkgames.com>";
 
     // Configure transporter
     this.transporter = nodemailer.createTransport({
-      host: smtpHost || 'smtp.mailtrap.io', // Default to Mailtrap for testing
+      host: smtpHost ?? 'smtp.mailtrap.io', // Default to Mailtrap for testing
       port: smtpPort ? parseInt(smtpPort) : 2525,
       secure: false,
       auth: smtpHost
@@ -59,13 +72,18 @@ export class EmailService {
 
       this.logger.log(`Email sent: ${info.messageId}`);
       return true;
-    } catch (error: any) {
-      this.logger.error(`Failed to send email: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to send email: ${message}`);
       throw error;
     }
   }
 
-  async sendOrderConfirmation(to: string, order: any, items: any[]): Promise<boolean> {
+  async sendOrderConfirmation(
+    to: string,
+    order: OrderWithRelations,
+    items: OrderItemWithProduct[],
+  ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #333;">Order Confirmation</h1>
@@ -123,7 +141,7 @@ Thank you for shopping with D'Ark Games Store!
 
   async sendKeyDelivery(
     to: string,
-    order: any,
+    order: OrderWithRelations,
     keys: Array<{ productName: string; key: string }>,
   ): Promise<boolean> {
     const html = `
@@ -223,7 +241,11 @@ This link will expire in 1 hour. If you didn't request this reset, please ignore
     });
   }
 
-  async sendPaymentReceipt(to: string, payment: any, order: any): Promise<boolean> {
+  async sendPaymentReceipt(
+    to: string,
+    payment: Payment & { order?: Order },
+    order: Order & { items?: OrderItem[] },
+  ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #2ecc71;">Payment Receipt</h1>

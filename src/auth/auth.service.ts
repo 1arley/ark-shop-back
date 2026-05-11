@@ -29,10 +29,12 @@ export class AuthService {
     });
 
     if (userExists) {
-      throw new ConflictException('Email já cadastrado.');
+      throw new ConflictException('Email already registered.');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Use configurable bcrypt salt rounds (default 12 for production security)
+    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS') || '12');
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const user = await this.prisma.user.create({
       data: {
@@ -59,13 +61,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Credenciais inválidas.');
+      throw new UnauthorizedException('Invalid credentials.');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Credenciais inválidas.');
+      throw new UnauthorizedException('Invalid credentials.');
     }
 
     const tokens = await this.getTokens(user.id, user.email, user.role);
@@ -87,7 +89,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Usuário não encontrado.');
+      throw new UnauthorizedException('User not found.');
     }
 
     const { password: _, ...userWithoutPassword } = user;

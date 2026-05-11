@@ -48,11 +48,14 @@ import { EmailModule } from '@/modules/email/email.module';
     BullModule.registerQueue({
       name: 'email',
     }),
-    // Rate limiting configuration
+    // Rate limiting configuration - improved for production
+    // Auth endpoints should have stricter limits (configured in controllers)
+    // General API: 60 requests per minute
+    // Auth endpoints: 5 requests per minute (applied separately)
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 10,
+        ttl: 60000, // 1 minute
+        limit: 60, // 60 requests per minute for general endpoints
       },
     ]),
     PrismaModule,

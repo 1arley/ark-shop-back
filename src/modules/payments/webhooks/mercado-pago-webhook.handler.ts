@@ -27,13 +27,21 @@ export class MercadoPagoWebhookHandler {
    */
   verifySignature(rawBody: string | Buffer, signature: string): boolean {
     if (!signature) {
-      this.logger.warn('Webhook signature missing');
+      this.logger.warn('Webhook signature missing - rejecting webhook');
       return false;
     }
 
+    // In production, always require signature verification
+    const isProduction = process.env.NODE_ENV === 'production';
     if (!this.webhookSecret) {
-      // If no secret configured, skip verification (dev mode)
-      this.logger.warn('Webhook secret not configured, skipping verification');
+      if (isProduction) {
+        this.logger.error('Webhook secret not configured in production - rejecting all webhooks');
+        return false;
+      }
+      // Development mode - allow but warn
+      this.logger.warn(
+        '⚠️ WEBHOOK SECRET NOT CONFIGURED - Accepting webhook without verification (dev mode only)',
+      );
       return true;
     }
 
