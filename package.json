@@ -6,7 +6,7 @@
   "private": true,
   "license": "Copyright (C) SeedaBit Systems",
   "scripts": {
-    "build": "nest build",
+    "build": "npx prisma generate --config-name=default && nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
