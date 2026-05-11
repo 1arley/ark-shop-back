@@ -18,9 +18,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
 COPY prisma ./prisma/
-COPY prisma.config.ts ./
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
-RUN npx prisma generate
+RUN npx prisma generate --schema=./prisma/schema.prisma
 ENV DATABASE_URL=""
 
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
@@ -38,7 +37,6 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/prisma.config.ts ./
 COPY package.json ./
 
 USER node
