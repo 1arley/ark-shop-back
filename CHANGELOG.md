@@ -1,3 +1,13 @@
+# [1.4.0](https://github.com/1arley/ark-shop-back/compare/v1.3.1...v1.4.0) (2026-05-11)
+
+### Bug Fixes
+
+- include prisma.config.ts in production build ([3427e48](https://github.com/1arley/ark-shop-back/commit/3427e48dc61623f6a8760ad249dcd1e80eccf885))
+
+### Features
+
+- configure Vercel deployment support with serverless handler and request rewrites ([abb1897](https://github.com/1arley/ark-shop-back/commit/abb189726c31a8b87f8768bc30f37b7ecad9a72f))
+
 ## [1.3.1](https://github.com/1arley/ark-shop-back/compare/v1.3.0...v1.3.1) (2026-05-11)
 
 ### Bug Fixes
