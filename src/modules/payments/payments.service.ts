@@ -29,34 +29,18 @@ export class PaymentsService {
 
     // If PIX, generate QR code directly (no duplicate payment record)
     if (method === PaymentMethod.PIX) {
-      try {
-        const providerImpl = this.providerFactory.getProvider(selectedProvider);
-        const paymentIntent = await providerImpl.createPaymentIntent({
-          amount,
-          currency: 'BRL',
-          orderId,
-          method,
-        });
+      const providerImpl = this.providerFactory.getProvider(selectedProvider);
+      const paymentIntent = await providerImpl.createPaymentIntent({
+        amount,
+        currency: 'BRL',
+        orderId,
+        method,
+      });
 
-        return this.paymentsRepository.createPixPayment(orderId, userId, amount, selectedProvider, {
-          pixQrCode: paymentIntent.providerData?.pix_copy_paste || '',
-          pixCode: paymentIntent.providerData?.pix_qr_code || '',
-        });
-      } catch (_error) {
-        // Fallback to mock PIX if provider fails
-        const pixData = {
-          pixQrCode: `00020126580014BR.GOV.BCB.PIX0136${orderId}520400005303986540${amount.toFixed(2)}5802BR5913D'ARK GAMES6008BRASILIA62070503***6304`,
-          pixCode: `00020126580014BR.GOV.BCB.PIX0136${orderId}520400005303986540${amount.toFixed(2)}5802BR5913D'ARK GAMES6008BRASILIA62070503***6304`,
-        };
-
-        return this.paymentsRepository.createPixPayment(
-          orderId,
-          userId,
-          amount,
-          selectedProvider,
-          pixData,
-        );
-      }
+      return this.paymentsRepository.createPixPayment(orderId, userId, amount, selectedProvider, {
+        pixQrCode: paymentIntent.providerData?.pix_copy_paste || '',
+        pixCode: paymentIntent.providerData?.pix_qr_code || '',
+      });
     }
 
     // For other payment methods, create standard payment record

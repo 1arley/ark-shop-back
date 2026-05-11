@@ -32,9 +32,9 @@ export class MercadoPagoWebhookHandler {
     }
 
     if (!this.webhookSecret) {
-      // If no secret configured, skip verification (dev mode)
-      this.logger.warn('Webhook secret not configured, skipping verification');
-      return true;
+      // Fail-closed: reject all webhooks if secret is not configured
+      this.logger.error('MERCADO_PAGO_WEBHOOK_SECRET is not set. All webhooks rejected.');
+      return false;
     }
 
     try {
