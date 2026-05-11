@@ -15,10 +15,17 @@ async function bootstrap() {
   // CORS configuration
   const corsOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
-    : ['http://localhost:5173', 'http://localhost:3000'];
+    : undefined;
+
+  if (!corsOrigins && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'CORS_ORIGIN must be configured in production. ' +
+        'Set it to a comma-separated list of allowed origins.',
+    );
+  }
 
   app.enableCors({
-    origin: corsOrigins,
+    origin: corsOrigins ?? ['http://localhost:5173', 'http://localhost:3000'],
     credentials: process.env.CORS_CREDENTIALS === 'true' || true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

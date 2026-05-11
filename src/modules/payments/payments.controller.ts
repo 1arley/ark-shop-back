@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -64,13 +65,11 @@ export class PaymentsController {
   ) {
     // Only process Mercado Pago webhooks for now
     if (provider === 'mercadopago' || provider === 'mercado_pago') {
-      // Verify signature if secret is configured
-      if (process.env.MERCADO_PAGO_WEBHOOK_SECRET) {
-        const isValid = this.mpWebhookHandler.verifySignature(rawBody, signature || '');
+      // Mandatory signature verification — fail-closed
+      const isValid = this.mpWebhookHandler.verifySignature(rawBody, signature || '');
 
-        if (!isValid) {
-          return { status: 'error', message: 'Invalid signature' };
-        }
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid webhook signature.');
       }
 
       // Process webhook event
@@ -79,8 +78,7 @@ export class PaymentsController {
       return { status: 'ok', requestId };
     }
 
-    // Generic webhook handler for other providers
-    return { status: 'ok', message: 'Webhook received', provider };
+    return { status: 'ignored', provider };
   }
 
   @Get(':id')

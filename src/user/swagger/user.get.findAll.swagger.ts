@@ -1,11 +1,8 @@
-import { applyDecorators, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { applyDecorators, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
-import { RolesGuard } from '@/auth/roles.guard';
 
 export function ApiFindAllUsers() {
   return applyDecorators(
-    UseGuards(JwtAuthGuard, RolesGuard),
     ApiBearerAuth(),
     ApiOperation({ summary: 'Listar todos os usuários (Apenas ADMIN)' }),
     HttpCode(HttpStatus.OK),

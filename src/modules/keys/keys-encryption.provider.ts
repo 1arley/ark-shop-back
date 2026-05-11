@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as CryptoJS from 'crypto-js';
-import { randomInt } from 'crypto';
 
 /**
  * Keys Encryption Provider
@@ -12,34 +11,17 @@ export class KeysEncryptionProvider {
   private readonly encryptionKey: string;
 
   constructor(private readonly configService: ConfigService) {
-    const encryptionKey = this.configService.get<string>('KEYS_ENCRYPTION_KEY');
+    const key = this.configService.get<string>('KEYS_ENCRYPTION_KEY');
 
-    // CRITICAL: Always require encryption key - no fallbacks
-    if (!encryptionKey) {
+    if (!key || key.length < 32) {
       throw new Error(
-        'KEYS_ENCRYPTION_KEY environment variable is required. ' +
-          'Generate a secure random key (min 32 characters). ' +
-          "Example: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+        'KEYS_ENCRYPTION_KEY must be set and at least 32 characters long. ' +
+          'Application startup aborted to prevent insecure key storage. ' +
+          "Generate a secure key: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
       );
     }
 
-    // Validate key is not the placeholder
-    if (encryptionKey === 'default-key-change-in-production') {
-      throw new Error(
-        'KEYS_ENCRYPTION_KEY is set to placeholder value. ' +
-          'Please set a real encryption key (min 32 characters).',
-      );
-    }
-
-    // Validate key strength
-    if (encryptionKey.length < 32) {
-      throw new Error(
-        `KEYS_ENCRYPTION_KEY must be at least 32 characters (got ${encryptionKey.length}). ` +
-          'Use a secure random key for production.',
-      );
-    }
-
-    this.encryptionKey = encryptionKey;
+    this.encryptionKey = key;
   }
 
   /**
@@ -85,15 +67,13 @@ export class KeysEncryptionProvider {
   }
 
   /**
-   * Generate a cryptographically secure random key
-   * Uses crypto.randomInt for secure random number generation
+   * Generate a secure random key (for testing/demo purposes)
    */
   generateSecureKey(length: number = 32): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
     let result = '';
     for (let i = 0; i < length; i++) {
-      // CRITICAL: Use crypto.randomInt instead of Math.random()
-      result += chars.charAt(randomInt(0, chars.length));
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
   }

@@ -1,3 +1,22 @@
+# [1.3.0](https://github.com/1arley/ark-shop-back/compare/v1.2.0...v1.3.0) (2026-05-11)
+
+### Bug Fixes
+
+- add authentication to user list and improve pagination security ([208fc75](https://github.com/1arley/ark-shop-back/commit/208fc75d94c51006533a628216a4c1e4084edf40))
+- add confirmation token requirement for clear demo data ([6a57486](https://github.com/1arley/ark-shop-back/commit/6a57486549175a63932cd20f750626edc0a2ae7e))
+- add CORS origin validation for production environments ([d5583d5](https://github.com/1arley/ark-shop-back/commit/d5583d5f34b288292bc615e560a2dfd069570018))
+- enforce encryption key requirement and improve email service health checks ([6a782f7](https://github.com/1arley/ark-shop-back/commit/6a782f7e269a3bf5de22142924e86166973a3965))
+- enforce webhook signature verification and fail-closed security ([2fcd7ae](https://github.com/1arley/ark-shop-back/commit/2fcd7ae1cc6d94a330744a9c04a1fd76e64b7c60))
+- return only necessary fields from JWT validate method ([8694c4a](https://github.com/1arley/ark-shop-back/commit/8694c4a1b2874eb66f6b9696e45250a6eb18fb68))
+
+### Features
+
+- add supabase-setup.ps1 script ([c3355f2](https://github.com/1arley/ark-shop-back/commit/c3355f201bf18924a2273d19e6bed6ecdc0d74af))
+
+### Performance Improvements
+
+- fix N+1 queries in cart and orders + prevent TOCTOU race condition ([43fb827](https://github.com/1arley/ark-shop-back/commit/43fb8278ef49d308436bbfd8d21ec7924083da74))
+
 # [1.2.0](https://github.com/1arley/ark-shop-back/compare/v1.1.1...v1.2.0) (2026-05-09)
 
 ### Bug Fixes

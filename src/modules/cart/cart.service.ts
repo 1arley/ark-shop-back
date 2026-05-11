@@ -1,30 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AddToCartDto } from './dto/cart.dto';
-import { CartItem } from '@prisma/client';
-
-type CartItemWithProduct = CartItem & {
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    isActive: boolean;
-    stock: number;
-    description: string | null;
-  };
-};
-
-export interface CartResponse {
-  items: CartItemWithProduct[];
-  total: number;
-  itemCount: number;
-}
 
 @Injectable()
 export class CartService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Ensure user has a cart, creating if necessary
+  // Garante que o usuário tem um cart, criando se necessário
   private async ensureCart(userId: string) {
     return this.prisma.cart.upsert({
       where: { userId },
@@ -38,29 +20,49 @@ export class CartService {
     });
   }
 
-  async getCart(userId: string): Promise<CartResponse> {
+  async getCart(userId: string) {
     const cart = await this.prisma.cart.findUnique({
       where: { userId },
       include: {
         items: {
           include: {
-            // Include product data to avoid N+1 query
-            product: true,
+            // inclui dados básicos do produto para exibição no frontend
+            cart: false,
           },
           orderBy: { createdAt: 'asc' },
         },
       },
     });
 
+    // Busca produtos separadamente para não complicar a query
     if (!cart) {
       return { items: [], total: 0, itemCount: 0 };
     }
 
-    // Use already included product data - no additional queries needed
-    const itemsWithProducts = cart.items as unknown as CartItemWithProduct[];
+    // Batch fetch all products in a single query (fixes N+1)
+    const productIds = cart.items.map(item => item.productId);
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        isActive: true,
+        stock: true,
+        description: true,
+      },
+    });
+
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    // Enriquece os itens com dados do produto
+    const itemsWithProducts = cart.items.map(item => ({
+      ...item,
+      product: productMap.get(item.productId) ?? null,
+    }));
 
     const total = itemsWithProducts.reduce((sum, item) => {
-      const price = item.product?.price ? Number(item.product.price) : 0;
+      const price = item.product?.price?.toNumber() ?? 0;
       return sum + price * item.quantity;
     }, 0);
 

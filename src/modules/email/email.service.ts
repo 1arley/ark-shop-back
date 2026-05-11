@@ -31,6 +31,7 @@ export class EmailService {
   private readonly transporter: nodemailer.Transporter;
   private readonly logger = new Logger(EmailService.name);
   private readonly from: string;
+  private isReady = false;
 
   constructor(private readonly configService: ConfigService) {
     const smtpHost = this.configService.get<string>('SMTP_HOST');
@@ -54,12 +55,23 @@ export class EmailService {
     });
 
     // Verify connection configuration
-    this.transporter.verify((_error, _success) => {
-      this.logger.log('Email service initialized');
+    this.transporter.verify(error => {
+      if (error) {
+        this.logger.error(`Email transporter unhealthy: ${error.message}`);
+        this.isReady = false;
+      } else {
+        this.logger.log('Email service ready.');
+        this.isReady = true;
+      }
     });
   }
 
   async send(options: EmailOptions): Promise<boolean> {
+    if (!this.isReady) {
+      this.logger.warn('Email not sent — transporter not ready.');
+      return false;
+    }
+
     try {
       const info = await this.transporter.sendMail({
         from: this.from,

@@ -5,7 +5,6 @@ import { OrderStatus, KeyStatus } from '@prisma/client';
 import type { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { KeysService } from '@/modules/keys/keys.service';
-import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()
 export class OrdersService {
@@ -15,7 +14,6 @@ export class OrdersService {
     private readonly ordersRepository: OrdersRepository,
     @InjectQueue('email') private readonly emailQueue: Queue,
     private readonly keysService: KeysService,
-    private readonly prisma: PrismaService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto, userId: string) {
@@ -44,77 +42,22 @@ export class OrdersService {
 
   /**
    * Deliver order - reserve keys and mark as delivered
-   * This is the critical delivery flow - wrapped in transaction for data integrity
+   * This is the critical delivery flow
    */
   async deliverOrder(orderId: string) {
-    // Use transaction to ensure atomic delivery
-    return this.prisma.$transaction(async tx => {
-      const order = await tx.order.findUnique({
-        where: { id: orderId },
-        include: {
-          user: true,
-          items: {
-            include: {
-              product: true,
-              key: true,
-            },
-          },
-          payment: true,
-        },
-      });
+    const order = await this.ordersRepository.findById(orderId);
+    if (!order) {
+      throw new BadRequestException('Order not found');
+    }
 
-      if (!order) {
-        throw new BadRequestException('Order not found');
-      }
+    if (order.status !== OrderStatus.PAID) {
+      throw new BadRequestException(
+        `Cannot deliver order with status: ${order.status}. Order must be PAID.`,
+      );
+    }
 
-      if (order.status !== OrderStatus.PAID) {
-        throw new BadRequestException(
-          `Cannot deliver order with status: ${order.status}. Order must be PAID.`,
-        );
-      }
-
-      // Reserve keys for each order item atomically
-      for (const item of order.items) {
-        if (!item.key) {
-          // Find and reserve an available key for this product
-          const availableKey = await tx.key.findFirst({
-            where: {
-              productId: item.productId,
-              status: KeyStatus.AVAILABLE,
-            },
-          });
-
-          if (!availableKey) {
-            throw new BadRequestException(`No available keys for product: ${item.product.name}`);
-          }
-
-          // Reserve the key
-          await tx.key.update({
-            where: { id: availableKey.id },
-            data: {
-              status: KeyStatus.RESERVED,
-              orderItemId: item.id,
-            },
-          });
-        }
-      }
-
-      // Update order status to delivered
-      return tx.order.update({
-        where: { id: orderId },
-        data: { status: OrderStatus.DELIVERED },
-        include: {
-          user: true,
-          items: {
-            include: {
-              product: true,
-              key: true,
-            },
-          },
-          payment: true,
-        },
-      });
-    });
+    // Wrap key reservation in a transaction to prevent TOCTOU race conditions
+    return this.ordersRepository.deliverOrderAtomic(orderId, order.items);
   }
 
   /**
