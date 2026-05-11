@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { AppModule } from '@/app.module';
+import { AppModule } from '../../src/app.module';
 import { PrismaService } from '@/prisma/prisma.service';
 
 let app: INestApplication;

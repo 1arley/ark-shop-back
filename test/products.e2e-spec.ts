@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import * as request from 'supertest';
-import { AppModule } from '@/app.module';
+import { AppModule } from '../src/app.module';
 import { ConfigService } from '@nestjs/config';
 
 describe('Products E2E', () => {
