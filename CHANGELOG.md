@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/1arley/ark-shop-back/compare/v1.4.1...v1.4.2) (2026-05-12)
+
+### Bug Fixes
+
+- resolve path alias issue in app.module.ts for Vercel deployment ([e186535](https://github.com/1arley/ark-shop-back/commit/e186535c75e79a53e51cff7532c2b3b4d5a0990f))
+
 ## [1.4.1](https://github.com/1arley/ark-shop-back/compare/v1.4.0...v1.4.1) (2026-05-11)
 
 ### Bug Fixes
