@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/1arley/ark-shop-back/compare/v1.7.0...v1.7.1) (2026-05-12)
+
+### Bug Fixes
+
+- resolve Prisma 7 compatibility and database connection issues ([ad0e048](https://github.com/1arley/ark-shop-back/commit/ad0e04805198620c9cefdc8f392e71bfc5c3fdd6))
+
 # [1.7.0](https://github.com/1arley/ark-shop-back/compare/v1.6.1...v1.7.0) (2026-05-12)
 
 ### Features
