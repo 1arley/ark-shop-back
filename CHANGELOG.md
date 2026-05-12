@@ -1,3 +1,9 @@
+## [1.6.1](https://github.com/1arley/ark-shop-back/compare/v1.6.0...v1.6.1) (2026-05-12)
+
+### Bug Fixes
+
+- improve error handling during app initialization and enforce DATABASE_URL requirement ([92064ca](https://github.com/1arley/ark-shop-back/commit/92064ca31c0b97a3d2de6a26f024f92ea313eaf4))
+
 # [1.6.0](https://github.com/1arley/ark-shop-back/compare/v1.5.0...v1.6.0) (2026-05-12)
 
 ### Bug Fixes
