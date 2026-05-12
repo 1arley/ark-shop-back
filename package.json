@@ -6,7 +6,7 @@
   "private": true,
   "license": "Copyright (C) SeedaBit Systems",
   "scripts": {
-    "build": "npx prisma generate && nest build && npx tsc-alias && node scripts/create-entry.cjs && node -e \"if(process.env.VERCEL==='1'){require('fs').rmSync('src',{recursive:true,force:true});console.log('Removed src/ (VERCEL=1)')}\"",
+    "build": "npx prisma generate && nest build && npx tsc-alias && node scripts/create-entry.cjs && node scripts/create-runner.cjs",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
