@@ -21,7 +21,7 @@ export async function createApp(): Promise<INestApplication> {
 
   app.enableCors({
     origin: corsOrigins ?? true,
-    credentials: process.env.CORS_CREDENTIALS === 'true' || true,
+    credentials: process.env.CORS_CREDENTIALS !== 'false',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });

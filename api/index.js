@@ -21,8 +21,14 @@ let cachedApp;
 
 module.exports = async (req, res) => {
   if (!cachedApp) {
-    const app = await createApp();
-    cachedApp = app.getHttpAdapter().getInstance();
+    try {
+      const app = await createApp();
+      cachedApp = app.getHttpAdapter().getInstance();
+    } catch (err) {
+      console.error('FATAL: App initialization failed:', err);
+      res.status(500).json({ statusCode: 500, message: 'Internal server error' });
+      return;
+    }
   }
   cachedApp(req, res);
 };

@@ -9,16 +9,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     const provider = process.env.DATABASE_PROVIDER || 'postgresql';
 
+    const databaseUrl = process.env.DATABASE_URL;
+
+    if (!databaseUrl) {
+      throw new Error(
+        'DATABASE_URL environment variable is required but was not set. ' +
+          'Configure it in your Vercel project environment variables.',
+      );
+    }
+
     if (provider === 'sqlite') {
-      const adapter = new PrismaLibSql({
-        url: process.env.DATABASE_URL || '',
-      });
+      const adapter = new PrismaLibSql({ url: databaseUrl });
       super({ adapter });
     } else {
-      const databaseUrl = process.env.DATABASE_URL || '';
-      const pool = new Pool({
-        connectionString: databaseUrl,
-      });
+      const pool = new Pool({ connectionString: databaseUrl });
       const adapter = new PrismaPg(pool);
       super({ adapter });
     }
