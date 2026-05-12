@@ -19,6 +19,13 @@ export class S3StorageProvider implements StorageProvider {
     this.endpoint = this.configService.get<string>('S3_ENDPOINT', '');
   }
 
+  private getBaseUrl(): string {
+    return this.configService.get<string>(
+      'UPLOAD_BASE_URL',
+      `https://${this.bucket}.s3.${this.region}.amazonaws.com`,
+    );
+  }
+
   private async ensureClient(): Promise<void> {
     if (this.client) return;
 
@@ -66,7 +73,7 @@ export class S3StorageProvider implements StorageProvider {
 
     await upload.done();
 
-    const url = `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+    const url = `${this.getBaseUrl()}/${key}`;
 
     this.logger.log(`File uploaded to S3: ${key}`);
 
