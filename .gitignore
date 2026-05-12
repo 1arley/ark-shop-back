@@ -61,3 +61,4 @@ bun.lock
 # Supabase CLI temp files
 supabase/.temp/
 supabase/migrations/
+uploads/
