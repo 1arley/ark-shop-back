@@ -104,9 +104,22 @@ async function main() {
     console.log(`  ✓ ${product.name}: 10 keys created`);
   }
 
-  console.log('\n👤 Creating test users...');
+  console.log('\n👤 Creating users...');
+  const password123 = await bcrypt.hash('12345678', 10);
   const adminPassword = await bcrypt.hash('password123', 10);
   const userPassword = await bcrypt.hash('user1234', 10);
+
+  await prisma.user.upsert({
+    where: { email: 'superadmin@darkgames.com' },
+    update: {},
+    create: {
+      email: 'superadmin@darkgames.com',
+      password: password123,
+      name: 'Super Admin',
+      role: 'SUPERADMIN',
+    },
+  });
+  console.log('  ✓ superadmin@darkgames.com (senha: 12345678)');
 
   await prisma.user.upsert({
     where: { email: 'admin@darkgames.com' },
