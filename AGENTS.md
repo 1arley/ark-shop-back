@@ -52,4 +52,6 @@ npm run format          # prettier --write src/** test/**
 - **`prisma generate` required after any schema change.** Build (Dockerfile) generates Prisma client separately as a build stage step
 - **typecheck:** No dedicated `typecheck` script — rely on `nest build` or tsc via IDE
 - **Lint rules:** `no-explicit-any` and no-unsafe-\* rules are `warn` (not `error`) to accommodate NestJS patterns. `no-floating-promises` is `error` (unless void). Relaxed rules for test files
-- **Renaming conventions** for tests: `.spec.ts` for unit (collocated), `.e2e-spec.ts` for E2E (in `test/`)
+
+Skills provide specialized instructions and workflows for specific tasks.
+Use the skill tool to load a skill when a task matches its description.
