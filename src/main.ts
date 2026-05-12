@@ -4,9 +4,12 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
+import cookieParser from 'cookie-parser';
 
 export async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+
+  app.use(cookieParser());
 
   const apiPrefix = process.env.API_PREFIX || 'api';
   app.setGlobalPrefix(apiPrefix);
@@ -19,8 +22,17 @@ export async function createApp(): Promise<INestApplication> {
     console.warn('CORS_ORIGIN not configured — allowing all origins');
   }
 
+  const corsOrigin = corsOrigins ?? true;
+
+  if (corsOrigin === true && process.env.CORS_CREDENTIALS !== 'false') {
+    console.warn(
+      'CORS_ORIGIN not configured — credentials mode requires explicit origin. ' +
+        'Falling back to request origin. Set CORS_ORIGIN for production.',
+    );
+  }
+
   app.enableCors({
-    origin: corsOrigins ?? true,
+    origin: corsOrigin,
     credentials: process.env.CORS_CREDENTIALS !== 'false',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

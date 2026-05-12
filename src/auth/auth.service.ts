@@ -116,21 +116,42 @@ export class AuthService {
   private async getTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role, jti: crypto.randomUUID() };
 
+    const accessExpiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
+    const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') as StringValue,
+        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        expiresIn: accessExpiresIn as StringValue,
       }),
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') as StringValue,
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        expiresIn: refreshExpiresIn as StringValue,
       }),
     ]);
 
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
+      access_expires_in: this.parseExpiresInToSeconds(accessExpiresIn),
+      refresh_expires_in: this.parseExpiresInToSeconds(refreshExpiresIn),
     };
+  }
+
+  private parseExpiresInToSeconds(expiresIn: string): number {
+    if (expiresIn.endsWith('d')) {
+      return parseInt(expiresIn.slice(0, -1)) * 24 * 60 * 60;
+    }
+    if (expiresIn.endsWith('h')) {
+      return parseInt(expiresIn.slice(0, -1)) * 60 * 60;
+    }
+    if (expiresIn.endsWith('m')) {
+      return parseInt(expiresIn.slice(0, -1)) * 60;
+    }
+    if (expiresIn.endsWith('s')) {
+      return parseInt(expiresIn.slice(0, -1));
+    }
+    return 7 * 24 * 60 * 60;
   }
 
   private async createRefreshToken(userId: string, token: string): Promise<void> {

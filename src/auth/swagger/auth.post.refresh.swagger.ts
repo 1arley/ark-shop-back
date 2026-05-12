@@ -1,18 +1,21 @@
-import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { applyDecorators, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 
 export function ApiRefreshTokens() {
   return applyDecorators(
+    HttpCode(HttpStatus.OK),
     ApiOperation({ summary: 'Renovar tokens' }),
-    ApiBearerAuth('JWT-auth'),
+    ApiHeader({
+      name: 'Set-Cookie',
+      description: 'Novos access_token e refresh_token são definidos como cookies httpOnly',
+    }),
     ApiResponse({
-      status: 201,
-      description: 'Tokens renovados com sucesso',
+      status: 200,
+      description: 'Tokens renovados com sucesso. Novos cookies definidos.',
       schema: {
         type: 'object',
         properties: {
           access_token: { type: 'string', example: 'eyJ...' },
-          refresh_token: { type: 'string', example: 'eyJ...' },
         },
       },
     }),

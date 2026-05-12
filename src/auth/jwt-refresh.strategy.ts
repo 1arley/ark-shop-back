@@ -1,11 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/prisma/prisma.service';
 import { JwtPayload } from '@/auth/interfaces/jwt-payload.interface';
 import { Request } from 'express';
 import * as crypto from 'crypto';
+import { extractRefreshToken } from '@/auth/token-extractor.util';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
@@ -14,19 +15,18 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     private prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractRefreshToken,
       ignoreExpiration: false,
       secretOrKey: configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-      passReqToCallback: true, // Importante para capturar o token na requisição
+      passReqToCallback: true,
     });
   }
 
   async validate(req: Request, payload: JwtPayload) {
-    const authHeader = req.get('Authorization');
-    if (!authHeader) {
-      throw new UnauthorizedException('Authorization header missing');
+    const refreshToken = extractRefreshToken(req);
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token não fornecido.');
     }
-    const refreshToken = authHeader.replace('Bearer', '').trim();
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
@@ -34,7 +34,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
 
     if (!user) throw new UnauthorizedException('Usuário não encontrado.');
 
-    const refreshTokens = await this.prisma.refreshToken.findMany({
+    const storedTokens = await this.prisma.refreshToken.findMany({
       where: {
         userId: user.id,
         expiresAt: {
@@ -47,13 +47,13 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       take: 10,
     });
 
-    if (refreshTokens.length === 0) {
+    if (storedTokens.length === 0) {
       throw new UnauthorizedException('Nenhum refresh token válido encontrado.');
     }
 
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     let tokenValid = false;
-    for (const storedToken of refreshTokens) {
+    for (const storedToken of storedTokens) {
       if (tokenHash === storedToken.token) {
         tokenValid = true;
         break;

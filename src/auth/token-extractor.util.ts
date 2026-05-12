@@ -1,0 +1,28 @@
+import { ExtractJwt } from 'passport-jwt';
+import type { Request } from 'express';
+
+export function cookieOrBearerExtractor(req: Request): string | null {
+  if (req?.cookies?.access_token) {
+    return req.cookies.access_token;
+  }
+
+  const bearerToken = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+  if (bearerToken) {
+    return bearerToken;
+  }
+
+  return null;
+}
+
+export function extractRefreshToken(req: Request): string | null {
+  if (req?.cookies?.refresh_token) {
+    return req.cookies.refresh_token;
+  }
+
+  const authHeader = req.get('Authorization');
+  if (authHeader) {
+    return authHeader.replace('Bearer', '').trim();
+  }
+
+  return null;
+}

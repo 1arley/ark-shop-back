@@ -1,10 +1,15 @@
 import { applyDecorators, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 
 export function ApiLoginUser() {
   return applyDecorators(
     HttpCode(HttpStatus.OK),
     ApiOperation({ summary: 'Realizar login' }),
+    ApiHeader({
+      name: 'Set-Cookie',
+      description:
+        'access_token (httpOnly, 15min) e refresh_token (httpOnly, 7d) são definidos como cookies',
+    }),
     ApiResponse({
       status: 200,
       description: 'Login realizado com sucesso',
@@ -12,11 +17,6 @@ export function ApiLoginUser() {
         type: 'object',
         properties: {
           access_token: {
-            type: 'string',
-            example:
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
-          },
-          refresh_token: {
             type: 'string',
             example:
               'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
