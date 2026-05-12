@@ -1,6 +1,0 @@
-# Exclude TypeScript source files — compiled dist/ output is used instead.
-# Vercel's @vercel/node builder uses esbuild which does NOT support
-# tsconfig.json path aliases (@/ → src/). By excluding src/, Vercel
-# is forced to use the pre-built dist/ output (via nest build + tsc-alias)
-# which has all aliases resolved to relative paths.
-src

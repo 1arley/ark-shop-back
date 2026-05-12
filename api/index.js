@@ -15,7 +15,7 @@ moduleAlias.addAliases({
 
 // Vercel Serverless Function entrypoint
 // Uses compiled dist/ output from nest build
-const { createApp } = require('../dist/main');
+const { createApp } = require('../dist/entry');
 
 let cachedApp;
 
