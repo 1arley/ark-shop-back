@@ -22,6 +22,7 @@ import { AdminModule } from '@/modules/admin/admin.module';
 import { CartModule } from '@/modules/cart/cart.module';
 import { AntifraudModule } from '@/modules/antifraud/antifraud.module';
 import { EmailModule } from '@/modules/email/email.module';
+import { ContactModule } from '@/modules/contact/contact.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { EmailModule } from '@/modules/email/email.module';
     CartModule,
     AntifraudModule,
     EmailModule,
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [

@@ -263,4 +263,96 @@ export class AdminRepository {
       timestamp: new Date(),
     };
   }
+
+  // ─── Admin Products ───────────────────────────────────────
+
+  async findAllProducts(page: number, limit: number, search?: string) {
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        skip,
+        take: limit,
+        where,
+        include: { category: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return {
+      data: products,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  // ─── Admin Orders ─────────────────────────────────────────
+
+  async findAllOrders(page: number, limit: number, status?: string) {
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          items: {
+            include: { product: true },
+          },
+          payment: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return {
+      data: orders,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  // ─── Admin Keys ───────────────────────────────────────────
+
+  async findAllKeys(page: number, limit: number, productId?: string) {
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (productId) {
+      where.productId = productId;
+    }
+
+    const [keys, total] = await Promise.all([
+      this.prisma.key.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          product: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.key.count({ where }),
+    ]);
+
+    return {
+      data: keys,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
 }

@@ -1,8 +1,16 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { OrderStatus } from '@prisma/client';
 import { AdminRepository } from './admin.repository';
 import { KeysService } from '@/modules/keys/keys.service';
 import { ProductsService } from '@/modules/products/products.service';
+import { OrdersService } from '@/modules/orders/orders.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -12,6 +20,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly keysService: KeysService,
     private readonly productsService: ProductsService,
+    private readonly ordersService: OrdersService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -29,6 +38,59 @@ export class AdminService {
 
   async getSystemHealth() {
     return this.adminRepository.getSystemHealth();
+  }
+
+  // ─── Products ─────────────────────────────────────────────
+
+  async findAllProducts(page: number, limit: number, search?: string) {
+    return this.adminRepository.findAllProducts(page, limit, search);
+  }
+
+  async createProduct(dto: any) {
+    return this.productsService.create(dto);
+  }
+
+  async updateProduct(id: string, dto: any) {
+    return this.productsService.update(id, dto);
+  }
+
+  async deleteProduct(id: string) {
+    const orderCount = await this.prisma.orderItem.count({
+      where: { productId: id },
+    });
+    if (orderCount > 0) {
+      throw new ConflictException(
+        `Cannot delete product with ${orderCount} associated order(s). Remove or archive the product instead.`,
+      );
+    }
+    return this.productsService.delete(id);
+  }
+
+  async addKeysToProduct(productId: string, keys: string[]) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    const result = await this.keysService.importKeys(productId, keys);
+    return { count: result.imported };
+  }
+
+  // ─── Orders ───────────────────────────────────────────────
+
+  async findAllOrders(page: number, limit: number, status?: string) {
+    return this.adminRepository.findAllOrders(page, limit, status);
+  }
+
+  async updateOrderStatus(id: string, status: string) {
+    return this.ordersService.updateStatus(id, status as OrderStatus);
+  }
+
+  // ─── Keys ─────────────────────────────────────────────────
+
+  async findAllKeys(page: number, limit: number, productId?: string) {
+    return this.adminRepository.findAllKeys(page, limit, productId);
   }
 
   async bulkImportKeys(productId: string, keysText: string, isCsv = false) {

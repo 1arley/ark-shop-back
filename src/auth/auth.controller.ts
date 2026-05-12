@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseGuards, Req, Res, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { LoginDto } from '@/auth/dto/login.dto';
@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { JwtRefreshAuthGuard } from '@/auth/jwt-refresh-auth.guard';
 import { extractRefreshToken } from '@/auth/token-extractor.util';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
+import { ForgotPasswordDto } from '@/auth/dto/forgot-password.dto';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -85,7 +86,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiLogoutUser()
   @UseGuards(JwtAuthGuard)
-  async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const refreshToken = extractRefreshToken(req);
 
     if (refreshToken) {
@@ -98,5 +102,13 @@ export class AuthController {
     res.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/' });
 
     return { message: 'Logout realizado com sucesso.' };
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Solicitar redefinição de senha' })
+  @ApiResponse({ status: 200, description: 'Se o email existir, um link de redefinição será enviado.' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
   }
 }

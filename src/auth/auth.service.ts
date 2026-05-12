@@ -202,4 +202,20 @@ export class AuthService {
       where: { id: storedToken.id },
     });
   }
+
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return { message: 'Se o email existir, um link de redefinição será enviado.' };
+    }
+
+    // TODO: Implementar envio de email com link de redefinição
+    // O token de reset deve ser armazenado no banco e enviado por email
+    // utilizando o EmailService ou Bull queue
+
+    return { message: 'Se o email existir, um link de redefinição será enviado.' };
+  }
 }
