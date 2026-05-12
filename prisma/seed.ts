@@ -1,8 +1,24 @@
 import { PrismaClient } from '@prisma/client';
-import * as CryptoJS from 'crypto-js'; // ← era "* as crypto", mas usado como CryptoJS
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
+import * as CryptoJS from 'crypto-js';
 import * as bcrypt from 'bcrypt';
+import * as dotenv from 'dotenv';
 
-const prisma = new PrismaClient();
+// Carrega .env primeiro, depois .env.local (se existir) — mas NÃO sobrescreve
+// variáveis já definidas no ambiente (ex: DATABASE_URL via CLI)
+dotenv.config();
+dotenv.config({ path: '.env.local', override: false });
+
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is required but was not set.');
+}
+
+const pool = new Pool({ connectionString: databaseUrl });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const ENCRYPTION_KEY = process.env.KEYS_ENCRYPTION_KEY || 'default-key-change-in-production';
 
@@ -90,7 +106,7 @@ async function main() {
 
   console.log('\n👤 Creating test users...');
   const adminPassword = await bcrypt.hash('password123', 10);
-  const userPassword = await bcrypt.hash('user123', 10);
+  const userPassword = await bcrypt.hash('user1234', 10);
 
   await prisma.user.upsert({
     where: { email: 'admin@darkgames.com' },
@@ -114,7 +130,7 @@ async function main() {
       role: 'USER',
     },
   });
-  console.log('  ✓ user@darkgames.com (senha: user123)');
+  console.log('  ✓ user@darkgames.com (senha: user1234)');
 
   console.log('\n✅ Seed completed!');
 }

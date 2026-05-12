@@ -20,7 +20,7 @@ export class ProductsService {
       search?: string;
     },
   ) {
-    return this.productsRepository.findAll(page, limit, filters);
+    return await this.productsRepository.findAll(page, limit, filters);
   }
 
   async findOne(id: string) {
@@ -36,6 +36,6 @@ export class ProductsService {
   }
 
   async findByCategory(categoryId: string, page: number = 1, limit: number = 10) {
-    return this.productsRepository.findByCategory(categoryId, page, limit);
+    return await this.productsRepository.findByCategory(categoryId, page, limit);
   }
 }

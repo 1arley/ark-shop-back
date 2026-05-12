@@ -57,3 +57,7 @@ docker-compose.override.yml
 #Bun
 bun.lock
 /generated/prisma
+
+# Supabase CLI temp files
+supabase/.temp/
+supabase/migrations/
