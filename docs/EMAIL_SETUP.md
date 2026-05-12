@@ -21,6 +21,7 @@ EMAIL_FROM="D'Ark Games Store <noreply@darkgames.com>"
 ### 2. Production Options
 
 #### Option A: Gmail/Google Workspace
+
 ```bash
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -30,6 +31,7 @@ EMAIL_FROM="D'Ark Games Store <your-email@gmail.com>"
 ```
 
 #### Option B: SendGrid
+
 ```bash
 SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
@@ -39,6 +41,7 @@ EMAIL_FROM="D'Ark Games Store <noreply@yourdomain.com>"
 ```
 
 #### Option C: Mailgun
+
 ```bash
 SMTP_HOST=smtp.mailgun.org
 SMTP_PORT=587
@@ -59,6 +62,7 @@ The system sends 4 types of emails:
 ## Testing
 
 ### Test Order Confirmation
+
 ```bash
 # Order will trigger email automatically
 POST /api/orders
@@ -68,6 +72,7 @@ POST /api/orders
 ```
 
 ### Test Password Reset
+
 ```bash
 # Will send reset email
 POST /api/auth/reset-password
@@ -77,11 +82,13 @@ POST /api/auth/reset-password
 ```
 
 ### Check Mailtrap
+
 All test emails will appear in Mailtrap inbox for inspection.
 
 ## Queue System
 
 Emails are sent asynchronously via BullMQ queue:
+
 - Queue name: `email`
 - Retry on failure: Yes (3 attempts)
 - Backoff: Exponential
@@ -91,18 +98,21 @@ Monitor queue: Use BullMQ dashboard or Redis CLI.
 ## Troubleshooting
 
 ### Emails not sending?
+
 1. Check SMTP credentials in `.env`
 2. Verify SMTP server is accessible
 3. Check application logs for errors
 4. Test with Mailtrap first
 
 ### Emails going to spam?
+
 1. Configure SPF records for your domain
 2. Set up DKIM signing
 3. Use a reputable SMTP provider
 4. Don't use generic "From" addresses
 
 ### Queue issues?
+
 ```bash
 # Check Redis
 docker compose exec redis redis-cli

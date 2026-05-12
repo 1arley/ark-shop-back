@@ -3,6 +3,7 @@
 ## 🚀 Getting Started in 5 Minutes
 
 ### 1. Prerequisites
+
 - Node.js 22+ (check: `node -v`)
 - Docker Desktop (for database)
 - Git
@@ -30,6 +31,7 @@ npm run start:dev
 ```
 
 ### 3. Access Swagger Docs
+
 Open: http://localhost:3000/api/docs
 
 ---
@@ -65,29 +67,31 @@ npm run test:all
 
 ## 📦 Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run start:dev` | Dev server with watch |
-| `npm run start:debug` | Dev server with debug mode |
-| `npm run build` | Build for production |
-| `npm run lint` | Lint code |
-| `npm run lint:fix` | Fix lint issues |
-| `npm run format` | Format code |
-| `npm run test` | Run unit tests |
-| `npm run test:e2e` | Run E2E tests |
-| `npm run prisma:generate` | Generate Prisma client |
-| `npm run prisma:migrate` | Run migrations |
-| `npm run prisma:studio` | Open Prisma Studio |
-| `npm run docker:up` | Start Docker services |
-| `npm run docker:down` | Stop Docker services |
-| `npm run docker:rebuild` | Full rebuild (no cache) |
+| Command                   | Description                |
+| ------------------------- | -------------------------- |
+| `npm run start:dev`       | Dev server with watch      |
+| `npm run start:debug`     | Dev server with debug mode |
+| `npm run build`           | Build for production       |
+| `npm run lint`            | Lint code                  |
+| `npm run lint:fix`        | Fix lint issues            |
+| `npm run format`          | Format code                |
+| `npm run test`            | Run unit tests             |
+| `npm run test:e2e`        | Run E2E tests              |
+| `npm run prisma:generate` | Generate Prisma client     |
+| `npm run prisma:migrate`  | Run migrations             |
+| `npm run prisma:studio`   | Open Prisma Studio         |
+| `npm run docker:up`       | Start Docker services      |
+| `npm run docker:down`     | Stop Docker services       |
+| `npm run docker:rebuild`  | Full rebuild (no cache)    |
 
 ---
 
 ## 🔑 Key Concepts
 
 ### Modules
+
 Each module is self-contained with:
+
 - Controller (HTTP endpoints)
 - Service (business logic)
 - Repository (database access)
@@ -96,6 +100,7 @@ Each module is self-contained with:
 Example: `modules/products/`
 
 ### Repository Pattern
+
 ```typescript
 // Repository handles DB queries
 const product = await this.productsRepository.findById(id);
@@ -105,11 +110,13 @@ const product = await this.productsService.findOne(id);
 ```
 
 ### Transactions
+
 Critical operations use Prisma transactions:
+
 ```typescript
-await this.prisma.$transaction(async (tx) => {
+await this.prisma.$transaction(async tx => {
   // All operations succeed or fail together
-})
+});
 ```
 
 ---
@@ -142,6 +149,7 @@ Authorization: Bearer <JWT_TOKEN>
 ## 📊 Database Models
 
 ### Core Models
+
 - **User**: Customer accounts
 - **Product**: Game catalog
 - **Key**: Digital keys (encrypted)
@@ -150,6 +158,7 @@ Authorization: Bearer <JWT_TOKEN>
 - **Wallet**: User balance
 
 ### Admin Models
+
 - **FraudLog**: Fraud analysis
 - **Notification**: System notifications
 - **Seller**: Marketplace sellers
@@ -159,6 +168,7 @@ Authorization: Bearer <JWT_TOKEN>
 ## 🛠️ Common Tasks
 
 ### Add New Product (Admin)
+
 ```bash
 POST /api/products
 Authorization: Bearer <ADMIN_TOKEN>
@@ -171,6 +181,7 @@ Authorization: Bearer <ADMIN_TOKEN>
 ```
 
 ### Import Keys (Admin)
+
 ```bash
 POST /api/keys/import
 {
@@ -180,6 +191,7 @@ POST /api/keys/import
 ```
 
 ### Create Order
+
 ```bash
 POST /api/orders
 {
@@ -190,6 +202,7 @@ POST /api/orders
 ```
 
 ### Generate PIX Payment
+
 ```bash
 POST /api/payments/:orderId
 {
@@ -203,17 +216,20 @@ POST /api/payments/:orderId
 ## 🐛 Troubleshooting
 
 ### "Cannot find module '@prisma/client'"
+
 ```bash
 npm run prisma:generate
 ```
 
 ### "Database connection error"
+
 ```bash
 docker compose up -d postgres
 npm run prisma:migrate
 ```
 
 ### "Port 3000 already in use"
+
 ```bash
 # Change PORT in .env
 PORT=3001
@@ -252,4 +268,4 @@ PORT=3001
 
 ---
 
-*Happy coding! 🎮*
+_Happy coding! 🎮_

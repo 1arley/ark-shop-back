@@ -45,6 +45,7 @@ Access Swagger docs at: http://localhost:3000/api/docs
 All protected endpoints require JWT authentication.
 
 ### Register
+
 ```bash
 POST /api/auth/register
 {
@@ -55,6 +56,7 @@ POST /api/auth/register
 ```
 
 ### Login
+
 ```bash
 POST /api/auth/login
 {
@@ -71,7 +73,9 @@ POST /api/auth/login
 ```
 
 ### Use Token
+
 Include in Authorization header:
+
 ```
 Authorization: Bearer <access_token>
 ```
@@ -81,16 +85,19 @@ Authorization: Bearer <access_token>
 ### Products
 
 #### List Products
+
 ```bash
 GET /api/products?page=1&limit=10&search=game&isActive=true
 ```
 
 #### Get Product
+
 ```bash
 GET /api/products/:id
 ```
 
 #### Create Product (Admin)
+
 ```bash
 POST /api/products
 Authorization: Bearer <token>
@@ -104,6 +111,7 @@ Authorization: Bearer <token>
 ```
 
 #### Update Product (Admin)
+
 ```bash
 PATCH /api/products/:id
 {
@@ -113,6 +121,7 @@ PATCH /api/products/:id
 ```
 
 #### Delete Product (Admin)
+
 ```bash
 DELETE /api/products/:id
 ```
@@ -120,11 +129,13 @@ DELETE /api/products/:id
 ### Shopping Cart
 
 #### Get Cart
+
 ```bash
 GET /api/cart
 ```
 
 #### Add to Cart
+
 ```bash
 POST /api/cart/items
 {
@@ -134,6 +145,7 @@ POST /api/cart/items
 ```
 
 #### Update Cart Item
+
 ```bash
 PATCH /api/cart/items/:productId
 {
@@ -142,11 +154,13 @@ PATCH /api/cart/items/:productId
 ```
 
 #### Remove from Cart
+
 ```bash
 DELETE /api/cart/items/:productId
 ```
 
 #### Clear Cart
+
 ```bash
 DELETE /api/cart
 ```
@@ -154,6 +168,7 @@ DELETE /api/cart
 ### Orders
 
 #### Create Order
+
 ```bash
 POST /api/orders
 {
@@ -167,26 +182,31 @@ POST /api/orders
 ```
 
 #### Get User Orders
+
 ```bash
 GET /api/orders?page=1&limit=10
 ```
 
 #### Get Order Details
+
 ```bash
 GET /api/orders/:id
 ```
 
 #### Cancel Order
+
 ```bash
 POST /api/orders/:id/cancel
 ```
 
 #### Get Recent Orders (Admin)
+
 ```bash
 GET /api/orders/recent?limit=10
 ```
 
 #### Update Order Status (Admin)
+
 ```bash
 PATCH /api/orders/:id/status
 {
@@ -195,11 +215,13 @@ PATCH /api/orders/:id/status
 ```
 
 #### Deliver Order (Admin)
+
 ```bash
 POST /api/orders/:id/deliver
 ```
 
 #### Download Keys
+
 ```bash
 GET /api/orders/:id/download
 ```
@@ -207,6 +229,7 @@ GET /api/orders/:id/download
 ### Payments
 
 #### Create Payment
+
 ```bash
 POST /api/payments/:orderId
 {
@@ -217,16 +240,19 @@ POST /api/payments/:orderId
 ```
 
 #### Get Payment
+
 ```bash
 GET /api/payments/:id
 ```
 
 #### Get Payment by Order
+
 ```bash
 GET /api/payments/order/:orderId
 ```
 
 #### Refund Payment (Admin)
+
 ```bash
 POST /api/payments/:id/refund
 {
@@ -235,6 +261,7 @@ POST /api/payments/:id/refund
 ```
 
 #### Webhook Handler
+
 ```bash
 POST /api/payments/webhook/mercadopago
 X-Signature: <hmac-sha256-signature>
@@ -247,6 +274,7 @@ X-Signature: <hmac-sha256-signature>
 ### Keys (Admin Only)
 
 #### Import Keys
+
 ```bash
 POST /api/keys/import
 {
@@ -256,16 +284,19 @@ POST /api/keys/import
 ```
 
 #### Get Product Keys
+
 ```bash
 GET /api/keys/product/:productId?page=1&limit=50
 ```
 
 #### Get Key Statistics
+
 ```bash
 GET /api/keys/stats/:productId
 ```
 
 #### Generate Demo Keys
+
 ```bash
 POST /api/keys/generate-demo
 {
@@ -277,16 +308,19 @@ POST /api/keys/generate-demo
 ### Categories
 
 #### List Categories
+
 ```bash
 GET /api/categories
 ```
 
 #### Get Root Categories
+
 ```bash
 GET /api/categories/root
 ```
 
 #### Create Category (Admin)
+
 ```bash
 POST /api/categories
 {
@@ -299,11 +333,13 @@ POST /api/categories
 ### Admin Dashboard
 
 #### Get Dashboard Stats
+
 ```bash
 GET /api/admin/dashboard
 ```
 
 Response:
+
 ```json
 {
   "revenue": {
@@ -335,16 +371,19 @@ Response:
 ```
 
 #### Get All Users
+
 ```bash
 GET /api/admin/users?page=1&limit=20
 ```
 
 #### Get Fraud Logs
+
 ```bash
 GET /api/admin/fraud-logs?page=1&limit=20
 ```
 
 #### Bulk Import Keys
+
 ```bash
 POST /api/admin/keys/import
 {
@@ -355,6 +394,7 @@ POST /api/admin/keys/import
 ```
 
 #### Generate Demo Data
+
 ```bash
 POST /api/admin/generate-demo
 {
@@ -364,6 +404,7 @@ POST /api/admin/generate-demo
 ```
 
 #### Clear Demo Data (SUPERADMIN only)
+
 ```bash
 POST /api/admin/clear-demo
 ```
@@ -371,6 +412,7 @@ POST /api/admin/clear-demo
 ### Antifraud
 
 #### Get Fraud Logs (Admin)
+
 ```bash
 GET /api/antifraud/logs?limit=100
 ```
@@ -378,6 +420,7 @@ GET /api/antifraud/logs?limit=100
 ## Database Schema
 
 ### Main Entities
+
 - **User** - Customer accounts
 - **Cart** - Shopping carts
 - **CartItem** - Cart items
@@ -391,11 +434,13 @@ GET /api/antifraud/logs?limit=100
 - **FraudLog** - Fraud analysis logs
 
 ### Key Statuses
+
 - `AVAILABLE` - Ready for sale
 - `RESERVED` - Reserved for order
 - `DELIVERED` - Delivered to customer
 
 ### Order Statuses
+
 - `PENDING` - Order created
 - `AWAITING_PAYMENT` - Waiting for payment
 - `PAID` - Payment confirmed
@@ -407,16 +452,19 @@ GET /api/antifraud/logs?limit=100
 ## Security
 
 ### Encryption
+
 - Keys encrypted with AES-256
 - Passwords hashed with bcrypt
 - JWT tokens for authentication
 
 ### Authorization
+
 - Role-based access control (USER, ADMIN, SUPERADMIN)
 - Users can only access their own data
 - Admin endpoints require ADMIN or SUPERADMIN role
 
 ### Webhooks
+
 - HMAC-SHA256 signature verification
 - Automatic retry with exponential backoff
 - Idempotent processing
@@ -480,6 +528,7 @@ docker compose up -d --build
 ## Support
 
 For issues or questions:
+
 1. Check documentation: `/api/docs`
 2. Review logs: `docker compose logs -f app`
 3. Check health: `GET /api/health`
