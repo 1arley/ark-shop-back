@@ -1,3 +1,13 @@
+# [1.6.0](https://github.com/1arley/ark-shop-back/compare/v1.5.0...v1.6.0) (2026-05-12)
+
+### Bug Fixes
+
+- update import statement for supertest to use default import ([acefb5f](https://github.com/1arley/ark-shop-back/commit/acefb5f0ac6cfcf17c826c9719a69a1aa327f93f))
+
+### Features
+
+- add module-alias dependency and configure path aliases in index.js ([f0fbf2d](https://github.com/1arley/ark-shop-back/commit/f0fbf2d922be61b9663e156ad5c35311f1311965))
+
 # [1.5.0](https://github.com/1arley/ark-shop-back/compare/v1.4.2...v1.5.0) (2026-05-12)
 
 ### Features
