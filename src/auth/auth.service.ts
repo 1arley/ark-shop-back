@@ -3,6 +3,8 @@ import {
   UnauthorizedException,
   ConflictException,
   NotFoundException,
+  BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -10,15 +12,20 @@ import * as crypto from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { RegisterDto } from '@/auth/dto/register.dto';
+import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { ConfigService } from '@nestjs/config';
+import { EmailService } from '@/modules/email/email.service';
 import type { StringValue } from 'ms';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -45,10 +52,15 @@ export class AuthService {
       },
     });
 
+    // Generate tokens for auto-login after registration
+    const tokens = await this.getTokens(user.id, user.email, user.role);
+    await this.createRefreshToken(user.id, tokens.refresh_token);
+
     const { password: _, ...userWithoutPassword } = user;
 
     return {
-      message: 'Usuário cadastrado com sucesso.',
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
       user: userWithoutPassword,
     };
   }
@@ -212,10 +224,63 @@ export class AuthService {
       return { message: 'Se o email existir, um link de redefinição será enviado.' };
     }
 
-    // TODO: Implementar envio de email com link de redefinição
-    // O token de reset deve ser armazenado no banco e enviado por email
-    // utilizando o EmailService ou Bull queue
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token: tokenHash,
+        expiresAt,
+      },
+    });
+
+    this.emailService.sendPasswordReset(email, token, email).catch(err => {
+      this.logger.error(`Failed to send password reset email: ${err.message}`);
+    });
 
     return { message: 'Se o email existir, um link de redefinição será enviado.' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const { token, email, password } = dto;
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('Token inválido ou expirado.');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const resetToken = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        token: tokenHash,
+        userId: user.id,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!resetToken) {
+      throw new BadRequestException('Token inválido ou expirado.');
+    }
+
+    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS') || '12');
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      }),
+    ]);
+
+    return { message: 'Senha redefinida com sucesso.' };
   }
 }

@@ -5,6 +5,13 @@ import { RegisterDto } from '@/auth/dto/register.dto';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedRequest } from '@/common/interfaces/request.interface';
+import type { Response } from 'express';
+
+const mockRes = () =>
+  ({
+    cookie: jest.fn(),
+    clearCookie: jest.fn(),
+  }) as unknown as Response;
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -14,6 +21,8 @@ describe('AuthController', () => {
     register: jest.fn(),
     login: jest.fn(),
     refreshTokens: jest.fn(),
+    forgotPassword: jest.fn(),
+    resetPassword: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -80,7 +89,7 @@ describe('AuthController', () => {
     };
 
     it('should login successfully and return tokens', async () => {
-      const mockResponse = {
+      const serviceResponse = {
         user: {
           id: '1',
           name: 'Test User',
@@ -91,20 +100,23 @@ describe('AuthController', () => {
         },
         access_token: 'fake-access-token',
         refresh_token: 'fake-refresh-token',
+        access_expires_in: 900,
+        refresh_expires_in: 604800,
       };
 
-      mockAuthService.login.mockResolvedValue(mockResponse);
+      mockAuthService.login.mockResolvedValue(serviceResponse);
 
-      const result = await controller.login(loginDto);
+      const result = await controller.login(loginDto, mockRes());
 
-      expect(result).toEqual(mockResponse);
+      expect(result.access_token).toBe('fake-access-token');
+      expect(result.user.email).toBe('test@example.com');
       expect(authService.login).toHaveBeenCalledWith(loginDto);
     });
 
     it('should propagate UnauthorizedException when credentials are invalid', async () => {
       mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
-      await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.login(loginDto, mockRes())).rejects.toThrow(UnauthorizedException);
       expect(authService.login).toHaveBeenCalledWith(loginDto);
     });
 
@@ -112,7 +124,7 @@ describe('AuthController', () => {
       const emptyDto: LoginDto = { email: '', password: '' };
       mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
-      await expect(controller.login(emptyDto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.login(emptyDto, mockRes())).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -126,16 +138,21 @@ describe('AuthController', () => {
         },
       };
 
-      const mockResponse = {
+      const serviceResponse = {
         access_token: 'new-access-token',
         refresh_token: 'new-refresh-token',
+        access_expires_in: 900,
+        refresh_expires_in: 604800,
       };
 
-      mockAuthService.refreshTokens.mockResolvedValue(mockResponse);
+      mockAuthService.refreshTokens.mockResolvedValue(serviceResponse);
 
-      const result = await controller.refreshTokens(mockRequest as unknown as AuthenticatedRequest);
+      const result = await controller.refreshTokens(
+        mockRequest as unknown as AuthenticatedRequest,
+        mockRes(),
+      );
 
-      expect(result).toEqual(mockResponse);
+      expect(result.access_token).toBe('new-access-token');
       expect(authService.refreshTokens).toHaveBeenCalledWith('1');
     });
 
@@ -145,7 +162,7 @@ describe('AuthController', () => {
       // In real scenario, the guard would reject this before reaching the controller.
       // Without the guard, accessing null.id throws a TypeError.
       await expect(
-        controller.refreshTokens(invalidRequest as unknown as AuthenticatedRequest),
+        controller.refreshTokens(invalidRequest as unknown as AuthenticatedRequest, mockRes()),
       ).rejects.toThrow(TypeError);
     });
 
@@ -163,7 +180,7 @@ describe('AuthController', () => {
       );
 
       await expect(
-        controller.refreshTokens(mockRequest as unknown as AuthenticatedRequest),
+        controller.refreshTokens(mockRequest as unknown as AuthenticatedRequest, mockRes()),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
@@ -198,7 +215,7 @@ describe('AuthController', () => {
 
       mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
-      await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.login(loginDto, mockRes())).rejects.toThrow(UnauthorizedException);
       // The error message should be generic, not specific about whether
       // email exists or password is wrong
       expect(authService.login).toHaveBeenCalledWith(loginDto);

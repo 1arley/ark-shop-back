@@ -13,6 +13,7 @@ import { JwtRefreshAuthGuard } from '@/auth/jwt-refresh-auth.guard';
 import { extractRefreshToken } from '@/auth/token-extractor.util';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
 import { ForgotPasswordDto } from '@/auth/dto/forgot-password.dto';
+import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -56,6 +57,7 @@ export class AuthController {
 
     return {
       access_token: result.access_token,
+      refresh_token: result.refresh_token,
       user: result.user,
     };
   }
@@ -79,6 +81,7 @@ export class AuthController {
 
     return {
       access_token: result.access_token,
+      refresh_token: result.refresh_token,
     };
   }
 
@@ -86,10 +89,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiLogoutUser()
   @UseGuards(JwtAuthGuard)
-  async logout(
-    @Req() req: AuthenticatedRequest,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     const refreshToken = extractRefreshToken(req);
 
     if (refreshToken) {
@@ -107,8 +107,20 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Solicitar redefinição de senha' })
-  @ApiResponse({ status: 200, description: 'Se o email existir, um link de redefinição será enviado.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Se o email existir, um link de redefinição será enviado.',
+  })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Redefinir senha com token' })
+  @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Token inválido ou expirado.' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

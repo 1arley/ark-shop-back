@@ -4,6 +4,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { EmailService } from '@/modules/email/email.service';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
@@ -29,7 +30,8 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: { signAsync: jest.fn() } },
-        { provide: ConfigService, useValue: { get: jest.fn() } },
+        { provide: ConfigService, useValue: { get: jest.fn(), getOrThrow: jest.fn() } },
+        { provide: EmailService, useValue: { sendPasswordReset: jest.fn() } },
       ],
     }).compile();
 
