@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -11,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { KeysService } from './keys.service';
+import { UpdateKeyDto } from './dto/update-key.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
@@ -65,6 +67,17 @@ export class KeysController {
   @ApiResponse({ status: 404, description: 'Key not found' })
   getKey(@Param('id') id: string) {
     return this.keysService.getKey(id);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a key' })
+  @ApiResponse({ status: 200, description: 'Key updated' })
+  @ApiResponse({ status: 404, description: 'Key not found' })
+  updateKey(@Param('id') id: string, @Body() dto: UpdateKeyDto) {
+    return this.keysService.updateKey(id, dto);
   }
 
   @Delete(':id')

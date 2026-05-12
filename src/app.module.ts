@@ -23,6 +23,9 @@ import { CartModule } from '@/modules/cart/cart.module';
 import { AntifraudModule } from '@/modules/antifraud/antifraud.module';
 import { EmailModule } from '@/modules/email/email.module';
 import { ContactModule } from '@/modules/contact/contact.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { SellersModule } from '@/modules/sellers/sellers.module';
+import { UploadModule } from '@/modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -76,6 +79,9 @@ import { ContactModule } from '@/modules/contact/contact.module';
     AntifraudModule,
     EmailModule,
     ContactModule,
+    NotificationsModule,
+    SellersModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [

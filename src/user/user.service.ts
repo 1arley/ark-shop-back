@@ -1,6 +1,13 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateUserDto } from '@/dto/create-user.dto';
+import { UpdateProfileDto } from '@/user/dto/update-profile.dto';
+import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { DEFAULT_PAGE_SIZE } from '@/common/constants';
 import { Role } from '@prisma/client';
@@ -100,5 +107,72 @@ export class UserService {
 
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
+  }
+
+  async updateProfile(id: string, dto: UpdateProfileDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+      if (existing) {
+        throw new ConflictException('Email já cadastrado.');
+      }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        email: dto.email,
+        avatarUrl: dto.avatarUrl,
+      },
+    });
+
+    const { password: _, ...userWithoutPassword } = updated;
+    return userWithoutPassword;
+  }
+
+  async adminUpdateUser(id: string, dto: AdminUpdateUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+      if (existing) {
+        throw new ConflictException('Email já cadastrado.');
+      }
+    }
+
+    if (dto.role && !['USER', 'ADMIN', 'SUPERADMIN'].includes(dto.role)) {
+      throw new BadRequestException('Role inválida. Use: USER, ADMIN ou SUPERADMIN.');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        email: dto.email,
+        role: dto.role,
+        avatarUrl: dto.avatarUrl,
+      },
+    });
+
+    const { password: _, ...userWithoutPassword } = updated;
+    return userWithoutPassword;
+  }
+
+  async deleteUser(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    await this.prisma.user.delete({ where: { id } });
+    return { message: 'Usuário removido com sucesso.' };
   }
 }

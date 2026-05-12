@@ -75,6 +75,7 @@ model User {
   email String @unique
   password String
   name String?
+  avatarUrl String?
   role String @default("USER")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -83,6 +84,8 @@ model User {
   payments Payment[]
   wallet Wallet?
   notifications Notification[]
+  passwordResetTokens PasswordResetToken[]
+  sellers Seller[]
   cart Cart?
 
   @@index([email])
@@ -99,6 +102,19 @@ model RefreshToken {
   updatedAt DateTime   @updatedAt
 
   @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
 }
 
 // ============================
@@ -277,6 +293,7 @@ model Notification {
   content   String
   metadata  Json?
   sentAt    DateTime?
+  readAt    DateTime?
   createdAt DateTime           @default(now())
 
   @@index([userId])
@@ -317,6 +334,7 @@ updatedAt DateTime @updatedAt
 model Seller {
   id          String   @id @default(uuid())
   userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   companyName String
   document    String
   commission  Decimal  @default(10) @db.Decimal(5, 2)

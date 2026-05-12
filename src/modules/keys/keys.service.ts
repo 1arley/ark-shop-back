@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { KeysRepository } from './keys.repository';
 import { KeysEncryptionProvider } from './keys-encryption.provider';
+import { KeyStatus } from '@prisma/client';
 
 @Injectable()
 export class KeysService {
@@ -47,6 +48,10 @@ export class KeysService {
 
   async getKeyStats(productId: string) {
     return this.keysRepository.countByProduct(productId);
+  }
+
+  async updateKey(keyId: string, data: { keyData?: string; status?: KeyStatus }) {
+    return this.keysRepository.update(keyId, data);
   }
 
   async deleteKey(keyId: string) {

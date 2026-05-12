@@ -6,9 +6,10 @@ import { PrismaModule } from '@/prisma/prisma.module';
 import { KeysModule } from '@/modules/keys/keys.module';
 import { ProductsModule } from '@/modules/products/products.module';
 import { OrdersModule } from '@/modules/orders/orders.module';
+import { UserModule } from '@/user/user.module';
 
 @Module({
-  imports: [PrismaModule, KeysModule, ProductsModule, OrdersModule],
+  imports: [PrismaModule, KeysModule, ProductsModule, OrdersModule, UserModule],
   controllers: [AdminController],
   providers: [AdminService, AdminRepository],
   exports: [AdminService, AdminRepository],

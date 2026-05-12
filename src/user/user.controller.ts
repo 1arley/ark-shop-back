@@ -1,6 +1,17 @@
-import { Controller, Get, UseGuards, Req, Query, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  UseGuards,
+  Req,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UserService } from '@/user/user.service';
+import { UpdateProfileDto } from '@/user/dto/update-profile.dto';
 import { ApiGetUserMe } from '@/user/swagger/user.get.me.swagger';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
@@ -46,5 +57,15 @@ export class UserController {
   @ApiResponse({ status: 500, description: 'Erro desconhecido no servidor' })
   getProfile(@Req() req: AuthenticatedRequest) {
     return this.userService.findById(req.user.id);
+  }
+
+  @Patch('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Atualizar próprio perfil' })
+  @ApiResponse({ status: 200, description: 'Perfil atualizado' })
+  @ApiResponse({ status: 409, description: 'Email já cadastrado' })
+  updateProfile(@Req() req: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
+    return this.userService.updateProfile(req.user.id, dto);
   }
 }

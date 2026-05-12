@@ -160,6 +160,30 @@ export class KeysRepository {
     };
   }
 
+  async update(id: string, data: { keyData?: string; status?: KeyStatus }) {
+    const key = await this.prisma.key.findUnique({
+      where: { id },
+    });
+
+    if (!key) {
+      throw new NotFoundException(`Key with ID ${id} not found`);
+    }
+
+    const updateData: any = {};
+    if (data.status) {
+      updateData.status = data.status;
+    }
+    if (data.keyData) {
+      updateData.keyData = this.encryptionProvider.encrypt(data.keyData);
+    }
+
+    return this.prisma.key.update({
+      where: { id },
+      data: updateData,
+      include: { product: true },
+    });
+  }
+
   async delete(id: string) {
     const key = await this.prisma.key.findUnique({
       where: { id },
