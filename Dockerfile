@@ -1,7 +1,7 @@
 # Stage 1: Base
 FROM node:22-alpine AS base
 
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init wget
 
 WORKDIR /app
 
@@ -45,8 +45,8 @@ USER node
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/api || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/main.js"]
