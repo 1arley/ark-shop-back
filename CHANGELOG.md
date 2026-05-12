@@ -1,3 +1,9 @@
+# [1.5.0](https://github.com/1arley/ark-shop-back/compare/v1.4.2...v1.5.0) (2026-05-12)
+
+### Features
+
+- add @nestjs/axios and tsc-alias dependencies; update build script ([3fcfebc](https://github.com/1arley/ark-shop-back/commit/3fcfebc63419da0c2a7535e1aa4fa0238ad0ee9d))
+
 ## [1.4.2](https://github.com/1arley/ark-shop-back/compare/v1.4.1...v1.4.2) (2026-05-12)
 
 ### Bug Fixes
