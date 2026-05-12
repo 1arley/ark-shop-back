@@ -5,7 +5,7 @@ import { ContactDto } from './dto/contact.dto';
 export class ContactService {
   constructor() {}
 
-  async send(dto: ContactDto) {
+  send(dto: ContactDto) {
     console.log('📬 Contact message received:', {
       name: dto.name,
       email: dto.email,
