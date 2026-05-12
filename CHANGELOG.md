@@ -1,3 +1,13 @@
+# [1.7.0](https://github.com/1arley/ark-shop-back/compare/v1.6.1...v1.7.0) (2026-05-12)
+
+### Features
+
+- add comprehensive documentation for quick start, email setup, architecture, and API ([4da2947](https://github.com/1arley/ark-shop-back/commit/4da29471fe848d4375811b4c7ad612ed2562b98a))
+- create entry script and update build process for Vercel compatibility ([5a76da4](https://github.com/1arley/ark-shop-back/commit/5a76da4e6252a4958f86fea4f3a7e6207b7fff1e))
+- enhance build script for Vercel compatibility by adding src removal ([d574a16](https://github.com/1arley/ark-shop-back/commit/d574a16472a8d103a0f5511ed225aaa98e333fb7))
+- refactor build process for Vercel compatibility and add runner script ([7090fda](https://github.com/1arley/ark-shop-back/commit/7090fda864032db0c77f266cadbf3895d7018f8a))
+- update TypeScript module settings to use node16 ([e87ac54](https://github.com/1arley/ark-shop-back/commit/e87ac54094a695220d9d0cee6c8ec3303da6fc56))
+
 ## [1.6.1](https://github.com/1arley/ark-shop-back/compare/v1.6.0...v1.6.1) (2026-05-12)
 
 ### Bug Fixes
