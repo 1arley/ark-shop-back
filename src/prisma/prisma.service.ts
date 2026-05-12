@@ -14,7 +14,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     if (!databaseUrl) {
       throw new Error(
         'DATABASE_URL environment variable is required but was not set. ' +
-          'Configure it in your Vercel project environment variables.',
+          'Configure it in your environment variables.',
       );
     }
 

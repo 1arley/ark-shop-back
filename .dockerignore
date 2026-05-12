@@ -24,7 +24,6 @@ coverage
 .turbo
 .nvmrc
 .releaserc
-.releaserc.json
 .lintstagedrc.json
 commitlint.config.js
 eslint.config.mjs
@@ -48,8 +47,6 @@ docker-compose*.yml
 
 # Test artifacts
 test
-jest.config.js
-jest-e2e.config.js
 *.spec.ts
 *.e2e-spec.ts
 

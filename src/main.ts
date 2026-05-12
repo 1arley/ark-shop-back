@@ -89,6 +89,4 @@ async function bootstrap() {
   }
 }
 
-if (!process.env.VERCEL) {
-  void bootstrap();
-}
+void bootstrap();
