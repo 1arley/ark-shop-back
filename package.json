@@ -6,7 +6,7 @@
   "private": true,
   "license": "Copyright (C) SeedaBit Systems",
   "scripts": {
-    "build": "npx prisma generate && nest build",
+    "build": "npx prisma generate && nest build && npx tsc-alias",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/bull": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
@@ -115,6 +116,7 @@
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.17",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.20.0"
