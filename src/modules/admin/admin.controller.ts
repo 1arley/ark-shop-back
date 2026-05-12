@@ -25,6 +25,7 @@ import {
   AddKeysDto,
   UpdateOrderStatusDto,
 } from './dto/admin-product.dto';
+import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
 
 const ADMIN_ROLES = ['ADMIN', 'SUPERADMIN'];
 
@@ -58,6 +59,39 @@ export class AdminController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
     return this.adminService.getAllUsers(page, limit);
+  }
+
+  @Get('users/:id')
+  @UseGuards(...AdminGuard())
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user by ID (admin)' })
+  @ApiResponse({ status: 200, description: 'User found' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  getUser(@Param('id') id: string) {
+    return this.adminService.getUser(id);
+  }
+
+  @Patch('users/:id')
+  @UseGuards(...AdminGuard())
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update user (admin)' })
+  @ApiResponse({ status: 200, description: 'User updated' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  updateUser(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
+    return this.adminService.updateUser(id, dto);
+  }
+
+  @Delete('users/:id')
+  @UseGuards(...AdminGuard())
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete user (admin)' })
+  @ApiResponse({ status: 200, description: 'User deleted' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  deleteUser(@Param('id') id: string) {
+    return this.adminService.deleteUser(id);
   }
 
   @Get('fraud-logs')

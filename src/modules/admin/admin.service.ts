@@ -11,6 +11,8 @@ import { AdminRepository } from './admin.repository';
 import { KeysService } from '@/modules/keys/keys.service';
 import { ProductsService } from '@/modules/products/products.service';
 import { OrdersService } from '@/modules/orders/orders.service';
+import { UserService } from '@/user/user.service';
+import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -21,6 +23,7 @@ export class AdminService {
     private readonly keysService: KeysService,
     private readonly productsService: ProductsService,
     private readonly ordersService: OrdersService,
+    private readonly userService: UserService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -38,6 +41,20 @@ export class AdminService {
 
   async getSystemHealth() {
     return this.adminRepository.getSystemHealth();
+  }
+
+  // ─── Users ────────────────────────────────────────────────
+
+  async getUser(id: string) {
+    return this.userService.findById(id);
+  }
+
+  async updateUser(id: string, dto: AdminUpdateUserDto) {
+    return this.userService.adminUpdateUser(id, dto);
+  }
+
+  async deleteUser(id: string) {
+    return this.userService.deleteUser(id);
   }
 
   // ─── Products ─────────────────────────────────────────────
