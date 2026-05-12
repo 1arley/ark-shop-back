@@ -48,6 +48,8 @@ export class PaymentsController {
       createPaymentDto.amount,
       createPaymentDto.provider,
       createPaymentDto.method,
+      createPaymentDto.payerCpf,
+      createPaymentDto.payerBirthDate,
     );
   }
 

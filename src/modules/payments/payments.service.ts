@@ -24,17 +24,29 @@ export class PaymentsService {
     amount: number,
     provider?: PaymentProvider,
     method: PaymentMethod = PaymentMethod.PIX,
+    payerCpf?: string,
+    payerBirthDate?: string,
   ) {
     const selectedProvider = provider || this.providerFactory.getDefaultProvider();
 
     // If PIX, generate QR code directly (no duplicate payment record)
     if (method === PaymentMethod.PIX) {
       const providerImpl = this.providerFactory.getProvider(selectedProvider);
+
+      // Fetch user info for Mercado Pago payer data
+      const order = await this.ordersService.findById(orderId);
+      const userEmail = order?.user?.email ?? undefined;
+      const userName = order?.user?.name ?? undefined;
+
       const paymentIntent = await providerImpl.createPaymentIntent({
         amount,
         currency: 'BRL',
         orderId,
         method,
+        payerEmail: userEmail,
+        payerName: userName,
+        payerCpf,
+        payerBirthDate,
       });
 
       return this.paymentsRepository.createPixPayment(orderId, userId, amount, selectedProvider, {

@@ -18,6 +18,10 @@ export interface PaymentProviderInterface {
     currency: string;
     orderId: string;
     method: PaymentMethod;
+    payerEmail?: string;
+    payerName?: string;
+    payerCpf?: string;
+    payerBirthDate?: string;
   }): Promise<PaymentIntent>;
   verifyPayment(providerTxId: string): Promise<{
     status: string;
@@ -53,10 +57,18 @@ export class PaymentProviderFactory {
     currency: string;
     orderId: string;
     method: PaymentMethod;
+    payerEmail?: string;
+    payerName?: string;
+    payerCpf?: string;
+    payerBirthDate?: string;
   }): Promise<PaymentIntent> {
     const payment = await this.mercadoPagoProvider.createPayment({
       amount: data.amount,
       description: `Order ${data.orderId}`,
+      payerEmail: data.payerEmail,
+      payerName: data.payerName,
+      payerDocument: data.payerCpf,
+      externalReference: data.orderId,
     });
 
     return {
