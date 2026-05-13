@@ -1,3 +1,14 @@
+# [1.10.0](https://github.com/1arley/ark-shop-back/compare/v1.9.1...v1.10.0) (2026-05-13)
+
+### Bug Fixes
+
+- controller tests - register mock and 2nd arg (Response) ([089c1ed](https://github.com/1arley/ark-shop-back/commit/089c1ed508a8a3905ecfa3d87d3be85837975a19))
+- sameSite=None for cross-origin cookies between Vercel and Railway ([9794143](https://github.com/1arley/ark-shop-back/commit/979414378c919d9023e42f68070ea9ae0618f40b))
+
+### Features
+
+- auth cookies httpOnly on register + GET /auth/me endpoint ([f0d920c](https://github.com/1arley/ark-shop-back/commit/f0d920cdbc6ed88cab35c48baa4e1df365adcc1e))
+
 ## [1.9.1](https://github.com/1arley/ark-shop-back/compare/v1.9.0...v1.9.1) (2026-05-13)
 
 ### Bug Fixes
