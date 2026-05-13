@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from '@/prisma/prisma.module';
@@ -26,14 +27,34 @@ import { ContactModule } from '@/modules/contact/contact.module';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { SellersModule } from '@/modules/sellers/sellers.module';
 import { UploadModule } from '@/modules/upload/upload.module';
+import { WalletModule } from '@/modules/wallet/wallet.module';
+
+// ─── Sentry (optional — 14-day trial) ────────────────────────────
+// Só ativa se SENTRY_DSN estiver configurado no ambiente
+// Usamos import dinâmico para não travar se o pacote não existir
+let sentryModule: any = undefined;
+if (process.env.SENTRY_DSN) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+    const { SentryModule: SM } = require('@sentry/nestjs/setup');
+    sentryModule = SM.forRoot();
+  } catch {
+    // @sentry/nestjs não instalado — segue sem Sentry
+  }
+}
 
 @Module({
   imports: [
+    ...(sentryModule ? [sentryModule] : []),
     ConfigModule.forRoot({
       envFilePath: ['.env', '.env.local', '.env.test'],
       isGlobal: true,
     }),
-    // BullModule com Redis — desabilita graciosamente se Redis não estiver disponível
+
+    // ─── Schedule (cron jobs) ─────────────────────────────────────
+    ScheduleModule.forRoot(),
+
+    // ─── BullMQ / Redis — lazy connect, não trava se Redis estiver off ──
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -46,29 +67,36 @@ import { UploadModule } from '@/modules/upload/upload.module';
           maxRetriesPerRequest: null,
           lazyConnect: true,
         },
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
       }),
       inject: [ConfigService],
     }),
     BullModule.registerQueue({
       name: 'email',
     }),
-    // Rate limiting configuration - improved for production
-    // Auth endpoints should have stricter limits (configured in controllers)
+
+    // ─── Rate Limiting ────────────────────────────────────────────
     // General API: 60 requests per minute
-    // Auth endpoints: 5 requests per minute (applied separately)
+    // Auth endpoints have stricter per-route limits (configured in auth.controller)
     ThrottlerModule.forRoot([
       {
-        ttl: 60000, // 1 minute
-        limit: 60, // 60 requests per minute for general endpoints
+        ttl: 60000,
+        limit: 60,
       },
     ]),
+
+    // ─── Feature Modules ──────────────────────────────────────────
     PrismaModule,
     LoggerModule,
     MetricsModule,
     HealthModule,
     AuthModule,
     UserModule,
-    // D'Ark Games Store Modules
     ProductsModule,
     KeysModule,
     OrdersModule,
@@ -82,6 +110,7 @@ import { UploadModule } from '@/modules/upload/upload.module';
     NotificationsModule,
     SellersModule,
     UploadModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [

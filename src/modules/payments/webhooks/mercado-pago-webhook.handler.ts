@@ -6,7 +6,7 @@ import { createHmac } from 'crypto';
 /**
  * Mercado Pago Webhook Handler
  * Handles payment notifications from Mercado Pago
- * Implements signature verification and retry logic
+ * Implements signature verification and event processing
  */
 @Injectable()
 export class MercadoPagoWebhookHandler {
@@ -60,7 +60,8 @@ export class MercadoPagoWebhookHandler {
   }
 
   /**
-   * Process webhook event
+   * Process webhook event with retry logic
+   * Failed events are retried with exponential backoff
    */
   async handleEvent(event: any) {
     // Validate payload structure
@@ -81,10 +82,10 @@ export class MercadoPagoWebhookHandler {
     try {
       switch (action) {
         case 'payment.created':
-          await this.handlePaymentCreated(data);
+          await this.retryWithBackoff('payment.created', () => this.handlePaymentCreated(data));
           break;
         case 'payment.updated':
-          await this.handlePaymentUpdated(data);
+          await this.retryWithBackoff('payment.updated', () => this.handlePaymentUpdated(data));
           break;
         case 'payment.deleted':
           await this.handlePaymentDeleted(data);
@@ -182,33 +183,35 @@ export class MercadoPagoWebhookHandler {
   }
 
   /**
-   * Retry failed webhook delivery
-   * Implements exponential backoff
-   * Note: This is a placeholder - actual implementation would need
-   * to store failed events and retry them asynchronously
+   * Retry a handler function with exponential backoff
+   * Used for idempotent operations like payment approval
    */
-  async retryWithBackoff(
-    eventId: string,
+  private async retryWithBackoff(
+    operation: string,
+    handlerFn: () => Promise<void>,
     attempt: number = 1,
-    maxAttempts: number = 5,
-    handlerFn?: () => Promise<void>,
+    maxAttempts: number = 3,
   ): Promise<void> {
-    if (attempt > maxAttempts) {
-      this.logger.error(`Max retry attempts reached for event: ${eventId}`);
-      throw new Error('Max retry attempts reached');
-    }
-
     try {
-      if (handlerFn) {
-        await handlerFn();
+      await handlerFn();
+      if (attempt > 1) {
+        this.logger.log(`Retry attempt ${attempt} succeeded for operation: ${operation}`);
       }
-      this.logger.log(`Retry attempt ${attempt} succeeded for event: ${eventId}`);
-    } catch (_error: any) {
-      const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s, 16s, 32s
-      this.logger.warn(`Retry ${attempt} failed for event ${eventId}, waiting ${delay}ms`);
+    } catch (error: any) {
+      if (attempt >= maxAttempts) {
+        this.logger.error(
+          `Max retry attempts (${maxAttempts}) reached for operation: ${operation}. Error: ${error.message}`,
+        );
+        throw error;
+      }
+
+      const delay = Math.min(Math.pow(2, attempt) * 1000, 10_000); // 2s, 4s, 8s, capped at 10s
+      this.logger.warn(
+        `Operation ${operation} failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms...`,
+      );
 
       await this.sleep(delay);
-      return this.retryWithBackoff(eventId, attempt + 1, maxAttempts, handlerFn);
+      return this.retryWithBackoff(operation, handlerFn, attempt + 1, maxAttempts);
     }
   }
 

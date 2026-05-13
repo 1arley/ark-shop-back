@@ -1,3 +1,8 @@
+# ============================================
+# D'Ark Games Store — Production Dockerfile
+# Multi-stage build for minimal image size
+# ============================================
+
 # Stage 1: Base
 FROM node:22-alpine AS base
 
@@ -31,22 +36,26 @@ RUN npm run build
 FROM base AS production
 
 ENV NODE_ENV=production
+ENV PORT=3000
 
 COPY --from=base /usr/bin/dumb-init /usr/bin/dumb-init
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/prisma.config.ts ./prisma.config.ts
-COPY package.json ./
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=build --chown=node:node /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build --chown=node:node /app/package.json ./package.json
+COPY --chown=node:node docker-entrypoint.sh /docker-entrypoint.sh
+
+RUN chmod +x /docker-entrypoint.sh
 
 USER node
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/api || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/api/health/ready || exit 1
 
-ENTRYPOINT ["dumb-init", "--"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["node", "dist/main.js"]

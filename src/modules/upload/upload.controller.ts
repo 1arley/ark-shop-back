@@ -9,6 +9,9 @@ import {
   UploadedFile,
   UploadedFiles,
   BadRequestException,
+  MaxFileSizeValidator,
+  ParseFilePipe,
+  FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -23,6 +26,7 @@ import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('upload')
 @Controller('upload')
@@ -30,10 +34,25 @@ import { Roles } from '@/auth/roles.decorators';
 @Roles('ADMIN', 'SUPERADMIN')
 @ApiBearerAuth()
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  private readonly maxFileSize: number;
+  private readonly allowedMimes: string[];
+
+  constructor(
+    private readonly uploadService: UploadService,
+    private readonly configService: ConfigService,
+  ) {
+    this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE', 5 * 1024 * 1024);
+    this.allowedMimes = this.configService
+      .get<string>('ALLOWED_MIME_TYPES', 'image/jpeg,image/png,image/webp,image/gif')
+      .split(',');
+  }
 
   @Post()
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB — reject early at Multer level
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -46,15 +65,30 @@ export class UploadController {
   })
   @ApiOperation({ summary: 'Upload a single file' })
   @ApiResponse({ status: 201, description: 'File uploaded' })
-  async uploadFile(@UploadedFile() file: Express.Multer.File, @Body('folder') folder?: string) {
-    if (!file) {
-      throw new BadRequestException('No file provided');
-    }
+  async uploadFile(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({
+            fileType: /image\/(jpeg|png|webp|gif)/,
+          }),
+        ],
+        fileIsRequired: true,
+      }),
+    )
+    file: Express.Multer.File,
+    @Body('folder') folder?: string,
+  ) {
     return this.uploadService.upload(file, folder);
   }
 
   @Post('multiple')
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(
+    FilesInterceptor('files', 10, {
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -68,10 +102,21 @@ export class UploadController {
       },
     },
   })
-  @ApiOperation({ summary: 'Upload multiple files (max 10)' })
+  @ApiOperation({ summary: 'Upload multiple files (max 10, 5MB each)' })
   @ApiResponse({ status: 201, description: 'Files uploaded' })
   async uploadMultiple(
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({
+            fileType: /image\/(jpeg|png|webp|gif)/,
+          }),
+        ],
+        fileIsRequired: true,
+      }),
+    )
+    files: Express.Multer.File[],
     @Body('folder') folder?: string,
   ) {
     if (!files || files.length === 0) {

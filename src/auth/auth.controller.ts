@@ -1,5 +1,6 @@
 import { Controller, Post, Body, UseGuards, Req, Res, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { LoginDto } from '@/auth/dto/login.dto';
@@ -34,12 +35,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 registros/minuto
   @ApiRegisterUser()
   async register(@Body() registerDto: RegisterDto) {
     return await this.authService.register(registerDto);
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 tentativas/minuto
   @ApiLoginUser()
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(loginDto);
@@ -63,6 +66,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 refreshes/minuto
   @ApiRefreshTokens()
   @UseGuards(JwtRefreshAuthGuard)
   async refreshTokens(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
@@ -86,6 +90,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @SkipThrottle()
   @HttpCode(HttpStatus.OK)
   @ApiLogoutUser()
   @UseGuards(JwtAuthGuard)
@@ -105,6 +110,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 solicitações/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Solicitar redefinição de senha' })
   @ApiResponse({
@@ -116,6 +122,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redefinir senha com token' })
   @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
