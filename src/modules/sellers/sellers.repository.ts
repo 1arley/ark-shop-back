@@ -6,7 +6,7 @@ import { CreateSellerDto, UpdateSellerDto } from './dto/create-seller.dto';
 export class SellersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateSellerDto) {
+  async create(data: CreateSellerDto, asaasAccountId?: string, asaasWalletId?: string) {
     return this.prisma.seller.create({
       data: {
         userId: data.userId,
@@ -14,6 +14,8 @@ export class SellersRepository {
         document: data.document,
         commission: data.commission ?? 10,
         isActive: data.isActive ?? true,
+        asaasAccountId,
+        asaasWalletId,
       },
       include: {
         user: {
