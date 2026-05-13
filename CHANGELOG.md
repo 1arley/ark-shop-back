@@ -1,3 +1,9 @@
+## [1.12.1](https://github.com/1arley/ark-shop-back/compare/v1.12.0...v1.12.1) (2026-05-13)
+
+### Bug Fixes
+
+- log split details in Asaas payment creation ([6225fb0](https://github.com/1arley/ark-shop-back/commit/6225fb07d71e415bf85c682bc2737d2d30078cd4))
+
 # [1.12.0](https://github.com/1arley/ark-shop-back/compare/v1.11.0...v1.12.0) (2026-05-13)
 
 ### Features
