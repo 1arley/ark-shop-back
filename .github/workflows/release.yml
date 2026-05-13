@@ -169,3 +169,14 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ needs.release.outputs.version }}
+
+      - name: Deploy to Railway
+        if: github.ref == 'refs/heads/main'
+        env:
+          RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RAILWAY_DEPLOY_HOOK" ]; then
+            curl -X POST "$RAILWAY_DEPLOY_HOOK"
+          else
+            echo "⚠️  RAILWAY_DEPLOY_HOOK not set — skipping Railway deploy"
+          fi
