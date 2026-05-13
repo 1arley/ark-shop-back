@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, UseGuards, Req, Res, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Res,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
@@ -24,7 +34,7 @@ function getCookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
     secure: IS_PRODUCTION,
-    sameSite: IS_PRODUCTION ? 'none' as const : 'lax' as const,
+    sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
     path: '/',
     maxAge: maxAgeSeconds,
   };
@@ -121,8 +131,16 @@ export class AuthController {
       });
     }
 
-    res.clearCookie(ACCESS_TOKEN_COOKIE, { path: '/', secure: IS_PRODUCTION, sameSite: IS_PRODUCTION ? 'none' as const : 'lax' as const });
-    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/', secure: IS_PRODUCTION, sameSite: IS_PRODUCTION ? 'none' as const : 'lax' as const });
+    res.clearCookie(ACCESS_TOKEN_COOKIE, {
+      path: '/',
+      secure: IS_PRODUCTION,
+      sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
+    });
+    res.clearCookie(REFRESH_TOKEN_COOKIE, {
+      path: '/',
+      secure: IS_PRODUCTION,
+      sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
+    });
 
     return { message: 'Logout realizado com sucesso.' };
   }
