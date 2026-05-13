@@ -15,7 +15,8 @@ const logger = new Logger('Bootstrap');
 export async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
-    rawBody: true, // Necessário para verificação de assinatura de webhooks
+    // rawBody: true preserva o body bruto para verificação de assinatura de webhooks
+    rawBody: true,
   });
 
   // ─── Security Headers (Helmet) ────────────────────────────────────
