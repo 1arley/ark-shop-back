@@ -1,3 +1,9 @@
+## [1.8.4](https://github.com/1arley/ark-shop-back/compare/v1.8.3...v1.8.4) (2026-05-13)
+
+### Bug Fixes
+
+- use rawBody:true without bodyParser:false to avoid breaking JSON parsing ([0ed5631](https://github.com/1arley/ark-shop-back/commit/0ed5631fbc53af950dc9bf753271f35edf6d7ac8))
+
 ## [1.8.3](https://github.com/1arley/ark-shop-back/compare/v1.8.2...v1.8.3) (2026-05-13)
 
 ### Bug Fixes
