@@ -26,6 +26,7 @@ import {
   UpdateOrderStatusDto,
 } from './dto/admin-product.dto';
 import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
+import { CreateSellerDto, UpdateSellerDto } from '@/modules/sellers/dto/create-seller.dto';
 
 const ADMIN_ROLES = ['ADMIN', 'SUPERADMIN'];
 
@@ -238,6 +239,67 @@ export class AdminController {
     @Body('isCsv', ParseBoolPipe) isCsv: boolean = false,
   ) {
     return this.adminService.bulkImportKeys(productId, keysText, isCsv);
+  }
+
+  // ─── Sellers ────────────────────────────────────────────────
+
+  @Get('sellers')
+  @UseGuards(...AdminGuard())
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List all sellers (admin)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Paginated sellers' })
+  findAllSellers(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.adminService.findAllSellers(page, limit);
+  }
+
+  @Post('sellers')
+  @UseGuards(...AdminGuard())
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a seller (admin)' })
+  @ApiResponse({ status: 201, description: 'Seller created' })
+  @ApiResponse({ status: 409, description: 'User already has a seller profile' })
+  createSeller(@Body() dto: CreateSellerDto) {
+    return this.adminService.createSeller(dto);
+  }
+
+  @Get('sellers/:id')
+  @UseGuards(...AdminGuard())
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get seller by ID (admin)' })
+  @ApiResponse({ status: 200, description: 'Seller found' })
+  @ApiResponse({ status: 404, description: 'Seller not found' })
+  findSeller(@Param('id') id: string) {
+    return this.adminService.findSeller(id);
+  }
+
+  @Patch('sellers/:id')
+  @UseGuards(...AdminGuard())
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update seller (admin)' })
+  @ApiResponse({ status: 200, description: 'Seller updated' })
+  @ApiResponse({ status: 404, description: 'Seller not found' })
+  updateSeller(@Param('id') id: string, @Body() dto: UpdateSellerDto) {
+    return this.adminService.updateSeller(id, dto);
+  }
+
+  @Delete('sellers/:id')
+  @UseGuards(...AdminGuard())
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete seller (admin)' })
+  @ApiResponse({ status: 200, description: 'Seller deleted' })
+  @ApiResponse({ status: 404, description: 'Seller not found' })
+  deleteSeller(@Param('id') id: string) {
+    return this.adminService.deleteSeller(id);
   }
 
   @Post('generate-demo')

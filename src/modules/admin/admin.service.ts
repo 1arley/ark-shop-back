@@ -14,6 +14,8 @@ import { OrdersService } from '@/modules/orders/orders.service';
 import { UserService } from '@/user/user.service';
 import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
 import { ConfigService } from '@nestjs/config';
+import { SellersService } from '@/modules/sellers/sellers.service';
+import { CreateSellerDto, UpdateSellerDto } from '@/modules/sellers/dto/create-seller.dto';
 
 @Injectable()
 export class AdminService {
@@ -25,6 +27,7 @@ export class AdminService {
     private readonly ordersService: OrdersService,
     private readonly userService: UserService,
     private readonly configService: ConfigService,
+    private readonly sellersService: SellersService,
   ) {}
 
   async getDashboardStats() {
@@ -226,5 +229,27 @@ export class AdminService {
     ]);
 
     return { message: 'Demo data cleared' };
+  }
+
+  // ─── Sellers ────────────────────────────────────────────────
+
+  async createSeller(dto: CreateSellerDto) {
+    return this.sellersService.create(dto);
+  }
+
+  async findAllSellers(page: number, limit: number) {
+    return this.sellersService.findAll(page, limit);
+  }
+
+  async findSeller(id: string) {
+    return this.sellersService.findOne(id);
+  }
+
+  async updateSeller(id: string, dto: UpdateSellerDto) {
+    return this.sellersService.update(id, dto);
+  }
+
+  async deleteSeller(id: string) {
+    return this.sellersService.delete(id);
   }
 }
