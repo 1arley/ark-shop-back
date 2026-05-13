@@ -168,14 +168,17 @@ export class AsaasProvider {
       };
 
       // Split automático se sellerWalletId estiver presente
+      // e se o marketplace estiver habilitado na conta Asaas
       if (data.sellerWalletId) {
         payload.split = [
           {
             walletId: data.sellerWalletId,
             percentualValue: sellerPercent,
           },
-          // Os restantes {commission}% ficam na conta da plataforma automaticamente
         ];
+        this.logger.log(
+          `Split enabled: ${sellerPercent}% to seller (${data.sellerWalletId}), ${commission}% platform`,
+        );
       }
 
       const response = await this.api.post('/payments', payload);
