@@ -19,6 +19,22 @@ export interface AsaasPixPayment {
 }
 
 /**
+ * Asaas API error response shape
+ */
+interface AsaasApiError {
+  errors?: Array<{ description: string; code?: string }>;
+}
+
+/**
+ * Asaas subaccount response
+ */
+interface AsaasSubAccount {
+  id: string;
+  walletId: string;
+  accountNumber: string;
+}
+
+/**
  * Asaas Payment Provider
  *
  * Integração com Asaas API v3 — Marketplace (Subcontas).
@@ -93,7 +109,7 @@ export class AsaasProvider {
       agencyDigit?: string;
       type: 'CONTA_CORRENTE' | 'CONTA_POUPANCA' | 'CONTA_SALARIO';
     };
-  }): Promise<{ id: string; walletId: string; accountNumber: string }> {
+  }): Promise<AsaasSubAccount> {
     try {
       this.logger.log(`Creating Asaas subaccount for: ${data.name}`);
 
@@ -107,11 +123,12 @@ export class AsaasProvider {
         walletId: account.walletId,
         accountNumber: account.accountNumber,
       };
-    } catch (error: any) {
-      const apiError = error.response?.data;
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: AsaasApiError } };
+      const apiError = axiosError.response?.data;
       this.logger.error(`Asaas create account error: ${JSON.stringify(apiError)}`);
       throw new BadRequestException(
-        `Failed to create Asaas account: ${apiError?.errors?.[0]?.description || error.message}`,
+        `Failed to create Asaas account: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
       );
     }
   }
@@ -204,11 +221,12 @@ export class AsaasProvider {
         externalReference: payment.externalReference,
         split: payment.split || [],
       };
-    } catch (error: any) {
-      const apiError = error.response?.data;
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: AsaasApiError } };
+      const apiError = axiosError.response?.data;
       this.logger.error(`Asaas create payment error: ${JSON.stringify(apiError)}`);
       throw new BadRequestException(
-        `Failed to create Asaas payment: ${apiError?.errors?.[0]?.description || error.message}`,
+        `Failed to create Asaas payment: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
       );
     }
   }
@@ -225,10 +243,11 @@ export class AsaasProvider {
     try {
       const response = await this.api.get(`/payments/${paymentId}/pixQrCode`);
       return response.data;
-    } catch (error: any) {
-      this.logger.error(`Failed to fetch PIX QR code: ${error.message}`);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: AsaasApiError }; message?: string };
+      this.logger.error(`Failed to fetch PIX QR code: ${err.message || 'Unknown error'}`);
       throw new BadRequestException(
-        `Failed to fetch PIX QR code: ${error.response?.data?.errors?.[0]?.description || error.message}`,
+        `Failed to fetch PIX QR code: ${err.response?.data?.errors?.[0]?.description || err.message || 'Unknown error'}`,
       );
     }
   }
@@ -265,10 +284,11 @@ export class AsaasProvider {
         amount: payment.value,
         providerData: payment,
       };
-    } catch (error: any) {
-      this.logger.error(`Failed to verify payment: ${error.message}`);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: AsaasApiError }; message?: string };
+      this.logger.error(`Failed to verify payment: ${err.message || 'Unknown error'}`);
       throw new BadRequestException(
-        `Failed to verify payment: ${error.response?.data?.errors?.[0]?.description || error.message}`,
+        `Failed to verify payment: ${err.response?.data?.errors?.[0]?.description || err.message || 'Unknown error'}`,
       );
     }
   }
@@ -280,10 +300,11 @@ export class AsaasProvider {
     try {
       const response = await this.api.get(`/payments/${paymentId}`);
       return response.data;
-    } catch (error: any) {
-      this.logger.error(`Failed to fetch payment: ${error.message}`);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: AsaasApiError }; message?: string };
+      this.logger.error(`Failed to fetch payment: ${err.message || 'Unknown error'}`);
       throw new BadRequestException(
-        `Failed to fetch payment: ${error.response?.data?.errors?.[0]?.description || error.message}`,
+        `Failed to fetch payment: ${err.response?.data?.errors?.[0]?.description || err.message || 'Unknown error'}`,
       );
     }
   }
@@ -301,11 +322,12 @@ export class AsaasProvider {
     try {
       const response = await this.api.post('/customers', data);
       return response.data.id;
-    } catch (error: any) {
-      const apiError = error.response?.data;
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: AsaasApiError } };
+      const apiError = axiosError.response?.data;
       this.logger.error(`Asaas create customer error: ${JSON.stringify(apiError)}`);
       throw new BadRequestException(
-        `Failed to create Asaas customer: ${apiError?.errors?.[0]?.description || error.message}`,
+        `Failed to create Asaas customer: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
       );
     }
   }
@@ -323,11 +345,12 @@ export class AsaasProvider {
 
       this.logger.log(`Refund successful: ${response.data.id}`);
       return response.data;
-    } catch (error: any) {
-      const apiError = error.response?.data;
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: AsaasApiError } };
+      const apiError = axiosError.response?.data;
       this.logger.error(`Asaas refund error: ${JSON.stringify(apiError)}`);
       throw new BadRequestException(
-        `Refund failed: ${apiError?.errors?.[0]?.description || error.message}`,
+        `Refund failed: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
       );
     }
   }
