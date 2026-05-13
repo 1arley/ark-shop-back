@@ -25,6 +25,7 @@ import {
   AddKeysDto,
   UpdateOrderStatusDto,
 } from './dto/admin-product.dto';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
 import { CreateSellerDto, UpdateSellerDto } from '@/modules/sellers/dto/create-seller.dto';
 
@@ -80,8 +81,12 @@ export class AdminController {
   @ApiOperation({ summary: 'Update user (admin)' })
   @ApiResponse({ status: 200, description: 'User updated' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  updateUser(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
-    return this.adminService.updateUser(id, dto);
+  updateUser(
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateUserDto,
+    @CurrentUser() user: { id: string; role: string },
+  ) {
+    return this.adminService.updateUser(id, dto, user.id, user.role);
   }
 
   @Delete('users/:id')
@@ -91,8 +96,8 @@ export class AdminController {
   @ApiOperation({ summary: 'Delete user (admin)' })
   @ApiResponse({ status: 200, description: 'User deleted' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  deleteUser(@Param('id') id: string) {
-    return this.adminService.deleteUser(id);
+  deleteUser(@Param('id') id: string, @CurrentUser() user: { id: string; role: string }) {
+    return this.adminService.deleteUser(id, user.role);
   }
 
   @Get('fraud-logs')
