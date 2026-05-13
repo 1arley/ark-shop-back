@@ -9,28 +9,16 @@ import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { json } from 'express';
 
 const logger = new Logger('Bootstrap');
 
 export async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
-    // Desabilita o body parser padrão do NestJS para configurar manualmente
-    bodyParser: false,
+    // Preserva req.rawBody para verificação de assinatura de webhooks
+    // sem interferir no parser JSON normal do Express/NestJS
+    rawBody: true,
   });
-
-  // ─── Body parser com captura de raw body ─────────────────────────
-  // Necessário para verificação de assinatura de webhooks.
-  // O verify callback armazena o buffer bruto em req.rawBody
-  // enquanto o Express faz o parsing JSON normalmente em req.body.
-  app.use(
-    json({
-      verify: (req: any, _res, buf) => {
-        req.rawBody = buf;
-      },
-    }),
-  );
 
   // ─── Security Headers (Helmet) ────────────────────────────────────
   app.use(
