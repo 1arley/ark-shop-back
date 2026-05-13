@@ -1,3 +1,9 @@
+# [1.12.0](https://github.com/1arley/ark-shop-back/compare/v1.11.0...v1.12.0) (2026-05-13)
+
+### Features
+
+- role permissions - ADMIN cannot change roles, modify or delete SUPERADMIN ([42c6bda](https://github.com/1arley/ark-shop-back/commit/42c6bda81c57137014b7d197a81fe8f407c29f7e))
+
 # [1.11.0](https://github.com/1arley/ark-shop-back/compare/v1.10.0...v1.11.0) (2026-05-13)
 
 ### Features
