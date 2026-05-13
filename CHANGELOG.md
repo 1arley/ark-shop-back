@@ -1,3 +1,9 @@
+## [1.8.1](https://github.com/1arley/ark-shop-back/compare/v1.8.0...v1.8.1) (2026-05-13)
+
+### Bug Fixes
+
+- remove RawBodyMiddleware that hangs requests - NestJS rawBody:true already handles it ([f5aafb7](https://github.com/1arley/ark-shop-back/commit/f5aafb7c5789824bd5c7beb739633d5147e284c3))
+
 # [1.8.0](https://github.com/1arley/ark-shop-back/compare/v1.7.1...v1.8.0) (2026-05-13)
 
 ### Bug Fixes
