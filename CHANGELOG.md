@@ -1,3 +1,9 @@
+## [1.8.2](https://github.com/1arley/ark-shop-back/compare/v1.8.1...v1.8.2) (2026-05-13)
+
+### Bug Fixes
+
+- restore rawBody:true and remove conflicting RawBodyMiddleware ([3a9d16c](https://github.com/1arley/ark-shop-back/commit/3a9d16c31e986cfa0cf473d6e47ade544568a8fa))
+
 ## [1.8.1](https://github.com/1arley/ark-shop-back/compare/v1.8.0...v1.8.1) (2026-05-13)
 
 ### Bug Fixes
