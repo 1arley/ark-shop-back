@@ -1,5 +1,5 @@
-import { Controller, Post, Body, UseGuards, Req, Res, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, UseGuards, Req, Res, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AuthService } from '@/auth/auth.service';
@@ -35,10 +35,27 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 registros/minuto
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiRegisterUser()
-  async register(@Body() registerDto: RegisterDto) {
-    return await this.authService.register(registerDto);
+  async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.register(registerDto);
+
+    res.cookie(
+      ACCESS_TOKEN_COOKIE,
+      result.access_token,
+      getCookieOptions(result.access_expires_in),
+    );
+    res.cookie(
+      REFRESH_TOKEN_COOKIE,
+      result.refresh_token,
+      getCookieOptions(result.refresh_expires_in),
+    );
+
+    return {
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+      user: result.user,
+    };
   }
 
   @Post('login')
@@ -129,5 +146,15 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Token inválido ou expirado.' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Retorna o usuário autenticado' })
+  @ApiResponse({ status: 200, description: 'Usuário autenticado' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  getProfile(@Req() req: AuthenticatedRequest) {
+    return req.user;
   }
 }
