@@ -13,7 +13,10 @@ import cookieParser from 'cookie-parser';
 const logger = new Logger('Bootstrap');
 
 export async function createApp(): Promise<INestApplication> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    rawBody: true, // Necessário para verificação de assinatura de webhooks
+  });
 
   // ─── Security Headers (Helmet) ────────────────────────────────────
   app.use(

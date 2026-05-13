@@ -40,6 +40,7 @@ export class PaymentsRepository {
     amount: number,
     provider: PaymentProvider,
     pixData: {
+      providerTxId?: string;
       pixQrCode: string;
       pixCode: string;
     },
@@ -54,6 +55,7 @@ export class PaymentsRepository {
         status: PaymentStatus.PENDING,
         pixQrCode: pixData.pixQrCode,
         pixCode: pixData.pixCode,
+        ...(pixData.providerTxId && { providerTxId: pixData.providerTxId }),
       },
       include: {
         order: true,

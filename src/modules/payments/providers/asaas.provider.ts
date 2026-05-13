@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/prisma/prisma.service';
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 /**
  * Resposta de criação de cobrança PIX na Asaas
@@ -36,6 +36,7 @@ export class AsaasProvider {
   private readonly logger = new Logger(AsaasProvider.name);
   private readonly baseUrl: string;
   private readonly apiKey: string;
+  private readonly api: AxiosInstance;
 
   constructor(
     private readonly configService: ConfigService,
@@ -48,6 +49,13 @@ export class AsaasProvider {
     if (!this.apiKey) {
       this.logger.warn('⚠️  ASAAS_API_KEY not configured. Asaas provider will fail.');
     }
+
+    // Instância axios com timeout para evitar hangs
+    this.api = axios.create({
+      baseURL: this.baseUrl,
+      timeout: 15_000, // 15s — fail fast em vez de travar o event loop
+      headers: this.getHeaders(),
+    });
   }
 
   // ─── Headers ─────────────────────────────────────────────────────
@@ -89,9 +97,7 @@ export class AsaasProvider {
     try {
       this.logger.log(`Creating Asaas subaccount for: ${data.name}`);
 
-      const response = await axios.post(`${this.baseUrl}/accounts`, data, {
-        headers: this.getHeaders(),
-      });
+      const response = await this.api.post('/accounts', data);
 
       const account = response.data;
       this.logger.log(`Subaccount created: ${account.id}`);
@@ -155,9 +161,7 @@ export class AsaasProvider {
         ];
       }
 
-      const response = await axios.post(`${this.baseUrl}/payments`, payload, {
-        headers: this.getHeaders(),
-      });
+      const response = await this.api.post('/payments', payload);
 
       const payment = response.data;
       this.logger.log(`PIX charge created: ${payment.id}, Status: ${payment.status}`);
@@ -178,13 +182,8 @@ export class AsaasProvider {
       if (!pixQrCode && !pixCopyPaste) {
         try {
           const pixData = await this.getPixQrCode(payment.id);
-          pixQrCode = pixData.payload;
-          pixCopyPaste = pixData.payload; // O payload Asaas é o copia-cola
-
-          // Gerar QR code imagem se a Asaas não retornar
-          if (!pixQrCode) {
-            pixQrCode = pixData.encodedImage || null;
-          }
+          pixCopyPaste = pixData.payload; // Texto copia-cola PIX
+          pixQrCode = pixData.encodedImage || null; // Imagem PNG base64 do QR code
         } catch {
           this.logger.warn(`Could not fetch PIX QR code for payment ${payment.id}`);
         }
@@ -224,9 +223,7 @@ export class AsaasProvider {
     expirationDate: string | null;
   }> {
     try {
-      const response = await axios.get(`${this.baseUrl}/payments/${paymentId}/pixQrCode`, {
-        headers: this.getHeaders(),
-      });
+      const response = await this.api.get(`/payments/${paymentId}/pixQrCode`);
       return response.data;
     } catch (error: any) {
       this.logger.error(`Failed to fetch PIX QR code: ${error.message}`);
@@ -281,9 +278,7 @@ export class AsaasProvider {
    */
   async getPayment(paymentId: string): Promise<any> {
     try {
-      const response = await axios.get(`${this.baseUrl}/payments/${paymentId}`, {
-        headers: this.getHeaders(),
-      });
+      const response = await this.api.get(`/payments/${paymentId}`);
       return response.data;
     } catch (error: any) {
       this.logger.error(`Failed to fetch payment: ${error.message}`);
@@ -304,9 +299,7 @@ export class AsaasProvider {
     phone?: string;
   }): Promise<string> {
     try {
-      const response = await axios.post(`${this.baseUrl}/customers`, data, {
-        headers: this.getHeaders(),
-      });
+      const response = await this.api.post('/customers', data);
       return response.data.id;
     } catch (error: any) {
       const apiError = error.response?.data;
@@ -326,9 +319,7 @@ export class AsaasProvider {
       this.logger.log(`Refunding Asaas payment: ${paymentId}`);
 
       const payload = amount ? { value: amount } : {};
-      const response = await axios.post(`${this.baseUrl}/payments/${paymentId}/refund`, payload, {
-        headers: this.getHeaders(),
-      });
+      const response = await this.api.post(`/payments/${paymentId}/refund`, payload);
 
       this.logger.log(`Refund successful: ${response.data.id}`);
       return response.data;
@@ -344,48 +335,45 @@ export class AsaasProvider {
   // ─── Utilitários ─────────────────────────────────────────────────
 
   /**
-   * Busca o seller pelo userId para obter os dados de split
+   * Busca o walletId do seller para split automático.
+   *
+   * ATENÇÃO: Atualmente o sistema suporta apenas UM seller ativo (single-seller).
+   * O seller é determinado pelo mais recente com isActive=true.
+   *
+   * TODO: Adicionar sellerId ao Product para suporte multi-seller:
+   *   OrderItem → Product → sellerId → Seller.asaasWalletId
    */
   async getSellerWalletForOrder(orderId: string): Promise<{
     walletId: string | null;
     commission: number;
   } | null> {
     try {
-      const order = await this.prisma.order.findUnique({
-        where: { id: orderId },
-        include: {
-          items: {
-            include: {
-              product: true,
-            },
-          },
-        },
-      });
-
-      if (!order) return null;
-
-      // Pega o primeiro produto do pedido para identificar o seller
-      // Nota: em um marketplace real, cada item pode ter um seller diferente
-      const firstItem = order.items[0];
-      if (!firstItem) return null;
-
-      // Busca o seller associado ao produto (ou ao user)
-      // No modelo atual, produtos não têm seller_id — assumimos que o seller
-      // é o dono da loja. TODO: adicionar sellerId ao Product
       const seller = await this.prisma.seller.findFirst({
         where: { isActive: true },
         orderBy: { createdAt: 'desc' },
       });
 
-      if (!seller?.asaasWalletId) return null;
+      if (!seller) {
+        this.logger.warn(
+          `No active seller found for order ${orderId} — payment will have no split`,
+        );
+        return null;
+      }
+
+      if (!seller.asaasWalletId) {
+        this.logger.warn(`Seller ${seller.id} has no Asaas wallet — payment will have no split`);
+        return null;
+      }
 
       return {
         walletId: seller.asaasWalletId,
         commission: seller.commission.toNumber(),
       };
     } catch (error: unknown) {
+      // Erros de banco/ infraestrutura NÃO devem ser silenciados —
+      // senão a cobrança é criada sem split e o seller não recebe
       this.logger.error(`Failed to get seller wallet for order ${orderId}: ${String(error)}`);
-      return null;
+      throw error;
     }
   }
 

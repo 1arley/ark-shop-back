@@ -17,10 +17,12 @@ export class SellersService {
   async create(dto: CreateSellerDto) {
     const user = await this.userService.findById(dto.userId);
 
-    // Cria a subconta do seller no Asaas (marketplace)
-    let asaasAccountId: string | undefined;
-    let asaasWalletId: string | undefined;
+    // 1. Cria o seller primeiro no banco — se falhar, não criamos nada no Asaas
+    const seller = await this.repository.create(dto);
 
+    // 2. Tenta criar a subconta no Asaas (marketplace)
+    // Se falhar, o seller já existe no banco sem Asaas —
+    // podemos reprocessar depois manualmente sem perder dados
     try {
       const result = await this.asaasProvider.createSubAccount({
         name: dto.companyName,
@@ -29,17 +31,20 @@ export class SellersService {
         companyType: dto.document.length > 11 ? 'MEI' : undefined,
       });
 
-      asaasAccountId = result.id;
-      asaasWalletId = result.walletId;
+      // Atualiza o seller com os dados da Asaas
+      await this.repository.updateAsaasData(seller.id, {
+        asaasAccountId: result.id,
+        asaasWalletId: result.walletId,
+      });
 
       this.logger.log(`Asaas subaccount created for seller ${dto.userId}: ${result.id}`);
     } catch (error) {
       this.logger.error(`Failed to create Asaas subaccount for seller ${dto.userId}`, error);
-      // Não bloqueia o cadastro — o seller pode ser criado sem Asaas
-      // e a integração pode ser feita depois manualmente
+      // Não bloqueia — seller existe no banco, integração Asaas pode ser
+      // feita depois manualmente no painel admin
     }
 
-    return this.repository.create(dto, asaasAccountId, asaasWalletId);
+    return seller;
   }
 
   async findAll(page: number, limit: number) {

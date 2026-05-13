@@ -6,7 +6,7 @@ import { CreateSellerDto, UpdateSellerDto } from './dto/create-seller.dto';
 export class SellersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateSellerDto, asaasAccountId?: string, asaasWalletId?: string) {
+  async create(data: CreateSellerDto) {
     return this.prisma.seller.create({
       data: {
         userId: data.userId,
@@ -14,8 +14,27 @@ export class SellersRepository {
         document: data.document,
         commission: data.commission ?? 10,
         isActive: data.isActive ?? true,
-        asaasAccountId,
-        asaasWalletId,
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+  }
+
+  /**
+   * Atualiza os dados da integração Asaas no seller
+   * (chamado após criar a subconta no Asaas)
+   */
+  async updateAsaasData(id: string, data: { asaasAccountId: string; asaasWalletId: string }) {
+    await this.findById(id);
+
+    return this.prisma.seller.update({
+      where: { id },
+      data: {
+        asaasAccountId: data.asaasAccountId,
+        asaasWalletId: data.asaasWalletId,
       },
       include: {
         user: {

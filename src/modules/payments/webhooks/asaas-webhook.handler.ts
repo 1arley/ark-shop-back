@@ -167,11 +167,9 @@ export class AsaasWebhookHandler {
     const providerPaymentId = String(payment.id);
     this.logger.log(`Payment refunded: ${providerPaymentId}`);
 
-    try {
-      await this.paymentsService.refundPaymentByProviderTxId(providerPaymentId);
-    } catch (error: any) {
-      this.logger.error(`Failed to process refund for ${providerPaymentId}: ${error.message}`);
-    }
+    // Deixa o erro propagar — o handleEvent retorna authorizationStatus: 'REJECTED'
+    // e o Asaas retenta o webhook automaticamente
+    await this.paymentsService.refundPaymentByProviderTxId(providerPaymentId);
   }
 
   private async handlePaymentCancelled(payment: any) {
@@ -180,13 +178,7 @@ export class AsaasWebhookHandler {
     const providerPaymentId = String(payment.id);
     this.logger.log(`Payment cancelled: ${providerPaymentId}`);
 
-    try {
-      await this.paymentsService.rejectPaymentByProviderTxId(providerPaymentId, 'cancelled');
-    } catch (error: any) {
-      this.logger.error(
-        `Failed to process cancellation for ${providerPaymentId}: ${error.message}`,
-      );
-    }
+    await this.paymentsService.rejectPaymentByProviderTxId(providerPaymentId, 'cancelled');
   }
 
   // ─── Autorização de Saques/Estornos ─────────────────────────────

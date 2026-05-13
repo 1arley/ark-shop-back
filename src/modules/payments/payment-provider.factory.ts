@@ -132,7 +132,17 @@ export class PaymentProviderFactory {
       amount: payment.value,
       currency: 'BRL',
       status: payment.status,
-      providerData: payment,
+      providerData: {
+        id: payment.id,
+        transaction_amount: payment.value,
+        status: payment.status,
+        pix_qr_code: payment.pixQrCode,
+        pix_copy_paste: payment.pixCopyPaste,
+        // Dados adicionais preservados em snake_case para compatibilidade
+        // com PaymentsService que espera este formato (vindo do Mercado Pago)
+        asaasPaymentId: payment.id,
+        split: payment.split,
+      },
     };
   }
 
