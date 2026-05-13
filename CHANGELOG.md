@@ -1,3 +1,9 @@
+# [1.9.0](https://github.com/1arley/ark-shop-back/compare/v1.8.4...v1.9.0) (2026-05-13)
+
+### Features
+
+- add /admin/sellers CRUD endpoints matching admin panel pattern ([75f155f](https://github.com/1arley/ark-shop-back/commit/75f155fddfa46e767be5b56bddfe4b32d33c04af))
+
 ## [1.8.4](https://github.com/1arley/ark-shop-back/compare/v1.8.3...v1.8.4) (2026-05-13)
 
 ### Bug Fixes
