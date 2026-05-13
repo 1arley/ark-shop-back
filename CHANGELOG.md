@@ -1,3 +1,9 @@
+## [1.8.3](https://github.com/1arley/ark-shop-back/compare/v1.8.2...v1.8.3) (2026-05-13)
+
+### Bug Fixes
+
+- use express.json verify callback instead of rawBody:true to avoid breaking global JSON parser ([ad09505](https://github.com/1arley/ark-shop-back/commit/ad0950577ddd9c27de1315b8a47b412527c47162))
+
 ## [1.8.2](https://github.com/1arley/ark-shop-back/compare/v1.8.1...v1.8.2) (2026-05-13)
 
 ### Bug Fixes
