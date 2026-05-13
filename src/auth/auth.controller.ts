@@ -18,12 +18,13 @@ import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 function getCookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
+    secure: IS_PRODUCTION,
+    sameSite: IS_PRODUCTION ? 'none' as const : 'lax' as const,
     path: '/',
     maxAge: maxAgeSeconds,
   };
@@ -120,8 +121,8 @@ export class AuthController {
       });
     }
 
-    res.clearCookie(ACCESS_TOKEN_COOKIE, { path: '/' });
-    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/' });
+    res.clearCookie(ACCESS_TOKEN_COOKIE, { path: '/', secure: IS_PRODUCTION, sameSite: IS_PRODUCTION ? 'none' as const : 'lax' as const });
+    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/', secure: IS_PRODUCTION, sameSite: IS_PRODUCTION ? 'none' as const : 'lax' as const });
 
     return { message: 'Logout realizado com sucesso.' };
   }
