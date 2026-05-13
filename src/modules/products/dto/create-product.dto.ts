@@ -31,4 +31,9 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'Product image URL' })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
 }

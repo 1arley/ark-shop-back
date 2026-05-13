@@ -50,6 +50,7 @@ export class CartService {
         isActive: true,
         stock: true,
         description: true,
+        imageUrl: true,
       },
     });
 
@@ -68,7 +69,15 @@ export class CartService {
 
     const itemCount = itemsWithProducts.reduce((sum, item) => sum + item.quantity, 0);
 
-    return { items: itemsWithProducts, total, itemCount };
+    return {
+      id: cart.id,
+      userId: cart.userId,
+      items: itemsWithProducts,
+      total,
+      itemCount,
+      createdAt: cart.createdAt,
+      updatedAt: cart.updatedAt,
+    };
   }
 
   async addItem(userId: string, dto: AddToCartDto) {

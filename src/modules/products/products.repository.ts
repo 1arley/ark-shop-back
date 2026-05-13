@@ -16,6 +16,7 @@ export class ProductsRepository {
         stock: data.stock ?? 0,
         isActive: data.isActive ?? true,
         categoryId: data.categoryId,
+        imageUrl: data.imageUrl,
       },
     });
   }
@@ -100,6 +101,7 @@ export class ProductsRepository {
         stock: data.stock,
         isActive: data.isActive,
         categoryId: data.categoryId,
+        imageUrl: data.imageUrl,
       },
     });
   }
