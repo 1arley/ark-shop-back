@@ -1,3 +1,13 @@
+# [1.11.0](https://github.com/1arley/ark-shop-back/compare/v1.10.0...v1.11.0) (2026-05-13)
+
+### Features
+
+- role hierarchy and permission guards ([c6f9ff2](https://github.com/1arley/ark-shop-back/commit/c6f9ff2a8e0fc95161000cbd1502aed064834942))
+
+### Reverts
+
+- role hierarchy and permission guards ([8dd50d5](https://github.com/1arley/ark-shop-back/commit/8dd50d59678bb7730e985f93048c3852fbf9932e))
+
 # [1.10.0](https://github.com/1arley/ark-shop-back/compare/v1.9.1...v1.10.0) (2026-05-13)
 
 ### Bug Fixes
