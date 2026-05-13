@@ -1,3 +1,25 @@
+# [1.8.0](https://github.com/1arley/ark-shop-back/compare/v1.7.1...v1.8.0) (2026-05-13)
+
+### Bug Fixes
+
+- add wget and dynamic port to healthcheck ([14d7b32](https://github.com/1arley/ark-shop-back/commit/14d7b32140ed378094e29972f148842d6ad92f4a))
+- auth service test - register test missing JWT mock and outdated assertion ([b486355](https://github.com/1arley/ark-shop-back/commit/b486355bc4ec7a5a7804f698e1573173d100bfc4))
+- code review issues - Asaas provider timeout, PIX QR field mapping, providerTxId persistence, rawBody, seller lookup, error propagation ([680bc41](https://github.com/1arley/ark-shop-back/commit/680bc4111cb1a81773b75cc0f7b124ee05817163))
+- prisma connection timeout and add @nestjs/axios ([f9028c1](https://github.com/1arley/ark-shop-back/commit/f9028c1eef34a96e28386663926c0a2b5f0d722c))
+- return tokens on register and refresh_token on login ([4b68fd8](https://github.com/1arley/ark-shop-back/commit/4b68fd8c3a296aa050b9367d3b33bb6416109f33))
+- s3 url using UPLOAD_BASE_URL instead of hardcoded ([2b7b188](https://github.com/1arley/ark-shop-back/commit/2b7b188aec330c6949af34ad894bb7318eee70ec))
+
+### Features
+
+- add admin user management endpoints ([3b2f047](https://github.com/1arley/ark-shop-back/commit/3b2f047aaf04c1a51f989e2ef1c1279d13b126bd))
+- add notifications, sellers, upload, keys modules ([3e7244d](https://github.com/1arley/ark-shop-back/commit/3e7244de0c9ed77f1a24319e2e6299fcf29b4930))
+- **admin:** add CRUD endpoints for products, orders, and key inventory management ([f6bb763](https://github.com/1arley/ark-shop-back/commit/f6bb763b88740027b8a0ec66f0f69ec6a378a927))
+- **contact:** add contact module for handling user inquiries ([7e0d380](https://github.com/1arley/ark-shop-back/commit/7e0d380a8544920f4c54d106c1132c726d7d220a))
+- implement cookie-based authentication with access and refresh tokens ([a4874d4](https://github.com/1arley/ark-shop-back/commit/a4874d4080658f30a8494c87dcf8a0b146989a24))
+- migrate payment provider to Asaas with marketplace split ([cb0e218](https://github.com/1arley/ark-shop-back/commit/cb0e2186f1a6ae35d949510401acbd15368badec))
+- migrate to Mercado Pago Orders API and add payer fields ([4cbd382](https://github.com/1arley/ark-shop-back/commit/4cbd382370d463d8f3608b83e0bfa41806093d0b))
+- production readiness - Helmet, Sentry, graceful shutdown, real health checks, Asaas-ready provider architecture ([7519901](https://github.com/1arley/ark-shop-back/commit/7519901a9c42846c6e50e6db4bdab8ac756ed376))
+
 ## [1.7.1](https://github.com/1arley/ark-shop-back/compare/v1.7.0...v1.7.1) (2026-05-12)
 
 ### Bug Fixes
