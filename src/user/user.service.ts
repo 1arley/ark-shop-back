@@ -136,7 +136,12 @@ export class UserService {
     return userWithoutPassword;
   }
 
-  async adminUpdateUser(id: string, dto: AdminUpdateUserDto, requestingUserId: string, requestingUserRole: string) {
+  async adminUpdateUser(
+    id: string,
+    dto: AdminUpdateUserDto,
+    requestingUserId: string,
+    requestingUserRole: string,
+  ) {
     const target = await this.prisma.user.findUnique({ where: { id } });
     if (!target) {
       throw new NotFoundException('Usuário não encontrado.');

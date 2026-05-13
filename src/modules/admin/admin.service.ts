@@ -52,7 +52,12 @@ export class AdminService {
     return this.userService.findById(id);
   }
 
-  async updateUser(id: string, dto: AdminUpdateUserDto, requestingUserId: string, requestingUserRole: string) {
+  async updateUser(
+    id: string,
+    dto: AdminUpdateUserDto,
+    requestingUserId: string,
+    requestingUserRole: string,
+  ) {
     return this.userService.adminUpdateUser(id, dto, requestingUserId, requestingUserRole);
   }
 
