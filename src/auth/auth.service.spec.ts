@@ -66,12 +66,16 @@ describe('AuthService', () => {
         updatedAt,
       };
 
+      jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-jwt-token');
+      jest.spyOn(configService, 'get').mockReturnValue('fake-secret');
+      jest.spyOn(configService, 'getOrThrow').mockReturnValue('fake-secret');
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue(createdUser);
 
       const result = await service.register(registerDto);
 
-      expect(result).toHaveProperty('message', 'Usuário cadastrado com sucesso.');
+      expect(result).toHaveProperty('access_token', 'fake-jwt-token');
+      expect(result).toHaveProperty('refresh_token', 'fake-jwt-token');
       expect(result).toHaveProperty('user');
       expect(result.user.email).toBe(registerDto.email);
       expect(result.user).not.toHaveProperty('password');
