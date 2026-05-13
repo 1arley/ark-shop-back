@@ -1,7 +1,19 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '@/auth/roles.decorators';
-import { AuthenticatedRequest } from '@/common/interfaces/request.interface';
+import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
+
+/**
+ * Hierarquia de permissões:
+ *   SUPERADMIN = 3 → pode tudo que ADMIN + USER fazem + ações exclusivas
+ *   ADMIN      = 2 → pode tudo que USER faz + gerenciamento
+ *   USER       = 1 → apenas ações do próprio perfil
+ */
+const ROLE_HIERARCHY: Record<string, number> = {
+  SUPERADMIN: 3,
+  ADMIN: 2,
+  USER: 1,
+};
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -13,7 +25,7 @@ export class RolesGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    if (!requiredRoles) {
+    if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
@@ -23,9 +35,16 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Usuário não autenticado.');
     }
 
-    const hasRole = requiredRoles.some(role => user.role === role);
+    const userLevel = ROLE_HIERARCHY[user.role] ?? 0;
 
-    if (!hasRole) {
+    // Verifica se o usuário tem nível hierárquico suficiente.
+    // Se a rota exige ADMIN, SUPERADMIN (nível 3) também passa.
+    const hasAccess = requiredRoles.some(role => {
+      const requiredLevel = ROLE_HIERARCHY[role] ?? 0;
+      return userLevel >= requiredLevel;
+    });
+
+    if (!hasAccess) {
       throw new ForbiddenException('Você não tem permissão para acessar este recurso.');
     }
 

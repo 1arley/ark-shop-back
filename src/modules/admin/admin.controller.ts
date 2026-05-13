@@ -7,11 +7,13 @@ import {
   Body,
   Param,
   Query,
+  Req,
   ParseIntPipe,
   DefaultValuePipe,
   UseGuards,
   ParseBoolPipe,
 } from '@nestjs/common';
+import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
@@ -80,8 +82,12 @@ export class AdminController {
   @ApiOperation({ summary: 'Update user (admin)' })
   @ApiResponse({ status: 200, description: 'User updated' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  updateUser(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
-    return this.adminService.updateUser(id, dto);
+  updateUser(
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateUserDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.adminService.updateUser(id, dto, req.user.id, req.user.role);
   }
 
   @Delete('users/:id')
@@ -91,8 +97,8 @@ export class AdminController {
   @ApiOperation({ summary: 'Delete user (admin)' })
   @ApiResponse({ status: 200, description: 'User deleted' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  deleteUser(@Param('id') id: string) {
-    return this.adminService.deleteUser(id);
+  deleteUser(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.adminService.deleteUser(id, req.user.role);
   }
 
   @Get('fraud-logs')
