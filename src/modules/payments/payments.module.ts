@@ -6,7 +6,9 @@ import { PaymentProviderFactory } from './payment-provider.factory';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { OrdersModule } from '@/modules/orders/orders.module';
 import { MercadoPagoProvider } from './providers/mercado-pago.provider';
+import { AsaasProvider } from './providers/asaas.provider';
 import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
+import { AsaasWebhookHandler } from './webhooks/asaas-webhook.handler';
 import { RawBodyMiddleware } from '@/common/middleware/raw-body.middleware';
 
 @Module({
@@ -17,9 +19,17 @@ import { RawBodyMiddleware } from '@/common/middleware/raw-body.middleware';
     PaymentsRepository,
     PaymentProviderFactory,
     MercadoPagoProvider,
+    AsaasProvider,
     MercadoPagoWebhookHandler,
+    AsaasWebhookHandler,
   ],
-  exports: [PaymentsService, PaymentsRepository, PaymentProviderFactory, MercadoPagoProvider],
+  exports: [
+    PaymentsService,
+    PaymentsRepository,
+    PaymentProviderFactory,
+    MercadoPagoProvider,
+    AsaasProvider,
+  ],
 })
 export class PaymentsModule {
   configure(consumer: MiddlewareConsumer) {

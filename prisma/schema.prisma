@@ -332,15 +332,18 @@ updatedAt DateTime @updatedAt
 // SELLERS MODULE (Marketplace)
 // ============================
 model Seller {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyName String
-  document    String
-  commission  Decimal  @default(10) @db.Decimal(5, 2)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName       String
+  document          String
+  commission        Decimal  @default(10) @db.Decimal(5, 2)
+  asaasAccountId    String?  @unique // ID da conta Asaas (subconta marketplace)
+  asaasWalletId     String?  // Wallet ID da subconta Asaas (usado no split)
+  pixKey            String?  // Chave PIX do vendedor (CPF, CNPJ, email, telefone)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([userId])
 }

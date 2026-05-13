@@ -19,6 +19,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
+import { AsaasWebhookHandler } from './webhooks/asaas-webhook.handler';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { RawBody } from '@/common/decorators/raw-body.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -29,6 +30,7 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly mpWebhookHandler: MercadoPagoWebhookHandler,
+    private readonly asaasWebhookHandler: AsaasWebhookHandler,
   ) {}
 
   @Post(':orderId')
@@ -60,23 +62,40 @@ export class PaymentsController {
   @ApiResponse({ status: 400, description: 'Invalid signature' })
   async webhook(
     @Param('provider') provider: string,
-    @Body() webhookData: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    @Body() webhookData: any,
     @RawBody() rawBody: Buffer,
-    @Headers('x-signature') signature?: string,
+    @Headers('x-webhook-signature') asaasSignature?: string,
+    @Headers('x-signature') mpSignature?: string,
     @Headers('x-request-id') requestId?: string,
   ) {
-    // Only process Mercado Pago webhooks for now
-    if (provider === 'mercadopago' || provider === 'mercado_pago') {
-      // Mandatory signature verification — fail-closed
-      const isValid = this.mpWebhookHandler.verifySignature(rawBody, signature || '');
+    // ─── Asaas Webhook ──────────────────────────────────────────
+    if (provider === 'asaas') {
+      const isValid = this.asaasWebhookHandler.verifySignature(rawBody, asaasSignature || '');
 
       if (!isValid) {
-        throw new UnauthorizedException('Invalid webhook signature.');
+        throw new UnauthorizedException('Invalid Asaas webhook signature.');
       }
 
-      // Process webhook event
-      await this.mpWebhookHandler.handleEvent(webhookData);
+      const result = await this.asaasWebhookHandler.handleEvent(webhookData);
 
+      // Eventos de autorização (WITHDRAWAL_REQUESTED) exigem
+      // resposta SÍNCRONA com status no body
+      if (result.authorizationStatus) {
+        return { status: result.authorizationStatus, requestId };
+      }
+
+      return { status: 'ok', requestId };
+    }
+
+    // ─── Mercado Pago Webhook ───────────────────────────────────
+    if (provider === 'mercadopago' || provider === 'mercado_pago') {
+      const isValid = this.mpWebhookHandler.verifySignature(rawBody, mpSignature || '');
+
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid Mercado Pago webhook signature.');
+      }
+
+      await this.mpWebhookHandler.handleEvent(webhookData);
       return { status: 'ok', requestId };
     }
 
@@ -121,8 +140,8 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'List of payments' })
   getUserPayments(
     @Param('userId') userId: string,
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('page', new ParseIntPipe()) page: number = 1,
+    @Query('limit', new ParseIntPipe()) limit: number = 10,
   ) {
     return this.paymentsService.getUserPayments(userId, page, limit);
   }
