@@ -1,3 +1,9 @@
+## [1.9.1](https://github.com/1arley/ark-shop-back/compare/v1.9.0...v1.9.1) (2026-05-13)
+
+### Bug Fixes
+
+- add imageUrl to Product schema, fix cart response shape, fix download keys ([62d6773](https://github.com/1arley/ark-shop-back/commit/62d6773fcaebe0d712f96f94d12cf298a2247e67))
+
 # [1.9.0](https://github.com/1arley/ark-shop-back/compare/v1.8.4...v1.9.0) (2026-05-13)
 
 ### Features
