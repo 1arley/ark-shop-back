@@ -1,3 +1,9 @@
+# [1.13.0](https://github.com/1arley/ark-shop-back/compare/v1.12.1...v1.13.0) (2026-05-14)
+
+### Features
+
+- new dependencies in package.json ([e183803](https://github.com/1arley/ark-shop-back/commit/e183803a1db21818a0f6e64184acd18fbff54d44))
+
 ## [1.12.1](https://github.com/1arley/ark-shop-back/compare/v1.12.0...v1.12.1) (2026-05-13)
 
 ### Bug Fixes
