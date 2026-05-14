@@ -26,7 +26,7 @@ export class CategoriesService {
     return this.categoriesRepository.update(id, updateCategoryDto);
   }
 
-  async delete(id: string) {
-    return this.categoriesRepository.delete(id);
+  async delete(id: string, force: boolean = false) {
+    return this.categoriesRepository.delete(id, force);
   }
 }

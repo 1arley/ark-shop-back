@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/create-category.dto';
@@ -63,7 +73,8 @@ export class CategoriesController {
     status: 400,
     description: 'Cannot delete (has products or subcategories)',
   })
-  remove(@Param('id') id: string) {
-    return this.categoriesService.delete(id);
+  remove(@Param('id') id: string, @Query('force') force?: string) {
+    const forceDelete = force === 'true';
+    return this.categoriesService.delete(id, forceDelete);
   }
 }

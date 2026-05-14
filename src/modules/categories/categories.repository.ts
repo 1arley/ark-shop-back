@@ -70,7 +70,7 @@ export class CategoriesRepository {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, force: boolean = false) {
     const category = await this.prisma.category.findUnique({
       where: { id },
       include: {
@@ -87,8 +87,28 @@ export class CategoriesRepository {
       throw new Error('Category not found');
     }
 
-    if (category._count.products > 0 || category._count.children > 0) {
-      throw new Error('Cannot delete category with products or subcategories');
+    // Se for force=true, deleta mesmo com produtos/subcategorias (eles serão tratados pelo cascade)
+    if (!force && (category._count.products > 0 || category._count.children > 0)) {
+      // Verifica mais detalhadamente para dar uma mensagem melhor
+      const productsCount = await this.prisma.product.count({
+        where: { categoryId: id },
+      });
+      const childrenCount = await this.prisma.category.count({
+        where: { parentId: id },
+      });
+
+      if (productsCount > 0 || childrenCount > 0) {
+        const message = [];
+        if (productsCount > 0) {
+          message.push(`${productsCount} product${productsCount > 1 ? 's' : ''}`);
+        }
+        if (childrenCount > 0) {
+          message.push(`${childrenCount} subcategor${childrenCount > 1 ? 'ies' : 'y'}`);
+        }
+        throw new Error(
+          `Cannot delete category: it has ${message.join(' and ')}. Use force=true to delete anyway.`,
+        );
+      }
     }
 
     return this.prisma.category.delete({
