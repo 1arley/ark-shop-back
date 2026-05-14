@@ -1,3 +1,9 @@
+## [1.13.1](https://github.com/1arley/ark-shop-back/compare/v1.13.0...v1.13.1) (2026-05-14)
+
+### Bug Fixes
+
+- remove duplicate commands from product imageUrl migration ([bac33b0](https://github.com/1arley/ark-shop-back/commit/bac33b0beacda95627a77af9c8780db249bb21a6))
+
 # [1.13.0](https://github.com/1arley/ark-shop-back/compare/v1.12.1...v1.13.0) (2026-05-14)
 
 ### Features
