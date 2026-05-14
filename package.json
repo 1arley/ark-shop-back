@@ -29,6 +29,8 @@
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:studio": "npx prisma studio",
     "prisma:reset": "npx prisma migrate reset --force",
+    "prisma:migrate:deploy": "npx prisma migrate deploy",
+    "prisma:migrate:status": "npx prisma migrate status",
     "migrate:dev": "npx prisma migrate dev --name ${CURRENT_NAME}",
     "generate": "npx prisma generate",
     "seed": "ts-node prisma/seed.ts",
