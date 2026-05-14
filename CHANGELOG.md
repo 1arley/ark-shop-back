@@ -1,3 +1,9 @@
+## [1.13.3](https://github.com/1arley/ark-shop-back/compare/v1.13.2...v1.13.3) (2026-05-14)
+
+### Bug Fixes
+
+- add force delete option for categories and improve error messages ([b9e4e2e](https://github.com/1arley/ark-shop-back/commit/b9e4e2e85c546dd6e95f10da6a333fb5b326de35))
+
 ## [1.13.2](https://github.com/1arley/ark-shop-back/compare/v1.13.1...v1.13.2) (2026-05-14)
 
 ### Bug Fixes
