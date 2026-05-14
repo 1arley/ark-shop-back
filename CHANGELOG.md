@@ -1,3 +1,9 @@
+## [1.13.2](https://github.com/1arley/ark-shop-back/compare/v1.13.1...v1.13.2) (2026-05-14)
+
+### Bug Fixes
+
+- add prisma:migrate:deploy script for production deployments ([7035865](https://github.com/1arley/ark-shop-back/commit/7035865424634e35ab7d0408d887269075cd7f08))
+
 ## [1.13.1](https://github.com/1arley/ark-shop-back/compare/v1.13.0...v1.13.1) (2026-05-14)
 
 ### Bug Fixes
