@@ -39,7 +39,12 @@ export class S3StorageProvider implements StorageProvider {
     try {
       const { S3Client } = await import('@aws-sdk/client-s3');
       const { Upload } = await import('@aws-sdk/lib-storage');
+      const accessKeyId = this.configService.get<string>('S3_ACCESS_KEY_ID', '');
+      const secretAccessKey = this.configService.get<string>('S3_SECRET_ACCESS_KEY', '');
       const config: any = { region: this.region };
+      if (accessKeyId && secretAccessKey) {
+        config.credentials = { accessKeyId, secretAccessKey };
+      }
       if (this.endpoint) {
         config.endpoint = this.endpoint;
         config.forcePathStyle = true;
