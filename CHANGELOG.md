@@ -1,3 +1,9 @@
+## [1.16.1](https://github.com/1arley/ark-shop-back/compare/v1.16.0...v1.16.1) (2026-05-15)
+
+### Bug Fixes
+
+- corrigir importação CSV - adicionar endpoint file upload e validar erros ([9eecc62](https://github.com/1arley/ark-shop-back/commit/9eecc62f34dee975173abc5b94b770bb06e4cc3e))
+
 # [1.16.0](https://github.com/1arley/ark-shop-back/compare/v1.15.1...v1.16.0) (2026-05-15)
 
 ### Features
