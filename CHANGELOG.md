@@ -1,3 +1,9 @@
+# [1.17.0](https://github.com/1arley/ark-shop-back/compare/v1.16.2...v1.17.0) (2026-05-15)
+
+### Features
+
+- adicionar proteção contra produtos duplicados na importação CSV ([7844616](https://github.com/1arley/ark-shop-back/commit/78446160e792d9969b42698c5e20a7f15e4e1a8f))
+
 ## [1.16.2](https://github.com/1arley/ark-shop-back/compare/v1.16.1...v1.16.2) (2026-05-15)
 
 ### Bug Fixes
