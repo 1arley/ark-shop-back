@@ -181,35 +181,31 @@ export class OrdersRepository {
   }
 
   /**
-   * Reserve an available key for a product
-   * This is part of the delivery flow
+   * Reserve an available key for a product atomically.
+   * Uses updateMany with a WHERE condition to prevent TOCTOU race conditions.
    */
   async reserveAvailableKey(productId: string, orderItemId: string) {
-    // Find an available key for this product
-    const availableKey = await this.prisma.key.findFirst({
+    // Atomic reserve: updateMany only affects keys that are still AVAILABLE
+    const result = await this.prisma.key.updateMany({
       where: {
         productId,
         status: KeyStatus.AVAILABLE,
       },
-    });
-
-    if (!availableKey) {
-      return null;
-    }
-
-    // Reserve the key by updating its status and linking to order item
-    const reservedKey = await this.prisma.key.update({
-      where: { id: availableKey.id },
       data: {
         status: KeyStatus.RESERVED,
         orderItemId,
       },
-      include: {
-        product: true,
-      },
     });
 
-    return reservedKey;
+    if (result.count === 0) {
+      return null;
+    }
+
+    // Fetch the reserved key
+    return this.prisma.key.findFirst({
+      where: { orderItemId },
+      include: { product: true },
+    });
   }
 
   /**
@@ -239,8 +235,8 @@ export class OrdersRepository {
 
   /**
    * Atomically reserve keys and mark order as delivered.
-   * Wraps the entire flow in a $transaction to prevent TOCTOU race conditions
-   * where concurrent requests could grab the same key.
+   * Uses updateMany with WHERE condition on KeyStatus.AVAILABLE to prevent
+   * TOCTOU race conditions where concurrent requests could grab the same key.
    */
   async deliverOrderAtomic(
     orderId: string,
@@ -249,25 +245,21 @@ export class OrdersRepository {
     return this.prisma.$transaction(async tx => {
       for (const item of items) {
         if (!item.key) {
-          // Atomic find-and-reserve within the transaction
-          const availableKey = await tx.key.findFirst({
+          // Atomic reserve: updateMany only affects keys still AVAILABLE
+          const result = await tx.key.updateMany({
             where: {
               productId: item.productId,
               status: KeyStatus.AVAILABLE,
             },
-          });
-
-          if (!availableKey) {
-            throw new BadRequestException(`No available keys for product: ${item.product.name}`);
-          }
-
-          await tx.key.update({
-            where: { id: availableKey.id },
             data: {
               status: KeyStatus.RESERVED,
               orderItemId: item.id,
             },
           });
+
+          if (result.count === 0) {
+            throw new BadRequestException(`No available keys for product: ${item.product.name}`);
+          }
         }
       }
 

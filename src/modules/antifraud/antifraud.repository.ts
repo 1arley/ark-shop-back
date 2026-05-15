@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()
 export class AntifraudRepository {
+  private readonly logger = new Logger(AntifraudRepository.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async createFraudLog(data: {
@@ -48,13 +50,30 @@ export class AntifraudRepository {
     };
   }
 
+  /**
+   * Verifica reputação de IP.
+   *
+   * ATENÇÃO: Esta é uma implementação placeholder que sempre retorna true (aprovado).
+   * Para produção, integre com AbuseIPDB, ipqualityscore ou similar.
+   *
+   * TODO: Implementar verificação real de reputação de IP
+   * Exemplo: GET https://api.abuseipdb.com/api/v2/check?ipAddress={ip}
+   */
   checkIPReputation(_ipAddress: string): Promise<boolean> {
-    // TODO: Implement actual IP reputation check
+    this.logger.warn('IP reputation check not implemented — defaulting to approved');
     return Promise.resolve(true);
   }
 
+  /**
+   * Verifica se um device fingerprint está na lista negra.
+   *
+   * ATENÇÃO: Esta é uma implementação placeholder que sempre retorna false (não bloqueia).
+   * Para produção, implemente um cache Redis de fingerprints suspeitos.
+   *
+   * TODO: Implementar verificação real de blacklist de devices
+   */
   checkDeviceBlacklist(_deviceFingerprint: string): Promise<boolean> {
-    // TODO: Implement actual device blacklist check
+    this.logger.warn('Device blacklist check not implemented — defaulting to not blocked');
     return Promise.resolve(false);
   }
 

@@ -125,7 +125,9 @@ export class MercadoPagoProvider {
       };
     } catch (error: any) {
       const mpError = error.response?.data;
-      this.logger.error(`Mercado Pago error: ${JSON.stringify(mpError) || error.message}`);
+      this.logger.error(
+        `Mercado Pago error: ${mpError?.message || mpError?.error || error.message}`,
+      );
 
       throw new BadRequestException(
         `Failed to create payment: ${mpError?.message || error.message}`,

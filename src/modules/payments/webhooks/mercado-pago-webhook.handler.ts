@@ -41,14 +41,15 @@ export class MercadoPagoWebhookHandler {
       // Ensure we're working with a Buffer
       const bodyBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody);
 
-      // Compute expected signature using raw body
+      // Compute expected signature using raw body — digest() returns Buffer for binary safety
       const expectedSignature = createHmac('sha256', this.webhookSecret)
         .update(bodyBuffer)
-        .digest('hex');
+        .digest();
 
-      // Use timingSafeEqual para prevenir timing attacks
-      const sigBuffer = Buffer.from(signature);
-      const expectedBuffer = Buffer.from(expectedSignature);
+      // Normalize received signature: lowercase hex → Buffer
+      const normalizedSig = signature.toLowerCase();
+      const sigBuffer = Buffer.from(normalizedSig, 'hex');
+      const expectedBuffer = expectedSignature;
 
       if (sigBuffer.length !== expectedBuffer.length) {
         this.logger.warn('Invalid webhook signature (length mismatch)');

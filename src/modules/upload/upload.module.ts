@@ -5,12 +5,13 @@ import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
 import { LocalStorageProvider } from './providers/local-storage.provider';
 import { S3StorageProvider } from './providers/s3-storage.provider';
+import { MAX_FILE_SIZE } from '@/common/constants';
 
 @Module({
   imports: [
     MulterModule.register({
       storage: memoryStorage(),
-      limits: { fileSize: 10 * 1024 * 1024 },
+      limits: { fileSize: MAX_FILE_SIZE * 2 }, // 10MB — allow slightly more at Multer level than app-level
     }),
   ],
   controllers: [UploadController],

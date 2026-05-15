@@ -17,14 +17,14 @@ export class CartController {
   @ApiOperation({ summary: 'Get user cart' })
   @ApiResponse({ status: 200, description: 'Cart retrieved' })
   getCart(@CurrentUser() user: AuthenticatedUser) {
-    return this.cartService.getCart(user.id); // ← era user.sub
+    return this.cartService.getCart(user.id);
   }
 
   @Post('items')
   @ApiOperation({ summary: 'Add item to cart' })
   @ApiResponse({ status: 200, description: 'Item added' })
   addItem(@Body() dto: AddToCartDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.cartService.addItem(user.id, dto); // ← era user.sub
+    return this.cartService.addItem(user.id, dto);
   }
 
   @Patch('items/:productId')
@@ -36,7 +36,7 @@ export class CartController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (dto.quantity !== undefined) {
-      return this.cartService.updateItem(user.id, productId, dto.quantity); // ← era user.sub
+      return this.cartService.updateItem(user.id, productId, dto.quantity);
     }
     return this.cartService.getCart(user.id);
   }
@@ -45,21 +45,21 @@ export class CartController {
   @ApiOperation({ summary: 'Remove item from cart' })
   @ApiResponse({ status: 200, description: 'Item removed' })
   removeItem(@Param('productId') productId: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.cartService.removeItem(user.id, productId); // ← era user.sub
+    return this.cartService.removeItem(user.id, productId);
   }
 
   @Delete()
   @ApiOperation({ summary: 'Clear cart' })
   @ApiResponse({ status: 200, description: 'Cart cleared' })
   clearCart(@CurrentUser() user: AuthenticatedUser) {
-    return this.cartService.clearCart(user.id); // ← era user.sub, agora retorna Promise
+    return this.cartService.clearCart(user.id);
   }
 
   @Get('count')
   @ApiOperation({ summary: 'Get cart item count' })
   @ApiResponse({ status: 200, description: 'Count retrieved' })
   async getCount(@CurrentUser() user: AuthenticatedUser) {
-    const count = await this.cartService.getItemsCount(user.id); // ← era user.sub
+    const count = await this.cartService.getItemsCount(user.id);
     return { count };
   }
 }

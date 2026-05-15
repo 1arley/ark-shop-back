@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsEnum } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 
 export class AdminUpdateUserDto {
   @ApiPropertyOptional({ description: 'User name' })
@@ -13,9 +14,9 @@ export class AdminUpdateUserDto {
   email?: string;
 
   @ApiPropertyOptional({ description: 'User role (USER, ADMIN, SUPERADMIN)' })
-  @IsString()
+  @IsEnum(Role, { message: 'Role inválida. Use: USER, ADMIN ou SUPERADMIN.' })
   @IsOptional()
-  role?: string;
+  role?: Role;
 
   @ApiPropertyOptional({ description: 'Avatar URL' })
   @IsString()

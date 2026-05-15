@@ -126,7 +126,9 @@ export class AsaasProvider {
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: AsaasApiError } };
       const apiError = axiosError.response?.data;
-      this.logger.error(`Asaas create account error: ${JSON.stringify(apiError)}`);
+      this.logger.error(
+        `Asaas create account error: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
+      );
       throw new BadRequestException(
         `Failed to create Asaas account: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
       );
@@ -227,7 +229,9 @@ export class AsaasProvider {
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: AsaasApiError } };
       const apiError = axiosError.response?.data;
-      this.logger.error(`Asaas create payment error: ${JSON.stringify(apiError)}`);
+      this.logger.error(
+        `Asaas create payment error: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
+      );
       throw new BadRequestException(
         `Failed to create Asaas payment: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
       );
@@ -328,7 +332,9 @@ export class AsaasProvider {
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: AsaasApiError } };
       const apiError = axiosError.response?.data;
-      this.logger.error(`Asaas create customer error: ${JSON.stringify(apiError)}`);
+      this.logger.error(
+        `Asaas create customer error: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
+      );
       throw new BadRequestException(
         `Failed to create Asaas customer: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
       );
@@ -351,7 +357,9 @@ export class AsaasProvider {
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: AsaasApiError } };
       const apiError = axiosError.response?.data;
-      this.logger.error(`Asaas refund error: ${JSON.stringify(apiError)}`);
+      this.logger.error(
+        `Asaas refund error: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
+      );
       throw new BadRequestException(
         `Refund failed: ${apiError?.errors?.[0]?.description || (error as Error).message}`,
       );

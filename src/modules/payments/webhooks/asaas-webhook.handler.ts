@@ -63,10 +63,11 @@ export class AsaasWebhookHandler {
 
       const expectedSignature = createHmac('sha256', this.webhookSecret)
         .update(bodyBuffer)
-        .digest('hex');
+        .digest();
 
-      const signatureBuffer = Buffer.from(signature);
-      const expectedBuffer = Buffer.from(expectedSignature);
+      const normalizedSig = signature.toLowerCase();
+      const signatureBuffer = Buffer.from(normalizedSig, 'hex');
+      const expectedBuffer = expectedSignature;
 
       if (signatureBuffer.length !== expectedBuffer.length) {
         return false;

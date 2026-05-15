@@ -1,46 +1,32 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { json } from 'express';
 
 /**
- * Middleware para preservar o raw body da requisição
- * Necessário para verificação de assinatura em webhooks
+ * Middleware para preservar o raw body da requisição em rotas específicas.
+ * Necessário apenas para verificação de assinatura em webhooks.
  *
- * Usa express.raw() para capturar o body antes de qualquer parser JSON.
- * Isso garante que req.rawBody seja um Buffer com os bytes exatos.
+ * NestJS já configura rawBody: true globalmente via NestFactory.create(),
+ * então este middleware é um fallback para casos onde o body já foi
+ * consumido pelo parser JSON antes de chegar aqui.
  */
 @Injectable()
 export class RawBodyMiddleware implements NestMiddleware {
   private readonly logger = new Logger(RawBodyMiddleware.name);
 
   use(req: Request, res: Response, next: NextFunction) {
-    // Se o rawBody já foi preenchido (ex: por rawBody: true do NestJS),
+    // Se o rawBody já foi preenchido pelo NestJS (rawBody: true no factory),
     // apenas passa adiante
-    if (req.rawBody && Buffer.isBuffer(req.rawBody) && req.rawBody.length > 0) {
+    if (Buffer.isBuffer(req.rawBody) && req.rawBody.length > 0) {
       next();
       return;
     }
 
-    const chunks: Buffer[] = [];
-    let totalLength = 0;
-
-    req.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-      totalLength += chunk.length;
-    });
-
-    req.on('end', () => {
-      if (totalLength > 0) {
-        req.rawBody = Buffer.concat(chunks, totalLength);
-      } else {
-        // Body vazio — usa o body parseado como fallback
-        req.rawBody = req.body ? Buffer.from(JSON.stringify(req.body)) : Buffer.alloc(0);
-      }
-      next();
-    });
-
-    req.on('error', err => {
-      this.logger.error('RawBodyMiddleware error:', err);
-      next(err);
-    });
+    // Fallback: re-parse com buffer preservation
+    json({
+      verify: (_req: any, _res: any, buf: Buffer) => {
+        _req.rawBody = buf;
+      },
+    })(req, res, next);
   }
 }

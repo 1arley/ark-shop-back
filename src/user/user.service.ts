@@ -2,7 +2,6 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-  BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -152,10 +151,6 @@ export class UserService {
       if (existing) {
         throw new ConflictException('Email já cadastrado.');
       }
-    }
-
-    if (dto.role && !['USER', 'ADMIN', 'SUPERADMIN'].includes(dto.role)) {
-      throw new BadRequestException('Role inválida. Use: USER, ADMIN ou SUPERADMIN.');
     }
 
     // ─── Regras de permissão ──────────────────────────────────────────

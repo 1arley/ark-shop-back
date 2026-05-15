@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { LocalStorageProvider } from './providers/local-storage.provider';
 import { S3StorageProvider } from './providers/s3-storage.provider';
 import type { StorageProvider, UploadedFileInfo } from './storage-provider.interface';
+import { MAX_FILE_SIZE, ALLOWED_MIME_TYPES } from '@/common/constants';
 
 @Injectable()
 export class UploadService {
@@ -18,9 +19,9 @@ export class UploadService {
   ) {
     const driver = this.configService.get<string>('STORAGE_DRIVER', 'local');
     this.provider = driver === 's3' ? s3StorageProvider : localStorageProvider;
-    this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE', 5 * 1024 * 1024);
+    this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE', MAX_FILE_SIZE);
     this.allowedMimes = this.configService
-      .get<string>('ALLOWED_MIME_TYPES', 'image/jpeg,image/png,image/webp,image/gif')
+      .get<string>('ALLOWED_MIME_TYPES', ALLOWED_MIME_TYPES)
       .split(',');
     this.logger.log(`Upload service initialized with driver: ${driver}`);
   }

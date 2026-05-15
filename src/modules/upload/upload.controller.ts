@@ -27,6 +27,12 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { ConfigService } from '@nestjs/config';
+import {
+  MAX_FILE_SIZE,
+  MAX_MULTIPLE_FILES,
+  ALLOWED_MIME_TYPES,
+  ALLOWED_MIME_REGEX,
+} from '@/common/constants';
 
 @ApiTags('upload')
 @Controller('upload')
@@ -41,16 +47,16 @@ export class UploadController {
     private readonly uploadService: UploadService,
     private readonly configService: ConfigService,
   ) {
-    this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE', 5 * 1024 * 1024);
+    this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE', MAX_FILE_SIZE);
     this.allowedMimes = this.configService
-      .get<string>('ALLOWED_MIME_TYPES', 'image/jpeg,image/png,image/webp,image/gif')
+      .get<string>('ALLOWED_MIME_TYPES', ALLOWED_MIME_TYPES)
       .split(',');
   }
 
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB — reject early at Multer level
+      limits: { fileSize: MAX_FILE_SIZE }, // 5MB — reject early at Multer level
     }),
   )
   @ApiConsumes('multipart/form-data')
@@ -69,9 +75,9 @@ export class UploadController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE }),
           new FileTypeValidator({
-            fileType: /image\/(jpeg|png|webp|gif)/,
+            fileType: ALLOWED_MIME_REGEX,
           }),
         ],
         fileIsRequired: true,
@@ -85,8 +91,8 @@ export class UploadController {
 
   @Post('multiple')
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
-      limits: { fileSize: 5 * 1024 * 1024 },
+    FilesInterceptor('files', MAX_MULTIPLE_FILES, {
+      limits: { fileSize: MAX_FILE_SIZE },
     }),
   )
   @ApiConsumes('multipart/form-data')
@@ -108,9 +114,9 @@ export class UploadController {
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE }),
           new FileTypeValidator({
-            fileType: /image\/(jpeg|png|webp|gif)/,
+            fileType: ALLOWED_MIME_REGEX,
           }),
         ],
         fileIsRequired: true,

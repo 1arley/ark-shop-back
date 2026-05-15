@@ -18,6 +18,11 @@ import { EmailService } from '@/modules/email/email.service';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import type { StringValue } from 'ms';
+import {
+  DEFAULT_BCRYPT_SALT_ROUNDS,
+  PASSWORD_RESET_EXPIRY_HOURS,
+  HOUR_IN_MS,
+} from '@/common/constants';
 
 @Injectable()
 export class AuthService {
@@ -43,7 +48,9 @@ export class AuthService {
     }
 
     // Use configurable bcrypt salt rounds (default 12 for production security)
-    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS') || '12');
+    const saltRounds = parseInt(
+      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
+    );
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const user = await this.prisma.user.create({
@@ -231,7 +238,7 @@ export class AuthService {
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * HOUR_IN_MS);
 
     await this.prisma.passwordResetToken.create({
       data: {
@@ -271,7 +278,9 @@ export class AuthService {
       throw new BadRequestException('Token inválido ou expirado.');
     }
 
-    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS') || '12');
+    const saltRounds = parseInt(
+      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
+    );
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     await this.prisma.$transaction([

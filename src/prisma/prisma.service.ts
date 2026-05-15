@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { Pool } from 'pg';
+import { DB_CONNECTION_TIMEOUT_MS } from '@/common/constants';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -26,7 +27,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     } else {
       const pool = new Pool({
         connectionString: databaseUrl,
-        connectionTimeoutMillis: 10000, // 10s timeout — fail fast instead of hanging
+        connectionTimeoutMillis: DB_CONNECTION_TIMEOUT_MS, // 10s timeout — fail fast instead of hanging
       });
       const adapter = new PrismaPg(pool);
       super({ adapter });

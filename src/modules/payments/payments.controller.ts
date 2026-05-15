@@ -67,7 +67,6 @@ export class PaymentsController {
     @RawBody() rawBody: Buffer,
     @Headers('x-webhook-signature') asaasSignature?: string,
     @Headers('x-signature') mpSignature?: string,
-    @Headers('x-request-id') requestId?: string,
   ) {
     // ─── Asaas Webhook ──────────────────────────────────────────
     if (provider === 'asaas') {
@@ -82,10 +81,10 @@ export class PaymentsController {
       // Eventos de autorização (WITHDRAWAL_REQUESTED) exigem
       // resposta SÍNCRONA com status no body
       if (result.authorizationStatus) {
-        return { status: result.authorizationStatus, requestId };
+        return { status: result.authorizationStatus };
       }
 
-      return { status: 'ok', requestId };
+      return { status: 'ok' };
     }
 
     // ─── Mercado Pago Webhook ───────────────────────────────────
@@ -97,7 +96,7 @@ export class PaymentsController {
       }
 
       await this.mpWebhookHandler.handleEvent(webhookData);
-      return { status: 'ok', requestId };
+      return { status: 'ok' };
     }
 
     return { status: 'ignored', provider };

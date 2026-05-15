@@ -8,15 +8,10 @@ export class CartService {
 
   // Garante que o usuário tem um cart, criando se necessário
   private async ensureCart(userId: string) {
-    return this.prisma.cart.upsert({
+    await this.prisma.cart.upsert({
       where: { userId },
       create: { userId },
       update: {},
-      include: {
-        items: {
-          include: { cart: false },
-        },
-      },
     });
   }
 
