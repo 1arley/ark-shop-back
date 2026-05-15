@@ -1,3 +1,9 @@
+# [1.15.0](https://github.com/1arley/ark-shop-back/compare/v1.14.0...v1.15.0) (2026-05-15)
+
+### Features
+
+- adiciona importação de produtos via CSV com segurança e performance ([c4f702c](https://github.com/1arley/ark-shop-back/commit/c4f702ca75e4119a6dd9e0c8d57280098709814b))
+
 # [1.14.0](https://github.com/1arley/ark-shop-back/compare/v1.13.10...v1.14.0) (2026-05-15)
 
 ### Features
