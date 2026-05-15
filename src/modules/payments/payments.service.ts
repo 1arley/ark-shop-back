@@ -58,10 +58,13 @@ export class PaymentsService {
         payerBirthDate,
       });
 
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
       return this.paymentsRepository.createPixPayment(orderId, userId, amount, selectedProvider, {
         providerTxId: paymentIntent.id,
         pixQrCode: paymentIntent.providerData?.pix_qr_code || '',
         pixCode: paymentIntent.providerData?.pix_copy_paste || '',
+        expiresAt,
       });
     }
 

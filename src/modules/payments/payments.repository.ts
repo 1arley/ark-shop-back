@@ -43,6 +43,7 @@ export class PaymentsRepository {
       providerTxId?: string;
       pixQrCode: string;
       pixCode: string;
+      expiresAt?: Date;
     },
   ) {
     return this.prisma.payment.create({
@@ -56,6 +57,7 @@ export class PaymentsRepository {
         pixQrCode: pixData.pixQrCode,
         pixCode: pixData.pixCode,
         ...(pixData.providerTxId && { providerTxId: pixData.providerTxId }),
+        ...(pixData.expiresAt && { expiresAt: pixData.expiresAt }),
       },
       include: {
         order: true,
