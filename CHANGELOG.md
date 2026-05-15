@@ -1,3 +1,9 @@
+## [1.13.10](https://github.com/1arley/ark-shop-back/compare/v1.13.9...v1.13.10) (2026-05-15)
+
+### Bug Fixes
+
+- swap pixQrCode and pixCode fields in payment creation ([de03312](https://github.com/1arley/ark-shop-back/commit/de033124db5f8437b880ad82713d44ca889d9cee))
+
 ## [1.13.9](https://github.com/1arley/ark-shop-back/compare/v1.13.8...v1.13.9) (2026-05-15)
 
 ### Bug Fixes
