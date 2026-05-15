@@ -1,3 +1,9 @@
+## [1.16.2](https://github.com/1arley/ark-shop-back/compare/v1.16.1...v1.16.2) (2026-05-15)
+
+### Bug Fixes
+
+- corrigir parser CSV para lidar com formato Google Sheets com colunas extras ([aadf75f](https://github.com/1arley/ark-shop-back/commit/aadf75fa0db292808af70fa81649d07636e7c4af))
+
 ## [1.16.1](https://github.com/1arley/ark-shop-back/compare/v1.16.0...v1.16.1) (2026-05-15)
 
 ### Bug Fixes
