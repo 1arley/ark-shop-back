@@ -66,10 +66,19 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
-    // Sanitiza a key para evitar path traversal
-    // Divide a key em segmentos e sanitiza cada um individualmente
-    const segments = key.split('/').map(s => this.sanitizeSegment(s));
-    const filepath = this.sanitizePath(segments);
+    // Sanitiza cada segmento do path, preservando a extensão do arquivo final
+    const parts = key.split('/');
+    const sanitizedParts = parts.map((part, index) => {
+      if (index === parts.length - 1) {
+        // Último segmento: preserva a extensão do arquivo
+        const ext = path.extname(part);
+        const name = path.basename(part, ext);
+        return this.sanitizeSegment(name) + ext;
+      }
+      // Segmentos de diretório: sanitização completa
+      return this.sanitizeSegment(part);
+    });
+    const filepath = this.sanitizePath(sanitizedParts);
 
     try {
       await fs.unlink(filepath);

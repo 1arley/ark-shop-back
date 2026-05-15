@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentMethod, PaymentProvider } from '@prisma/client';
-import { MercadoPagoProvider } from './providers/mercado-pago.provider';
 import { AsaasProvider } from './providers/asaas.provider';
 
 export interface PaymentIntent {
@@ -38,17 +37,8 @@ export class PaymentProviderFactory {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly mercadoPagoProvider: MercadoPagoProvider,
     private readonly asaasProvider: AsaasProvider,
   ) {
-    // Register Mercado Pago
-    this.providers.set(PaymentProvider.MERCADO_PAGO, {
-      name: PaymentProvider.MERCADO_PAGO,
-      createPaymentIntent: this.createMercadoPagoIntent.bind(this),
-      verifyPayment: this.verifyMercadoPagoPayment.bind(this),
-      refundPayment: this.refundMercadoPagoPayment.bind(this),
-    });
-
     // Register Asaas (primary provider for marketplace)
     this.providers.set(PaymentProvider.ASAAS, {
       name: PaymentProvider.ASAAS,
@@ -56,44 +46,6 @@ export class PaymentProviderFactory {
       verifyPayment: this.verifyAsaasPayment.bind(this),
       refundPayment: this.refundAsaasPayment.bind(this),
     });
-  }
-
-  // ─── Mercado Pago ────────────────────────────────────────────────
-
-  private async createMercadoPagoIntent(data: {
-    amount: number;
-    currency: string;
-    orderId: string;
-    method: PaymentMethod;
-    payerEmail?: string;
-    payerName?: string;
-    payerCpf?: string;
-    payerBirthDate?: string;
-  }): Promise<PaymentIntent> {
-    const payment = await this.mercadoPagoProvider.createPayment({
-      amount: data.amount,
-      description: `Order ${data.orderId}`,
-      payerEmail: data.payerEmail,
-      payerName: data.payerName,
-      payerDocument: data.payerCpf,
-      externalReference: data.orderId,
-    });
-
-    return {
-      id: payment.id,
-      amount: payment.transaction_amount,
-      currency: 'BRL',
-      status: payment.status,
-      providerData: payment,
-    };
-  }
-
-  private async verifyMercadoPagoPayment(providerTxId: string) {
-    return this.mercadoPagoProvider.verifyPayment(providerTxId);
-  }
-
-  private async refundMercadoPagoPayment(providerTxId: string, amount?: number) {
-    return this.mercadoPagoProvider.refundPayment(providerTxId, amount);
   }
 
   // ─── Asaas ───────────────────────────────────────────────────────
@@ -138,8 +90,6 @@ export class PaymentProviderFactory {
         status: payment.status,
         pix_qr_code: payment.pixQrCode,
         pix_copy_paste: payment.pixCopyPaste,
-        // Dados adicionais preservados em snake_case para compatibilidade
-        // com PaymentsService que espera este formato (vindo do Mercado Pago)
         asaasPaymentId: payment.id,
         split: payment.split,
       },
@@ -185,10 +135,7 @@ export class PaymentProviderFactory {
   }
 
   getDefaultProvider(): PaymentProvider {
-    const defaultProvider = this.configService.get<string>(
-      'PAYMENT_DEFAULT_PROVIDER',
-      'ASAAS', // ← Alterado de MERCADO_PAGO para ASAAS
-    );
+    const defaultProvider = this.configService.get<string>('PAYMENT_DEFAULT_PROVIDER', 'ASAAS');
     return (
       PaymentProvider[defaultProvider as keyof typeof PaymentProvider] || PaymentProvider.ASAAS
     );

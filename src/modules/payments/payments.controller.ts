@@ -19,7 +19,6 @@ import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
-import { MercadoPagoWebhookHandler } from './webhooks/mercado-pago-webhook.handler';
 import { AsaasWebhookHandler } from './webhooks/asaas-webhook.handler';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { RawBody } from '@/common/decorators/raw-body.decorator';
@@ -30,7 +29,6 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
-    private readonly mpWebhookHandler: MercadoPagoWebhookHandler,
     private readonly asaasWebhookHandler: AsaasWebhookHandler,
   ) {}
 
@@ -66,40 +64,27 @@ export class PaymentsController {
     @Body() webhookData: any,
     @RawBody() rawBody: Buffer,
     @Headers('x-webhook-signature') asaasSignature?: string,
-    @Headers('x-signature') mpSignature?: string,
   ) {
+    if (provider !== 'asaas') {
+      return { status: 'ignored', provider };
+    }
+
     // ─── Asaas Webhook ──────────────────────────────────────────
-    if (provider === 'asaas') {
-      const isValid = this.asaasWebhookHandler.verifySignature(rawBody, asaasSignature || '');
+    const isValid = this.asaasWebhookHandler.verifySignature(rawBody, asaasSignature || '');
 
-      if (!isValid) {
-        throw new UnauthorizedException('Invalid Asaas webhook signature.');
-      }
-
-      const result = await this.asaasWebhookHandler.handleEvent(webhookData);
-
-      // Eventos de autorização (WITHDRAWAL_REQUESTED) exigem
-      // resposta SÍNCRONA com status no body
-      if (result.authorizationStatus) {
-        return { status: result.authorizationStatus };
-      }
-
-      return { status: 'ok' };
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid Asaas webhook signature.');
     }
 
-    // ─── Mercado Pago Webhook ───────────────────────────────────
-    if (provider === 'mercadopago' || provider === 'mercado_pago') {
-      const isValid = this.mpWebhookHandler.verifySignature(rawBody, mpSignature || '');
+    const result = await this.asaasWebhookHandler.handleEvent(webhookData);
 
-      if (!isValid) {
-        throw new UnauthorizedException('Invalid Mercado Pago webhook signature.');
-      }
-
-      await this.mpWebhookHandler.handleEvent(webhookData);
-      return { status: 'ok' };
+    // Eventos de autorização (WITHDRAWAL_REQUESTED) exigem
+    // resposta SÍNCRONA com status no body
+    if (result.authorizationStatus) {
+      return { status: result.authorizationStatus };
     }
 
-    return { status: 'ignored', provider };
+    return { status: 'ok' };
   }
 
   @Get(':id')

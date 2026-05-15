@@ -53,105 +53,99 @@ export class AdminRepository {
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Revenue stats
-    const revenueData = await this.prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: { status: PaymentStatus.APPROVED },
-    });
-
-    const todayRevenue = await this.prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: PaymentStatus.APPROVED,
-        createdAt: { gte: today },
-      },
-    });
-
-    const weekRevenue = await this.prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: PaymentStatus.APPROVED,
-        createdAt: { gte: weekAgo },
-      },
-    });
-
-    const monthRevenue = await this.prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: PaymentStatus.APPROVED,
-        createdAt: { gte: monthAgo },
-      },
-    });
-
-    // Order stats
-    const orderStats = await this.prisma.order.groupBy({
-      by: ['status'],
-      _count: true,
-    });
-
-    const totalOrders = await this.prisma.order.count();
-
-    // Product stats
-    const productStats = await this.prisma.product.groupBy({
-      by: ['isActive'],
-      _count: true,
-    });
-
-    const lowStockProducts = await this.prisma.product.count({
-      where: {
-        stock: { lte: 5 },
-        isActive: true,
-      },
-    });
-
-    // Key stats
-    const keyStats = await this.prisma.key.groupBy({
-      by: ['status'],
-      _count: true,
-    });
-
-    // User stats
-    const totalUsers = await this.prisma.user.count();
-
-    // Payment stats
-    const paymentStats = await this.prisma.payment.groupBy({
-      by: ['status'],
-      _count: true,
-    });
-
-    // Recent orders
-    const recentOrders = await this.prisma.order.findMany({
-      take: 10,
-      include: {
-        items: {
-          include: {
-            product: true,
+    // Execute all independent queries in parallel
+    const [
+      revenueData,
+      todayRevenue,
+      weekRevenue,
+      monthRevenue,
+      orderStats,
+      totalOrders,
+      productStats,
+      lowStockProducts,
+      keyStats,
+      totalUsers,
+      paymentStats,
+      recentOrders,
+      topProducts,
+    ] = await Promise.all([
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { status: PaymentStatus.APPROVED },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: {
+          status: PaymentStatus.APPROVED,
+          createdAt: { gte: today },
+        },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: {
+          status: PaymentStatus.APPROVED,
+          createdAt: { gte: weekAgo },
+        },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: {
+          status: PaymentStatus.APPROVED,
+          createdAt: { gte: monthAgo },
+        },
+      }),
+      this.prisma.order.groupBy({
+        by: ['status'],
+        _count: true,
+      }),
+      this.prisma.order.count(),
+      this.prisma.product.groupBy({
+        by: ['isActive'],
+        _count: true,
+      }),
+      this.prisma.product.count({
+        where: {
+          stock: { lte: 5 },
+          isActive: true,
+        },
+      }),
+      this.prisma.key.groupBy({
+        by: ['status'],
+        _count: true,
+      }),
+      this.prisma.user.count(),
+      this.prisma.payment.groupBy({
+        by: ['status'],
+        _count: true,
+      }),
+      this.prisma.order.findMany({
+        take: 10,
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+          payment: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.product.findMany({
+        take: 10,
+        include: {
+          _count: {
+            select: {
+              orderItems: true,
+            },
           },
         },
-        payment: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    // Top products
-    const topProducts = await this.prisma.product.findMany({
-      take: 10,
-      include: {
-        _count: {
-          select: {
-            orderItems: true,
+        orderBy: {
+          orderItems: {
+            _count: 'desc',
           },
         },
-      },
-      orderBy: {
-        orderItems: {
-          _count: 'desc',
-        },
-      },
-    });
-
-    const _formatStats = (stats: Array<{ _count: number; status?: string }>, status?: string) =>
-      stats.find((s: any) => s.status === status)?._count || 0;
+      }),
+    ]);
 
     return {
       revenue: {
@@ -225,7 +219,14 @@ export class AdminRepository {
       this.prisma.user.findMany({
         skip,
         take: limit,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
           _count: {
             select: {
               orders: true,
@@ -342,7 +343,14 @@ export class AdminRepository {
         skip,
         take: limit,
         where,
-        include: {
+        select: {
+          id: true,
+          productId: true,
+          status: true,
+          orderItemId: true,
+          deliveredAt: true,
+          createdAt: true,
+          updatedAt: true,
           product: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },

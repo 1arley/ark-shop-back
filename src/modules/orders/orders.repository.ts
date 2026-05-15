@@ -124,6 +124,12 @@ export class OrdersRepository {
   async updateStatus(id: string, status: OrderStatus) {
     const order = await this.prisma.order.findUnique({
       where: { id },
+      include: {
+        items: {
+          where: { keyId: { not: null } },
+          select: { id: true, keyId: true },
+        },
+      },
     });
 
     if (!order) {
@@ -143,6 +149,21 @@ export class OrdersRepository {
 
     if (!validTransitions[order.status].includes(status)) {
       throw new BadRequestException(`Invalid status transition from ${order.status} to ${status}`);
+    }
+
+    // Se for cancelamento, libera as chaves reservadas de volta para AVAILABLE
+    if (status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED) {
+      const reservedKeyIds = order.items.filter(item => item.keyId).map(item => item.keyId!);
+
+      if (reservedKeyIds.length > 0) {
+        await this.prisma.key.updateMany({
+          where: { id: { in: reservedKeyIds } },
+          data: {
+            status: KeyStatus.AVAILABLE,
+            orderItemId: null,
+          },
+        });
+      }
     }
 
     return this.prisma.order.update({

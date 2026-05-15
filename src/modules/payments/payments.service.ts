@@ -3,7 +3,6 @@ import { PaymentsRepository } from './payments.repository';
 import { PaymentProviderFactory } from './payment-provider.factory';
 import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
-import { MercadoPagoProvider } from './providers/mercado-pago.provider';
 import { OrdersService } from '@/modules/orders/orders.service';
 
 @Injectable()
@@ -14,7 +13,6 @@ export class PaymentsService {
     private readonly paymentsRepository: PaymentsRepository,
     private readonly providerFactory: PaymentProviderFactory,
     private readonly configService: ConfigService,
-    private readonly mercadoPagoProvider: MercadoPagoProvider,
     private readonly ordersService: OrdersService,
   ) {}
 

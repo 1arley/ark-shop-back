@@ -238,7 +238,12 @@ export class AuthService {
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * HOUR_IN_MS);
+    const resetExpiryHours = parseInt(
+      this.configService.get<string>('PASSWORD_RESET_EXPIRY_HOURS') ||
+        String(PASSWORD_RESET_EXPIRY_HOURS),
+      10,
+    );
+    const expiresAt = new Date(Date.now() + resetExpiryHours * HOUR_IN_MS);
 
     await this.prisma.passwordResetToken.create({
       data: {

@@ -84,14 +84,14 @@ export class OrdersService {
       order.items
         .filter(item => item.key && item.key.status === KeyStatus.DELIVERED)
         .map(async item => {
-          // Get decrypted key data
-          const keyData = await this.keysService.deliverKey(item.key!.id);
+          // Read-only decrypt (no status update needed — keys are already delivered)
+          const decryptedKey = await this.keysService.getDecryptedKey(item.key!.id);
 
           return {
             productName: item.product.name,
             keyId: item.key!.id,
             deliveredAt: item.key!.deliveredAt,
-            decryptedKey: keyData.decryptedKey, // Return the actual key code
+            decryptedKey,
           };
         }),
     );

@@ -42,6 +42,14 @@ export class KeysService {
     };
   }
 
+  /**
+   * Get decrypted key data without modifying key status (read-only).
+   * Used by downloadKeys for already-delivered keys.
+   */
+  async getDecryptedKey(keyId: string): Promise<string> {
+    return this.keysRepository.getKeyData(keyId);
+  }
+
   async getProductKeys(productId: string, page: number = 1, limit: number = 50) {
     return this.keysRepository.findByProduct(productId, page, limit);
   }

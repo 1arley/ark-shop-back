@@ -19,9 +19,10 @@ export function extractRefreshToken(req: Request): string | null {
     return req.cookies.refresh_token;
   }
 
-  const authHeader = req.get('Authorization');
-  if (authHeader) {
-    return authHeader.replace('Bearer', '').trim();
+  // Also check x-refresh-token header as secondary source
+  const refreshHeader = req.get('x-refresh-token');
+  if (refreshHeader) {
+    return refreshHeader.trim();
   }
 
   return null;

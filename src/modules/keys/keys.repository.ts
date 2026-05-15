@@ -38,13 +38,48 @@ export class KeysRepository {
       errors: [],
     };
 
+    // Encrypt all keys in batch (single-pass iteration)
+    const encryptedKeys: string[] = [];
     for (const key of keys) {
       try {
-        await this.create(productId, key);
-        result.imported++;
+        encryptedKeys.push(this.encryptionProvider.encrypt(key));
       } catch (error: any) {
         result.failed++;
-        result.errors.push(`Failed to import key: ${error.message || 'Unknown error'}`);
+        result.errors.push(`Failed to encrypt key: ${error.message || 'Unknown error'}`);
+      }
+    }
+
+    if (encryptedKeys.length === 0) {
+      return result;
+    }
+
+    // Bulk insert with createMany (single DB round-trip)
+    try {
+      await this.prisma.key.createMany({
+        data: encryptedKeys.map(keyData => ({
+          productId,
+          keyData,
+          status: KeyStatus.AVAILABLE,
+        })),
+        skipDuplicates: true,
+      });
+      result.imported = encryptedKeys.length;
+    } catch (_error: any) {
+      // Fallback: insert one by one if createMany fails (e.g. too many params)
+      for (const keyData of encryptedKeys) {
+        try {
+          await this.prisma.key.create({
+            data: {
+              productId,
+              keyData,
+              status: KeyStatus.AVAILABLE,
+            },
+          });
+          result.imported++;
+        } catch (innerError: any) {
+          result.failed++;
+          result.errors.push(`Failed to import key: ${innerError.message || 'Unknown error'}`);
+        }
       }
     }
 
