@@ -9,7 +9,7 @@
 - ✅ **Product Catalog** - Manage products with categories
 - ✅ **Shopping Cart** - Persistent cart with Prisma
 - ✅ **Order Processing** - Transaction-safe order creation
-- ✅ **Payment Integration** - Mercado Pago (PIX) with webhooks
+- ✅ **Payment Integration** - Asaas (PIX) with webhooks
 - ✅ **Key Delivery** - Encrypted key storage (AES-256)
 - ✅ **Admin Dashboard** - Statistics, bulk operations
 - ✅ **Fraud Detection** - Risk scoring and analysis
@@ -234,7 +234,7 @@ GET /api/orders/:id/download
 POST /api/payments/:orderId
 {
   "amount": 59.99,
-  "provider": "MERCADO_PAGO",
+  "provider": "ASAAS",
   "method": "PIX"
 }
 ```
@@ -263,7 +263,7 @@ POST /api/payments/:id/refund
 #### Webhook Handler
 
 ```bash
-POST /api/payments/webhook/mercadopago
+POST /api/payments/webhook/asaas
 X-Signature: <hmac-sha256-signature>
 {
   "action": "payment.updated",
@@ -504,12 +504,19 @@ JWT_REFRESH_EXPIRES_IN=7d
 # Encryption
 KEYS_ENCRYPTION_KEY=min-32-characters-secret
 
-# Mercado Pago
-MERCADO_PAGO_ACCESS_TOKEN=your-token
-MERCADO_PAGO_WEBHOOK_SECRET=your-webhook-secret
+# Asaas (Payment Provider - PRIMARY)
+ASAAS_API_KEY=seu_api_key_aqui
+ASAAS_SANDBOX=true
+ASAAS_WEBHOOK_SECRET=seu_webhook_secret_aqui
+ASAAS_PLATFORM_PIX_KEY=your-pix-key-here
+ASAAS_PLATFORM_WALLET_ID=
 
 # Payment
-PAYMENT_DEFAULT_PROVIDER=MERCADO_PAGO
+PAYMENT_DEFAULT_PROVIDER=ASAAS
+
+# Legacy (Mercado Pago - no longer used)
+# MERCADO_PAGO_ACCESS_TOKEN=your-token
+# MERCADO_PAGO_WEBHOOK_SECRET=your-webhook-secret
 ```
 
 ## Deployment

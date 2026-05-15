@@ -25,7 +25,18 @@ export class PaymentsService {
     payerCpf?: string,
     payerBirthDate?: string,
   ) {
-    const selectedProvider = provider || this.providerFactory.getDefaultProvider();
+    // Resolve provider: use explicit value or fall back to default
+    let selectedProvider = provider || this.providerFactory.getDefaultProvider();
+
+    // Defensive check: ensure the provider is actually registered.
+    // Prevents errors when clients send legacy/unimplemented providers (e.g. MERCADO_PAGO).
+    const registeredProviders = this.providerFactory.getRegisteredProviders();
+    if (!registeredProviders.includes(selectedProvider)) {
+      this.logger.warn(
+        `Provider ${selectedProvider} is not registered. Falling back to default (ASAAS).`,
+      );
+      selectedProvider = this.providerFactory.getDefaultProvider();
+    }
 
     // If PIX, generate QR code directly (no duplicate payment record)
     if (method === PaymentMethod.PIX) {

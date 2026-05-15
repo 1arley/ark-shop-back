@@ -258,7 +258,7 @@ ark-shop/
 
 ## Deployment Architecture
 
-`\nClient (Browser/Mobile)\n    ↓\nLoad Balancer\n    ↓\nAPI Instances (NestJS)\n    ↓\nPostgreSQL (Primary DB)\nRedis (Cache + Queues)\n    ↓\nExternal Services:\n- Payment Providers (Mercado Pago, Stripe)\n- Email Service (SendGrid)\n- Discord/Telegram\n`\n\n---
+`\nClient (Browser/Mobile)\n    ↓\nLoad Balancer\n    ↓\nAPI Instances (NestJS)\n    ↓\nPostgreSQL (Primary DB)\nRedis (Cache + Queues)\n    ↓\nExternal Services:\n- Payment Providers (Asaas)\n- Email Service (SendGrid)\n- Discord/Telegram\n`\n\n---
 
 ## Monitoring & Observability
 

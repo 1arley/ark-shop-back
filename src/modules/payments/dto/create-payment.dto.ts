@@ -11,7 +11,7 @@ export class CreatePaymentDto {
   @ApiPropertyOptional({
     description: 'Payment provider',
     enum: PaymentProvider,
-    example: PaymentProvider.MERCADO_PAGO,
+    example: PaymentProvider.ASAAS,
   })
   @IsEnum(PaymentProvider)
   @IsOptional()
