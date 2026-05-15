@@ -1,3 +1,9 @@
+# [1.14.0](https://github.com/1arley/ark-shop-back/compare/v1.13.10...v1.14.0) (2026-05-15)
+
+### Features
+
+- add 15-minute expiration to PIX payments ([76a87a1](https://github.com/1arley/ark-shop-back/commit/76a87a1c42554ef89510d0aba2454e0e84a50708))
+
 ## [1.13.10](https://github.com/1arley/ark-shop-back/compare/v1.13.9...v1.13.10) (2026-05-15)
 
 ### Bug Fixes
