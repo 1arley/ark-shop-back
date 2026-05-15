@@ -73,7 +73,7 @@ async function main() {
   const users = await Promise.all([
     prisma.user.create({
       data: {
-        email: 'admin@ark.com',
+        email: 'admin@darkgames.com',
         name: 'Admin User',
         password: hashedPassword,
         role: Role.ADMIN,
@@ -81,7 +81,7 @@ async function main() {
     }),
     prisma.user.create({
       data: {
-        email: 'superadmin@ark.com',
+        email: 'superadmin@darkgames.com',
         name: 'Super Admin',
         password: hashedPassword,
         role: Role.SUPERADMIN,
@@ -89,7 +89,7 @@ async function main() {
     }),
     prisma.user.create({
       data: {
-        email: 'user@ark.com',
+        email: 'user@darkgames.com',
         name: 'Regular User',
         password: hashedPassword,
         role: Role.USER,
@@ -104,9 +104,9 @@ async function main() {
   console.log(` - Contas: ${users.length}`);
   console.log('');
   console.log('🔐 Credenciais:');
-  console.log(' Admin: admin@ark.com / mudar123');
-  console.log(' SuperAdmin: superadmin@ark.com / mudar123');
-  console.log(' User: user@ark.com / mudar123');
+  console.log(' Admin: admin@darkgames.com / mudar123');
+  console.log(' SuperAdmin: superadmin@darkgames.com / mudar123');
+  console.log(' User: user@darkgames.com / mudar123');
   console.log('');
   console.log('🎉 Seed concluído com sucesso!');
 }
