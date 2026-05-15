@@ -87,9 +87,15 @@ Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do j
       type: 'object',
       properties: {
         imported: { type: 'number', example: 10 },
+        skipped: { type: 'number', example: 2, description: 'Products skipped due to duplicates' },
         failed: { type: 'number', example: 0 },
         products: { type: 'array' },
         errors: { type: 'array', items: { type: 'string' } },
+        skippedProducts: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of skipped product names',
+        },
       },
     },
   })

@@ -4,7 +4,6 @@ import { ProductsRepository } from '../products.repository';
 import { NotFoundException } from '@nestjs/common';
 import { CsvParserService } from '../services/csv-parser.service';
 import { PrismaService } from '@/prisma/prisma.service';
-import { CsvParserService } from '../services/csv-parser.service';
 
 describe('ProductsService', () => {
   let service: ProductsService;
@@ -35,6 +34,7 @@ describe('ProductsService', () => {
             update: jest.fn(),
             delete: jest.fn(),
             findByCategory: jest.fn(),
+            findByName: jest.fn(),
           },
         },
         {
@@ -167,11 +167,13 @@ describe('ProductsService', () => {
       const mockParse = jest.spyOn(service['csvParser'], 'parse');
       mockParse.mockReturnValue(parsedProducts as any);
 
+      jest.spyOn(repository, 'findByName').mockResolvedValue(null);
       jest.spyOn(repository, 'create').mockResolvedValue(createdProduct as any);
 
       const result = await service.importFromCsv(csvContent);
 
       expect(result.imported).toBe(1);
+      expect(result.skipped).toBe(0);
       expect(result.failed).toBe(0);
       expect(repository.create).toHaveBeenCalledWith({
         name: 'Test Game (XBOX)',
@@ -181,6 +183,27 @@ describe('ProductsService', () => {
         isActive: true,
         categoryId: undefined,
       });
+    });
+
+    it('should skip duplicate products', async () => {
+      const csvContent =
+        'XBOX,STEAM/PC\nCarimbo de data/hora,Nome do jogo,preço de venda\n07/12/2025,Test Game(xbox-europa),R$100,00';
+      const parsedProducts = [{ name: 'Test Game', price: 100, platform: 'XBOX', region: 'eu' }];
+      const existingProduct = { id: 'existing-uuid', name: 'Test Game (XBOX)', price: 100 };
+
+      const mockParse = jest.spyOn(service['csvParser'], 'parse');
+      mockParse.mockReturnValue(parsedProducts as any);
+
+      jest.spyOn(repository, 'findByName').mockResolvedValue(existingProduct as any);
+
+      const result = await service.importFromCsv(csvContent);
+
+      expect(result.imported).toBe(0);
+      expect(result.skipped).toBe(1);
+      expect(result.failed).toBe(0);
+      expect(result.skippedProducts).toBeDefined();
+      expect(result.skippedProducts?.[0]).toContain('already exists');
+      expect(repository.create).not.toHaveBeenCalled();
     });
 
     it('should handle import errors gracefully', async () => {

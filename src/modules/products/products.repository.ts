@@ -152,6 +152,17 @@ export class ProductsRepository {
     };
   }
 
+  async findByName(name: string) {
+    return this.prisma.product.findFirst({
+      where: {
+        name: {
+          equals: name,
+          mode: 'insensitive',
+        },
+      },
+    });
+  }
+
   async createMany(
     products: Array<{
       name: string;

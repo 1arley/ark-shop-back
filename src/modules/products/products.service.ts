@@ -7,9 +7,11 @@ import { PrismaService } from '@/prisma/prisma.service';
 
 export interface ImportResult {
   imported: number;
+  skipped: number;
   failed: number;
   products: any[];
   errors?: string[];
+  skippedProducts?: string[];
 }
 
 @Injectable()
@@ -82,7 +84,9 @@ export class ProductsService {
 
     const errors: string[] = [];
     const importedProducts: any[] = [];
+    const skippedProducts: string[] = [];
     let failedCount = 0;
+    let skippedCount = 0;
 
     // ✅ Processamento em batch (PERFORMANCE: Evita N+1 queries)
     const batchSize = 50;
@@ -92,8 +96,20 @@ export class ProductsService {
       const batchResults = await Promise.all(
         batch.map(async product => {
           try {
+            const productName = `${product.name} (${product.platform})`;
+
+            // ✅ Verificação de duplicatas (CRÍTICO: Previne dados duplicados)
+            const existingProduct = await this.productsRepository.findByName(productName);
+            if (existingProduct) {
+              return {
+                success: false,
+                skipped: true,
+                error: `Product "${productName}" already exists`,
+              };
+            }
+
             const createDto: CreateProductDto = {
-              name: `${product.name} (${product.platform})`,
+              name: productName,
               description: `Product imported from CSV - Platform: ${product.platform}${product.region ? ` - Region: ${product.region}` : ''}`,
               price: product.price,
               stock: 1,
@@ -107,6 +123,7 @@ export class ProductsService {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             return {
               success: false,
+              skipped: false,
               error: `Failed to import "${product.name}": ${errorMessage}`,
             };
           }
@@ -117,6 +134,9 @@ export class ProductsService {
       batchResults.forEach(result => {
         if (result.success) {
           importedProducts.push(result.product);
+        } else if (result.skipped) {
+          skippedCount++;
+          skippedProducts.push(result.error);
         } else {
           failedCount++;
           errors.push(result.error!);
@@ -126,14 +146,16 @@ export class ProductsService {
 
     // ✅ Log de conclusão (AUDITORIA)
     this.logger.log(
-      `CSV import completed - Imported: ${importedProducts.length}, Failed: ${failedCount}`,
+      `CSV import completed - Imported: ${importedProducts.length}, Skipped: ${skippedCount}, Failed: ${failedCount}`,
     );
 
     return {
       imported: importedProducts.length,
+      skipped: skippedCount,
       failed: failedCount,
       products: importedProducts,
       errors: errors.length > 0 ? errors : undefined,
+      skippedProducts: skippedProducts.length > 0 ? skippedProducts : undefined,
     };
   }
 }
