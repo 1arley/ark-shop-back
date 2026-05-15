@@ -1,3 +1,9 @@
+## [1.13.7](https://github.com/1arley/ark-shop-back/compare/v1.13.6...v1.13.7) (2026-05-15)
+
+### Bug Fixes
+
+- only load .env.local in non-production to prevent dev config from overriding production ([21cd126](https://github.com/1arley/ark-shop-back/commit/21cd126b57a55bf441fc947684a05399581832bd))
+
 ## [1.13.6](https://github.com/1arley/ark-shop-back/compare/v1.13.5...v1.13.6) (2026-05-15)
 
 ### Bug Fixes
