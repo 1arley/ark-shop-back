@@ -43,14 +43,15 @@ export class CsvParserService {
       );
     }
 
-    // Parse header line to identify platform columns
+    // Parse header lines to identify platform columns
     const headerLine = lines[0] || '';
+    const subHeaderLine = lines[1] || '';
 
-    // Parse all lines into rows
+    // Parse all data lines into rows
     const rows = this.parseCsvLines(lines.slice(2));
 
-    // Identify platform columns from header
-    const platforms = this.extractPlatforms(headerLine);
+    // Identify platform columns from BOTH header and sub-header for accurate alignment
+    const platforms = this.extractPlatforms(headerLine, subHeaderLine);
 
     const products: ParsedProduct[] = [];
 
@@ -126,30 +127,68 @@ export class CsvParserService {
   }
 
   /**
-   * Extract platform information from header line
+   * Extract platform information from header and sub-header lines
+   * Handles both formats:
+   * - Format A: XBOX,STEAM/PC,NINTENDO E-SHOP,PLAYSTATION (3 cols each)
+   * - Format B: ,XBOX,,,,STEAM/PC,,,,NINTENDO E-SHOP,,,,PLAYSTATION, (4 cols each with gaps)
+   *
+   * Uses sub-header line for accurate column alignment since it matches data rows structure.
    */
-  private extractPlatforms(headerLine: string): Array<{ name: string; columnIndex: number }> {
+  private extractPlatforms(
+    headerLine: string,
+    subHeaderLine: string,
+  ): Array<{ name: string; columnIndex: number }> {
     const platforms: Array<{ name: string; columnIndex: number }> = [];
-    const parts = headerLine.split(',');
 
-    let columnIndex = 0;
-    for (const part of parts) {
-      const trimmed = part.trim().replace(/"/g, '');
+    // Parse sub-header using CSV parser (handles quoted values)
+    // Sub-header is more reliable for column alignment since it matches data structure
+    const subHeaderParts = this.parseCsvLines([subHeaderLine])[0] || [];
+
+    // Find platform names from the first header line
+    const headerParts = this.parseCsvLines([headerLine])[0] || [];
+
+    // Identify platform names from header
+    const platformNames: string[] = [];
+    for (const part of headerParts) {
+      const trimmed = part?.trim() || '';
       if (trimmed && !trimmed.includes('Carimbo de data/hora')) {
-        // This is a platform name
-        platforms.push({
-          name: trimmed,
-          columnIndex: columnIndex,
-        });
-        columnIndex += 3; // Each platform has 3 columns: timestamp, name, price
-      } else {
-        columnIndex++;
+        const isPlatform = /^(XBOX|STEAM|PC|NINTENDO|PLAYSTATION|PS[45]?)/i.test(trimmed);
+        if (isPlatform) {
+          platformNames.push(trimmed);
+        }
       }
     }
 
-    // If no platforms found with the above method, use default positions
+    // If no platforms found in header, try to detect from sub-header pattern
+    if (platformNames.length === 0) {
+      // Count "Carimbo de data/hora" occurrences to determine number of platforms
+      const timestampCols = subHeaderParts.filter(p => p?.trim() === 'Carimbo de data/hora').length;
+
+      if (timestampCols > 0) {
+        // Use default platform names
+        const defaultNames = ['XBOX', 'STEAM/PC', 'NINTENDO E-SHOP', 'PLAYSTATION'] as const;
+        for (let i = 0; i < Math.min(timestampCols, defaultNames.length); i++) {
+          platformNames.push(defaultNames[i]!);
+        }
+      }
+    }
+
+    // Now find column indices from sub-header
+    // Each platform starts with "Carimbo de data/hora" column
+    let nameIndex = 0;
+    for (let i = 0; i < subHeaderParts.length; i++) {
+      const trimmed = subHeaderParts[i]?.trim() || '';
+      if (trimmed === 'Carimbo de data/hora' && nameIndex < platformNames.length) {
+        platforms.push({
+          name: platformNames[nameIndex]!,
+          columnIndex: i,
+        });
+        nameIndex++;
+      }
+    }
+
+    // Fallback: if still no platforms, use default positions
     if (platforms.length === 0) {
-      // Default format: XBOX, STEAM/PC, NINTENDO E-SHOP, PLAYSTATION
       const defaultPlatforms = ['XBOX', 'STEAM/PC', 'NINTENDO E-SHOP', 'PLAYSTATION'];
       defaultPlatforms.forEach((platform, index) => {
         platforms.push({
