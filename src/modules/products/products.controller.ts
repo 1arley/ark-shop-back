@@ -12,7 +12,11 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -20,11 +24,13 @@ import {
   ApiQuery,
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { ImportProductsDto } from './dto/import-products.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
@@ -43,22 +49,35 @@ export class ProductsController {
   @ApiOperation({
     summary: 'Import products from CSV',
     description:
-      'Import products from a CSV file exported from Google Sheets. The CSV should have columns for each platform (XBOX, STEAM/PC, NINTENDO E-SHOP, PLAYSTATION) with sub-columns: timestamp, game name, price.',
+      'Import products from a CSV file exported from Google Sheets. Accepts either JSON body with csvContent string OR multipart/form-data file upload. The CSV should have columns for each platform (XBOX, STEAM/PC, NINTENDO E-SHOP, PLAYSTATION) with sub-columns: timestamp, game name, price.',
   })
   @ApiBody({
     schema: {
-      type: 'object',
-      properties: {
-        csvContent: {
-          type: 'string',
-          example: `XBOX,STEAM/PC,NINTENDO E-SHOP,PLAYSTATION
+      oneOf: [
+        {
+          type: 'object',
+          properties: {
+            csvContent: {
+              type: 'string',
+              example: `XBOX,STEAM/PC,NINTENDO E-SHOP,PLAYSTATION
 Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do jogo,preço de venda
 07/12/2025 15:01:53,Final fantasy xvi(xbox-europa),R$200,00,17/12/2025 21:49:01,cuphead(steam-global),R$100,00`,
+            },
+            categoryId: { type: 'string', example: 'uuid-here' },
+            isActive: { type: 'boolean', example: true },
+          },
+          required: ['csvContent'],
         },
-        categoryId: { type: 'string', example: 'uuid-here' },
-        isActive: { type: 'boolean', example: true },
-      },
-      required: ['csvContent'],
+        {
+          type: 'object',
+          properties: {
+            file: { type: 'string', format: 'binary' },
+            categoryId: { type: 'string', example: 'uuid-here' },
+            isActive: { type: 'boolean', example: true },
+          },
+          required: ['file'],
+        },
+      ],
     },
   })
   @ApiResponse({
@@ -77,12 +96,65 @@ Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do j
   @ApiResponse({ status: 400, description: 'Bad request - Invalid CSV format' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async importFromCsv(
-    @Body() body: { csvContent: string; categoryId?: string; isActive?: boolean },
+    @Body() body: ImportProductsDto & { categoryId?: string; isActive?: boolean },
   ) {
     if (!body.csvContent) {
-      throw new Error('CSV content is required');
+      throw new BadRequestException('CSV content is required');
     }
     return this.productsService.importFromCsv(body.csvContent, {
+      categoryId: body.categoryId,
+      isActive: body.isActive,
+    });
+  }
+
+  @Post('import/file')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Import products from CSV file upload',
+    description:
+      'Upload a CSV file to import products. The CSV should be in Google Sheets export format with columns for each platform (XBOX, STEAM/PC, NINTENDO E-SHOP, PLAYSTATION) with sub-columns: timestamp, game name, price.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'CSV file to import' },
+        categoryId: { type: 'string', example: 'uuid-here' },
+        isActive: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Products imported successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid CSV file' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async importFromCsvFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { categoryId?: string; isActive?: boolean },
+  ) {
+    if (!file) {
+      throw new BadRequestException('CSV file is required');
+    }
+
+    if (!file.originalname.toLowerCase().endsWith('.csv')) {
+      throw new BadRequestException('Only CSV files are allowed');
+    }
+
+    const csvContent = file.buffer.toString('utf-8');
+
+    if (!csvContent || csvContent.trim().length === 0) {
+      throw new BadRequestException('CSV file is empty');
+    }
+
+    return this.productsService.importFromCsv(csvContent, {
       categoryId: body.categoryId,
       isActive: body.isActive,
     });
