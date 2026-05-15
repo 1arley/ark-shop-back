@@ -1,3 +1,9 @@
+## [1.15.1](https://github.com/1arley/ark-shop-back/compare/v1.15.0...v1.15.1) (2026-05-15)
+
+### Bug Fixes
+
+- atualiza seed para limpar banco e criar apenas 3 categorias e 3 contas principais ([ac97ff1](https://github.com/1arley/ark-shop-back/commit/ac97ff1254b49091f03e2ed7f7c378a0c86e2984))
+
 # [1.15.0](https://github.com/1arley/ark-shop-back/compare/v1.14.0...v1.15.0) (2026-05-15)
 
 ### Features
