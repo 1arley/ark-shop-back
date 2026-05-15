@@ -1,19 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 
-// interface RiskAnalysisResult {
-//   riskScore: number;
-//   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-//   decision: 'APPROVED' | 'MANUAL_REVIEW' | 'REJECTED';
-//   checks: {
-//     ipReputation: boolean;
-//     velocityCheck: boolean;
-//     blacklistCheck: boolean;
-//     deviceCheck: boolean;
-//   };
-//   reason?: string;
-// }
-
 @Injectable()
 export class AntifraudRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -84,23 +71,20 @@ export class AntifraudRepository {
   }
 
   async getUserPaymentSuccessRate(userId: string): Promise<number> {
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        order: {
-          userId,
-        },
-      },
-      select: {
-        status: true,
-      },
-    });
+    const [total, approved] = await Promise.all([
+      this.prisma.payment.count({
+        where: { order: { userId } },
+      }),
+      this.prisma.payment.count({
+        where: { order: { userId }, status: 'APPROVED' },
+      }),
+    ]);
 
-    if (payments.length === 0) {
+    if (total === 0) {
       return 1;
     }
 
-    const successCount = payments.filter(p => p.status === 'APPROVED').length;
-    return successCount / payments.length;
+    return approved / total;
   }
 
   async getRecentFraudLogs(limit: number = 100) {

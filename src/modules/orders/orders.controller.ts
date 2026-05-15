@@ -7,12 +7,14 @@ import {
   Patch,
   Query,
   ParseIntPipe,
+  DefaultValuePipe,
   UseGuards,
   HttpCode,
   HttpStatus,
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { OrderStatus } from '@prisma/client';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
@@ -45,8 +47,8 @@ export class OrdersController {
   @ApiResponse({ status: 200, description: 'List of orders' })
   findAll(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
     return this.ordersService.findByUser(user.id, page, limit);
   }
@@ -83,8 +85,8 @@ export class OrdersController {
   @ApiOperation({ summary: 'Update order status (admin)' })
   @ApiResponse({ status: 200, description: 'Order status updated' })
   @ApiResponse({ status: 400, description: 'Invalid status transition' })
-  updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.ordersService.updateStatus(id, status as any);
+  updateStatus(@Param('id') id: string, @Body('status') status: OrderStatus) {
+    return this.ordersService.updateStatus(id, status);
   }
 
   @Post(':id/cancel')

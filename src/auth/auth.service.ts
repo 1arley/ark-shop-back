@@ -15,6 +15,8 @@ import { RegisterDto } from '@/auth/dto/register.dto';
 import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '@/modules/email/email.service';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import type { StringValue } from 'ms';
 
 @Injectable()
@@ -26,6 +28,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
+    @InjectQueue('email') private readonly emailQueue: Queue,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -83,7 +86,8 @@ export class AuthService {
 
     const tokens = await this.getTokens(user.id, user.email, user.role);
 
-    await this.revokeAllUserRefreshTokens(user.id);
+    // Não revoga tokens de outras sessões: cada dispositivo/contexto mantém
+    // seu próprio refresh token. Tokens antigos expiram naturalmente.
     await this.createRefreshToken(user.id, tokens.refresh_token);
 
     const { password: _, ...userWithoutPassword } = user;
@@ -107,7 +111,11 @@ export class AuthService {
     return userWithoutPassword;
   }
 
-  async refreshTokens(userId: string) {
+  /**
+   * Rotaciona o refresh token: revoga o token antigo e cria um novo.
+   * Apenas o token usado é revogado — outras sessões permanecem ativas.
+   */
+  async refreshTokens(userId: string, oldRefreshToken: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -118,7 +126,10 @@ export class AuthService {
 
     const tokens = await this.getTokens(userId, user.email, user.role);
 
-    await this.revokeAllUserRefreshTokens(userId);
+    // Revoga APENAS o token usado (mantém outras sessões ativas)
+    await this.revokeRefreshToken(oldRefreshToken).catch(() => {
+      // Token já revogado ou expirado — apenas cria o novo
+    });
     await this.createRefreshToken(userId, tokens.refresh_token);
 
     return tokens;
@@ -230,9 +241,9 @@ export class AuthService {
       },
     });
 
-    this.emailService.sendPasswordReset(email, token, email).catch(err => {
-      this.logger.error(`Failed to send password reset email: ${err.message}`);
-    });
+    // Envia email via fila Bull para garantir entrega e evitar race condition
+    // (token já foi criado, mas a fila permite retry automático em caso de falha)
+    await this.emailQueue.add('send-password-reset', { to: email, resetToken: token, email });
 
     return { message: 'Se o email existir, um link de redefinição será enviado.' };
   }

@@ -55,7 +55,10 @@ export class ProductsRepository {
       ...(isActive !== undefined && { isActive }),
       ...(categoryId && { categoryId }),
       ...(search && {
-        OR: [{ name: { contains: search } }, { description: { contains: search } }],
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ],
       }),
     };
 

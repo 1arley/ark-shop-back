@@ -170,11 +170,20 @@ export class PaymentsService {
 
   /**
    * Approve payment by provider transaction ID and deliver order
+   * Idempotente: se o pagamento já foi aprovado, retorna o registro existente
+   * sem tentar entregar o pedido novamente.
    */
   async approvePaymentByProviderTxId(providerTxId: string, paymentInfo: any) {
     const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+
     if (!payment) {
       throw new BadRequestException('Payment not found');
+    }
+
+    // Idempotência: se já aprovado, retorna sem reprocessar
+    if (payment.status === PaymentStatus.APPROVED || payment.order?.status === OrderStatus.PAID) {
+      this.logger.log(`Payment ${providerTxId} already approved — skipping`);
+      return payment;
     }
 
     const approvedPayment = await this.paymentsRepository.approvePayment(

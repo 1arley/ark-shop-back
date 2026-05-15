@@ -30,10 +30,12 @@ export class LocalStorageProvider implements StorageProvider {
 
   /**
    * Sanitiza um nome de arquivo/pasta removendo caracteres perigosos.
+   * Remove qualquer caractere que não seja alfanumérico, hífen ou underscore
+   * para prevenir path traversal via '..' ou '....'.
    */
   private sanitizeSegment(segment: string): string {
-    // Remove caracteres que podem ser usados para path traversal
-    return segment.replace(/\.\./g, '').replace(/[/\\]/g, '');
+    // Remove qualquer caractere não seguro para nome de diretório/arquivo
+    return segment.replace(/[^a-zA-Z0-9_-]/g, '');
   }
 
   async upload(file: Express.Multer.File, folder = 'general'): Promise<UploadedFileInfo> {
@@ -65,8 +67,9 @@ export class LocalStorageProvider implements StorageProvider {
 
   async delete(key: string): Promise<void> {
     // Sanitiza a key para evitar path traversal
-    const safeKey = key.replace(/\.\.\//g, '').replace(/\.\.\\/g, '');
-    const filepath = this.sanitizePath([safeKey]);
+    // Divide a key em segmentos e sanitiza cada um individualmente
+    const segments = key.split('/').map(s => this.sanitizeSegment(s));
+    const filepath = this.sanitizePath(segments);
 
     try {
       await fs.unlink(filepath);

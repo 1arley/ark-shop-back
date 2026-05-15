@@ -139,6 +139,7 @@ describe('AuthController', () => {
           id: '1',
           email: 'test@example.com',
           role: 'USER',
+          refreshToken: 'old-refresh-token',
         },
       };
 
@@ -157,7 +158,7 @@ describe('AuthController', () => {
       );
 
       expect(result.access_token).toBe('new-access-token');
-      expect(authService.refreshTokens).toHaveBeenCalledWith('1');
+      expect(authService.refreshTokens).toHaveBeenCalledWith('1', 'old-refresh-token');
     });
 
     it('should handle missing user data in request', async () => {

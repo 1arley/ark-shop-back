@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import type { StorageProvider, UploadedFileInfo } from '../storage-provider.interface';
@@ -10,8 +12,7 @@ export class S3StorageProvider implements StorageProvider {
   private readonly bucket: string;
   private readonly region: string;
   private readonly endpoint: string;
-  private client: any;
-  private UploadClass: any;
+  private client!: S3Client;
 
   constructor(private readonly configService: ConfigService) {
     this.bucket = this.configService.get<string>('S3_BUCKET', '');
@@ -26,8 +27,8 @@ export class S3StorageProvider implements StorageProvider {
     );
   }
 
-  private async ensureClient(): Promise<void> {
-    if (this.client) return;
+  private ensureClient(): S3Client {
+    if (this.client) return this.client;
 
     if (!this.bucket) {
       throw new Error(
@@ -36,38 +37,29 @@ export class S3StorageProvider implements StorageProvider {
       );
     }
 
-    try {
-      const { S3Client } = await import('@aws-sdk/client-s3');
-      const { Upload } = await import('@aws-sdk/lib-storage');
-      const accessKeyId = this.configService.get<string>('S3_ACCESS_KEY_ID', '');
-      const secretAccessKey = this.configService.get<string>('S3_SECRET_ACCESS_KEY', '');
-      const config: any = { region: this.region };
-      if (accessKeyId && secretAccessKey) {
-        config.credentials = { accessKeyId, secretAccessKey };
-      }
-      if (this.endpoint) {
-        config.endpoint = this.endpoint;
-        config.forcePathStyle = true;
-      }
-      this.client = new S3Client(config);
-      this.UploadClass = Upload;
-    } catch {
-      throw new Error(
-        'S3 storage requires @aws-sdk/client-s3 and @aws-sdk/lib-storage. ' +
-          'Install them: npm install @aws-sdk/client-s3 @aws-sdk/lib-storage',
-      );
+    const accessKeyId = this.configService.get<string>('S3_ACCESS_KEY_ID', '');
+    const secretAccessKey = this.configService.get<string>('S3_SECRET_ACCESS_KEY', '');
+    const config: Record<string, any> = { region: this.region };
+    if (accessKeyId && secretAccessKey) {
+      config.credentials = { accessKeyId, secretAccessKey };
     }
+    if (this.endpoint) {
+      config.endpoint = this.endpoint;
+      config.forcePathStyle = true;
+    }
+    this.client = new S3Client(config);
+    return this.client;
   }
 
   async upload(file: Express.Multer.File, folder = 'general'): Promise<UploadedFileInfo> {
-    await this.ensureClient();
+    const client = this.ensureClient();
 
     const ext = path.extname(file.originalname);
     const filename = `${crypto.randomUUID()}${ext}`;
     const key = `${folder}/${filename}`;
 
-    const upload = new this.UploadClass({
-      client: this.client,
+    const upload = new Upload({
+      client,
       params: {
         Bucket: this.bucket,
         Key: key,
@@ -92,10 +84,9 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
-    await this.ensureClient();
-    const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+    const client = this.ensureClient();
 
-    await this.client.send(
+    await client.send(
       new DeleteObjectCommand({
         Bucket: this.bucket,
         Key: key,

@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, INestApplication, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { PinoLogger } from '@/logger/pino-logger.service';
 import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
 import helmet from 'helmet';
@@ -19,6 +20,9 @@ export async function createApp(): Promise<INestApplication> {
     // sem interferir no parser JSON normal do Express/NestJS
     rawBody: true,
   });
+
+  // ─── Pino Logger (global substituto do Logger padrão do Nest) ──────
+  app.useLogger(app.get(PinoLogger));
 
   // ─── Security Headers (Helmet) ────────────────────────────────────
   app.use(

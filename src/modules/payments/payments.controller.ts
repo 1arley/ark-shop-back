@@ -6,6 +6,7 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  DefaultValuePipe,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -140,8 +141,8 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'List of payments' })
   getUserPayments(
     @Param('userId') userId: string,
-    @Query('page', new ParseIntPipe()) page: number = 1,
-    @Query('limit', new ParseIntPipe()) limit: number = 10,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
     return this.paymentsService.getUserPayments(userId, page, limit);
   }

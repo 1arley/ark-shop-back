@@ -13,7 +13,17 @@ if (dsn) {
   Sentry.init({
     dsn,
     environment: process.env.NODE_ENV || 'development',
-    sendDefaultPii: true,
+    // Não enviar PII automaticamente para estar em conformidade com LGPD/GDPR
+    sendDefaultPii: false,
+    beforeSend(event) {
+      // Remove headers sensíveis antes de enviar ao Sentry
+      if (event.request?.headers) {
+        delete event.request.headers['authorization'];
+        delete event.request.headers['cookie'];
+        delete event.request.headers['x-api-key'];
+      }
+      return event;
+    },
     tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
   });
 }

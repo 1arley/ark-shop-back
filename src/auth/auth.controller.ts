@@ -1,15 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  UseGuards,
-  Req,
-  Res,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, UseGuards, Req, Res, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AuthService } from '@/auth/auth.service';
@@ -98,7 +88,7 @@ export class AuthController {
   @ApiRefreshTokens()
   @UseGuards(JwtRefreshAuthGuard)
   async refreshTokens(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.refreshTokens(req.user.id);
+    const result = await this.authService.refreshTokens(req.user.id, req.user.refreshToken!);
 
     res.cookie(
       ACCESS_TOKEN_COOKIE,
@@ -165,15 +155,5 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Token inválido ou expirado.' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
-  }
-
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Retorna o usuário autenticado' })
-  @ApiResponse({ status: 200, description: 'Usuário autenticado' })
-  @ApiResponse({ status: 401, description: 'Não autenticado' })
-  getProfile(@Req() req: AuthenticatedRequest) {
-    return req.user;
   }
 }

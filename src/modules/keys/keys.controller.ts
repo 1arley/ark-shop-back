@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  DefaultValuePipe,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -42,8 +43,8 @@ export class KeysController {
   @ApiResponse({ status: 200, description: 'List of keys' })
   getProductKeys(
     @Param('productId') productId: string,
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 50,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
   ) {
     return this.keysService.getProductKeys(productId, page, limit);
   }

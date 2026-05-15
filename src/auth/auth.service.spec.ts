@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { EmailService } from '@/modules/email/email.service';
+import { getQueueToken } from '@nestjs/bull';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
@@ -21,6 +22,8 @@ describe('AuthService', () => {
     refreshToken: {
       create: jest.fn(),
       deleteMany: jest.fn(),
+      findFirst: jest.fn(),
+      delete: jest.fn(),
     },
   };
 
@@ -32,6 +35,10 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: { signAsync: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn(), getOrThrow: jest.fn() } },
         { provide: EmailService, useValue: { sendPasswordReset: jest.fn() } },
+        {
+          provide: getQueueToken('email'),
+          useValue: { add: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 
@@ -197,7 +204,10 @@ describe('AuthService', () => {
       jest.spyOn(configService, 'get').mockReturnValue('fake-secret');
       mockPrismaService.user.findUnique.mockResolvedValue(user);
 
-      const result = await service.refreshTokens('1');
+      // Mock findFirst to return null since we're testing the happy path
+      mockPrismaService.refreshToken.findFirst.mockResolvedValue(null);
+
+      const result = await service.refreshTokens('1', 'old-refresh-token');
 
       expect(result).toHaveProperty('access_token', 'fake-jwt-token');
       expect(result).toHaveProperty('refresh_token', 'fake-jwt-token');
@@ -205,7 +215,9 @@ describe('AuthService', () => {
 
     it('deve lançar UnauthorizedException se userId não existir', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      await expect(service.refreshTokens('999')).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshTokens('999', 'old-refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 });
