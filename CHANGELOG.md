@@ -1,3 +1,9 @@
+## [1.13.9](https://github.com/1arley/ark-shop-back/compare/v1.13.8...v1.13.9) (2026-05-15)
+
+### Bug Fixes
+
+- fall back to ASAAS when unregistered payment provider (MERCADO_PAGO) is requested ([dc756e6](https://github.com/1arley/ark-shop-back/commit/dc756e6833e03e8dfef8dc6d031ca97b17bc4a44))
+
 ## [1.13.8](https://github.com/1arley/ark-shop-back/compare/v1.13.7...v1.13.8) (2026-05-15)
 
 ### Bug Fixes
