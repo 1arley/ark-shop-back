@@ -1,3 +1,9 @@
+## [1.13.4](https://github.com/1arley/ark-shop-back/compare/v1.13.3...v1.13.4) (2026-05-15)
+
+### Bug Fixes
+
+- resolve security vulnerabilities, bugs, and code quality issues ([b774e21](https://github.com/1arley/ark-shop-back/commit/b774e2103862c6f81bb4ccf0b817db61bea52f04))
+
 ## [1.13.3](https://github.com/1arley/ark-shop-back/compare/v1.13.2...v1.13.3) (2026-05-14)
 
 ### Bug Fixes
