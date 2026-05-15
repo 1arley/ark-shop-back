@@ -124,6 +124,34 @@ export class KeysRepository {
     });
   }
 
+  /**
+   * Reserva atomicamente a primeira chave disponível para um produto.
+   * A operação de busca e atualização ocorre dentro de uma transação
+   * para prevenir condições de corrida (TOCTOU).
+   */
+  async reserveAvailableKeyAtomic(productId: string, orderItemId: string) {
+    return this.prisma.$transaction(async tx => {
+      const availableKey = await tx.key.findFirst({
+        where: {
+          productId,
+          status: KeyStatus.AVAILABLE,
+        },
+      });
+
+      if (!availableKey) {
+        throw new BadRequestException(`No available keys for product ${productId}`);
+      }
+
+      return tx.key.update({
+        where: { id: availableKey.id },
+        data: {
+          status: KeyStatus.RESERVED,
+          orderItemId,
+        },
+      });
+    });
+  }
+
   async deliverKey(keyId: string) {
     return this.prisma.key.update({
       where: { id: keyId },

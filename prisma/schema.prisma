@@ -244,8 +244,8 @@ model Payment {
  order Order @relation(fields: [orderId], references: [id])
  userId String
  user User @relation(fields: [userId], references: [id])
- provider PaymentProvider
- providerTxId String?
+  provider PaymentProvider
+  providerTxId String? @unique
  amount Decimal @db.Decimal(10, 2)
  status PaymentStatus @default(PENDING)
  method PaymentMethod

@@ -39,6 +39,7 @@ export class OrdersRepository {
     }
 
     // Create order with items in a transaction
+    // Salva o preço real de cada item no momento da compra para integridade financeira
     const order = await this.prisma.order.create({
       data: {
         userId,
@@ -48,7 +49,7 @@ export class OrdersRepository {
           create: items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
-            price: 0, // Will be updated when payment is processed
+            price: productMap.get(item.productId)!.price,
           })),
         },
       },

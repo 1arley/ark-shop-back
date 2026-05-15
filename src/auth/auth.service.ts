@@ -149,38 +149,32 @@ export class AuthService {
     };
   }
 
+  /**
+   * Parse a string like "15m", "7d", "1h" into milliseconds.
+   * Used by both parseExpiresInToSeconds and createRefreshToken (DRY).
+   */
+  private parseExpiresInToMs(expiresIn: string): number {
+    const match = expiresIn.match(/^(\d+)([smhd])$/);
+    if (!match) return 7 * 24 * 60 * 60 * 1000; // default 7 dias
+
+    const value = parseInt(match[1]!, 10);
+    const unit = match[2]!;
+    const multipliers: Record<string, number> = {
+      s: 1000,
+      m: 60 * 1000,
+      h: 60 * 60 * 1000,
+      d: 24 * 60 * 60 * 1000,
+    };
+    return value * (multipliers[unit] || 7 * 24 * 60 * 60 * 1000);
+  }
+
   private parseExpiresInToSeconds(expiresIn: string): number {
-    if (expiresIn.endsWith('d')) {
-      return parseInt(expiresIn.slice(0, -1)) * 24 * 60 * 60;
-    }
-    if (expiresIn.endsWith('h')) {
-      return parseInt(expiresIn.slice(0, -1)) * 60 * 60;
-    }
-    if (expiresIn.endsWith('m')) {
-      return parseInt(expiresIn.slice(0, -1)) * 60;
-    }
-    if (expiresIn.endsWith('s')) {
-      return parseInt(expiresIn.slice(0, -1));
-    }
-    return 7 * 24 * 60 * 60;
+    return Math.floor(this.parseExpiresInToMs(expiresIn) / 1000);
   }
 
   private async createRefreshToken(userId: string, token: string): Promise<void> {
     const expiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
-
-    let expiresAt: Date;
-    if (expiresIn.endsWith('d')) {
-      const days = parseInt(expiresIn.slice(0, -1));
-      expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-    } else if (expiresIn.endsWith('h')) {
-      const hours = parseInt(expiresIn.slice(0, -1));
-      expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
-    } else if (expiresIn.endsWith('m')) {
-      const minutes = parseInt(expiresIn.slice(0, -1));
-      expiresAt = new Date(Date.now() + minutes * 60 * 60 * 1000);
-    } else {
-      expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    }
+    const expiresAt = new Date(Date.now() + this.parseExpiresInToMs(expiresIn));
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 

@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 
 /**
@@ -10,6 +10,8 @@ import { Request, Response, NextFunction } from 'express';
  */
 @Injectable()
 export class RawBodyMiddleware implements NestMiddleware {
+  private readonly logger = new Logger(RawBodyMiddleware.name);
+
   use(req: Request, res: Response, next: NextFunction) {
     // Se o rawBody já foi preenchido (ex: por rawBody: true do NestJS),
     // apenas passa adiante
@@ -37,7 +39,7 @@ export class RawBodyMiddleware implements NestMiddleware {
     });
 
     req.on('error', err => {
-      console.error('RawBodyMiddleware error:', err);
+      this.logger.error('RawBodyMiddleware error:', err);
       next(err);
     });
   }

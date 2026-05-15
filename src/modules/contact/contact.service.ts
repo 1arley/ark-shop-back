@@ -14,8 +14,25 @@ export class ContactService {
     private readonly configService: ConfigService,
   ) {}
 
+  /**
+   * Escapa caracteres HTML para prevenir XSS em emails.
+   */
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   async send(dto: ContactDto) {
     this.logger.log(`Contact message received from ${dto.email}: "${dto.subject}"`);
+
+    const safeName = this.escapeHtml(dto.name);
+    const safeEmail = this.escapeHtml(dto.email);
+    const safeSubject = this.escapeHtml(dto.subject);
+    const safeMessage = this.escapeHtml(dto.message);
 
     // 1. Notify all ADMIN and SUPERADMIN users
     const admins = await this.prisma.user.findMany({
@@ -30,8 +47,8 @@ export class ContactService {
           userId: admin.id,
           type: 'EMAIL' as const,
           status: 'PENDING' as const,
-          subject: `Novo contato: ${dto.subject}`,
-          content: `De: ${dto.name} (${dto.email})\n\n${dto.message}`,
+          subject: `Novo contato: ${safeSubject}`,
+          content: `De: ${safeName} (${safeEmail})\n\n${safeMessage}`,
           metadata: {
             senderName: dto.name,
             senderEmail: dto.email,
@@ -48,19 +65,19 @@ export class ContactService {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Novo Contato - D'Ark Games Store</h2>
           <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 8px; font-weight: bold;">Nome:</td><td>${dto.name}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td>${dto.email}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold;">Assunto:</td><td>${dto.subject}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold;">Nome:</td><td>${safeName}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td>${safeEmail}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold;">Assunto:</td><td>${safeSubject}</td></tr>
           </table>
           <hr style="margin: 20px 0;" />
-          <p style="white-space: pre-wrap;">${dto.message}</p>
+          <p style="white-space: pre-wrap;">${safeMessage}</p>
         </div>
       `;
 
       this.emailService
         .send({
           to: adminEmail,
-          subject: `[Contato] ${dto.subject}`,
+          subject: `[Contato] ${safeSubject}`,
           html,
         })
         .catch((err: Error) => {

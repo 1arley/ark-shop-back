@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentsService } from '../payments.service';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 /**
  * Mercado Pago Webhook Handler
@@ -46,7 +46,16 @@ export class MercadoPagoWebhookHandler {
         .update(bodyBuffer)
         .digest('hex');
 
-      const isValid = expectedSignature === signature;
+      // Use timingSafeEqual para prevenir timing attacks
+      const sigBuffer = Buffer.from(signature);
+      const expectedBuffer = Buffer.from(expectedSignature);
+
+      if (sigBuffer.length !== expectedBuffer.length) {
+        this.logger.warn('Invalid webhook signature (length mismatch)');
+        return false;
+      }
+
+      const isValid = timingSafeEqual(sigBuffer, expectedBuffer);
 
       if (!isValid) {
         this.logger.warn('Invalid webhook signature');
