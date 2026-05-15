@@ -47,7 +47,11 @@ if (process.env.SENTRY_DSN) {
   imports: [
     ...(sentryModule ? [sentryModule] : []),
     ConfigModule.forRoot({
-      envFilePath: ['.env', '.env.local', '.env.test'],
+      envFilePath: [
+        '.env',
+        ...(process.env.NODE_ENV !== 'production' ? ['.env.local'] : []),
+        ...(process.env.NODE_ENV === 'test' ? ['.env.test'] : []),
+      ],
       isGlobal: true,
     }),
 
