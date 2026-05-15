@@ -1,156 +1,116 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-import * as CryptoJS from 'crypto-js';
+import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import * as dotenv from 'dotenv';
 
-// Carrega .env primeiro, depois .env.local (se existir) — mas NÃO sobrescreve
-// variáveis já definidas no ambiente (ex: DATABASE_URL via CLI)
-dotenv.config();
-dotenv.config({ path: '.env.local', override: false });
-
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL environment variable is required but was not set.');
-}
-
-const pool = new Pool({ connectionString: databaseUrl });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-const ENCRYPTION_KEY = process.env.KEYS_ENCRYPTION_KEY || 'default-key-change-in-production';
-
-function encryptKey(data: string): string {
-  return CryptoJS.AES.encrypt(data, ENCRYPTION_KEY).toString();
-}
-
-function generateDemoKey(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let key = '';
-  for (let i = 0; i < 4; i++) {
-    if (i > 0) key += '-';
-    for (let j = 0; j < 4; j++) {
-      key += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-  }
-  return key;
-}
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting seed...');
 
-  const categories = [
-    'Action',
-    'Adventure',
-    'RPG',
-    'Strategy',
-    'Sports',
-    'Racing',
-    'Simulation',
-    'Horror',
-  ];
+  // Limpar banco
+  console.log('🧹 Limpando banco de dados...');
+  await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.key.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.fraudLog.deleteMany();
+  await prisma.walletTransaction.deleteMany();
+  await prisma.wallet.deleteMany();
+  await prisma.refreshToken.deleteMany();
+  await prisma.passwordResetToken.deleteMany();
+  await prisma.seller.deleteMany();
+  console.log('✅ Banco limpo');
 
-  console.log('📁 Creating categories...');
-  const createdCategories = [];
-  for (const categoryName of categories) {
-    const category = await prisma.category.upsert({
-      where: { id: categoryName.toLowerCase() }, // evita duplicatas em re-seeds
-      create: {
-        name: categoryName,
-        description: `${categoryName} games`,
-      },
-      update: {},
-    });
-    createdCategories.push(category);
-    console.log(`  ✓ ${categoryName}`);
-  }
-
-  console.log('\n🎮 Creating products...');
-  const products = [];
-  for (let i = 0; i < 5; i++) {
-    const category = createdCategories[Math.floor(Math.random() * createdCategories.length)]!;
-
-    const product = await prisma.product.create({
+  // Criar categorias
+  console.log('📁 Criando categorias...');
+  const categories = await Promise.all([
+    prisma.category.create({
       data: {
-        name: `Game ${i + 1} - ${category.name}`,
-        description: `Amazing ${category.name.toLowerCase()} game #${i + 1}`,
-        price: Math.floor(Math.random() * 50) + 9.99,
-        stock: 10,
-        isActive: true,
-        categoryId: category.id,
+        name: 'XBOX',
+        description: 'Jogos e produtos para plataforma Xbox',
       },
-    });
+    }),
+    prisma.category.create({
+      data: {
+        name: 'STEAM/PC',
+        description: 'Jogos e produtos para Steam/PC',
+      },
+    }),
+    prisma.category.create({
+      data: {
+        name: 'NINTENDO E-SHOP',
+        description: 'Jogos e produtos para Nintendo',
+      },
+    }),
+    prisma.category.create({
+      data: {
+        name: 'PLAYSTATION',
+        description: 'Jogos e produtos para PlayStation',
+      },
+    }),
+  ]);
 
-    products.push(product);
-    console.log(`  ✓ ${product.name}`);
-  }
+  console.log(`✅ ${categories.length} categorias criadas`);
 
-  console.log('\n🔑 Creating keys...');
-  for (const product of products) {
-    const keys = Array.from({ length: 10 }, () => generateDemoKey());
+  // Criar usuários
+  console.log('👥 Criando usuários...');
 
-    for (const key of keys) {
-      await prisma.key.create({
-        data: {
-          productId: product.id,
-          keyData: encryptKey(key),
-          status: 'AVAILABLE',
-        },
-      });
-    }
+  const hashedPassword = await bcrypt.hash('mudar123', 12);
 
-    console.log(`  ✓ ${product.name}: 10 keys created`);
-  }
+  const users = await Promise.all([
+    prisma.user.upsert({
+      where: { email: 'admin@ark.com' },
+      update: {},
+      create: {
+        email: 'admin@ark.com',
+        name: 'Admin User',
+        password: hashedPassword,
+        role: Role.ADMIN,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: 'superadmin@ark.com' },
+      update: {},
+      create: {
+        email: 'superadmin@ark.com',
+        name: 'Super Admin',
+        password: hashedPassword,
+        role: Role.SUPERADMIN,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: 'user@ark.com' },
+      update: {},
+      create: {
+        email: 'user@ark.com',
+        name: 'Regular User',
+        password: hashedPassword,
+        role: Role.USER,
+      },
+    }),
+  ]);
 
-  console.log('\n👤 Creating users...');
-  const password123 = await bcrypt.hash('12345678', 10);
-  const adminPassword = await bcrypt.hash('password123', 10);
-  const userPassword = await bcrypt.hash('user1234', 10);
-
-  await prisma.user.upsert({
-    where: { email: 'superadmin@darkgames.com' },
-    update: {},
-    create: {
-      email: 'superadmin@darkgames.com',
-      password: password123,
-      name: 'Super Admin',
-      role: 'SUPERADMIN',
-    },
-  });
-  console.log('  ✓ superadmin@darkgames.com (senha: 12345678)');
-
-  await prisma.user.upsert({
-    where: { email: 'admin@darkgames.com' },
-    update: {},
-    create: {
-      email: 'admin@darkgames.com',
-      password: adminPassword,
-      name: 'Admin User',
-      role: 'ADMIN',
-    },
-  });
-  console.log('  ✓ admin@darkgames.com (senha: password123)');
-
-  await prisma.user.upsert({
-    where: { email: 'user@darkgames.com' },
-    update: {},
-    create: {
-      email: 'user@darkgames.com',
-      password: userPassword,
-      name: 'Regular User',
-      role: 'USER',
-    },
-  });
-  console.log('  ✓ user@darkgames.com (senha: user1234)');
-
-  console.log('\n✅ Seed completed!');
+  console.log(`✅ ${users.length} usuários criados`);
+  console.log('');
+  console.log('📊 Resumo do seed:');
+  console.log(`   - Categorias: ${categories.length}`);
+  console.log(`   - Usuários: ${users.length}`);
+  console.log('');
+  console.log('🔐 Credenciais:');
+  console.log('   Admin: admin@ark.com / mudar123');
+  console.log('   SuperAdmin: superadmin@ark.com / mudar123');
+  console.log('   User: user@ark.com / mudar123');
+  console.log('');
+  console.log('🎉 Seed concluído com sucesso!');
 }
 
 main()
   .catch(e => {
-    console.error('❌ Seed failed:', e);
+    console.error('❌ Erro no seed:', e);
     process.exit(1);
   })
   .finally(async () => {

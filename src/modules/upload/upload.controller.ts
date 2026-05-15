@@ -24,8 +24,6 @@ import {
 } from '@nestjs/swagger';
 import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
-import { RolesGuard } from '@/auth/roles.guard';
-import { Roles } from '@/auth/roles.decorators';
 import { ConfigService } from '@nestjs/config';
 import {
   MAX_FILE_SIZE,
@@ -36,8 +34,7 @@ import {
 
 @ApiTags('upload')
 @Controller('upload')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'SUPERADMIN')
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UploadController {
   private readonly maxFileSize: number;

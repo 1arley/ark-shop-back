@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsService } from '../products.service';
 import { ProductsRepository } from '../products.repository';
 import { NotFoundException } from '@nestjs/common';
+import { CsvParserService } from '../services/csv-parser.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { CsvParserService } from '../services/csv-parser.service';
 
 describe('ProductsService', () => {
   let service: ProductsService;
@@ -32,6 +35,20 @@ describe('ProductsService', () => {
             update: jest.fn(),
             delete: jest.fn(),
             findByCategory: jest.fn(),
+          },
+        },
+        {
+          provide: CsvParserService,
+          useValue: {
+            parse: jest.fn(),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            category: {
+              findUnique: jest.fn(),
+            },
           },
         },
       ],
@@ -137,6 +154,51 @@ describe('ProductsService', () => {
 
       await service.delete(productId);
       expect(repository.delete).toHaveBeenCalledWith(productId);
+    });
+  });
+
+  describe('importFromCsv', () => {
+    it('should import products from CSV', async () => {
+      const csvContent =
+        'XBOX,STEAM/PC\nCarimbo de data/hora,Nome do jogo,preço de venda\n07/12/2025,Test Game(xbox-europa),R$100,00';
+      const parsedProducts = [{ name: 'Test Game', price: 100, platform: 'XBOX', region: 'eu' }];
+      const createdProduct = { id: 'uuid', name: 'Test Game (XBOX)', price: 100 };
+
+      const mockParse = jest.spyOn(service['csvParser'], 'parse');
+      mockParse.mockReturnValue(parsedProducts as any);
+
+      jest.spyOn(repository, 'create').mockResolvedValue(createdProduct as any);
+
+      const result = await service.importFromCsv(csvContent);
+
+      expect(result.imported).toBe(1);
+      expect(result.failed).toBe(0);
+      expect(repository.create).toHaveBeenCalledWith({
+        name: 'Test Game (XBOX)',
+        description: expect.stringContaining('Platform: XBOX'),
+        price: 100,
+        stock: 1,
+        isActive: true,
+        categoryId: undefined,
+      });
+    });
+
+    it('should handle import errors gracefully', async () => {
+      const csvContent =
+        'XBOX\nCarimbo de data/hora,Nome do jogo,preço de venda\n07/12/2025,Test Game,R$100,00';
+      const parsedProducts = [{ name: 'Test Game', price: 100, platform: 'XBOX' }];
+
+      const mockParse = jest.spyOn(service['csvParser'], 'parse');
+      mockParse.mockReturnValue(parsedProducts as any);
+
+      jest.spyOn(repository, 'create').mockRejectedValue(new Error('Database error'));
+
+      const result = await service.importFromCsv(csvContent);
+
+      expect(result.imported).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.errors).toBeDefined();
+      expect(result.errors?.[0]).toContain('Failed to import');
     });
   });
 });

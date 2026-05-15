@@ -151,4 +151,28 @@ export class ProductsRepository {
       },
     };
   }
+
+  async createMany(
+    products: Array<{
+      name: string;
+      description?: string | null;
+      price: number;
+      stock?: number;
+      isActive?: boolean;
+      categoryId?: string | null;
+      imageUrl?: string | null;
+    }>,
+  ) {
+    return this.prisma.product.createMany({
+      data: products.map(p => ({
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        stock: p.stock ?? 0,
+        isActive: p.isActive ?? true,
+        categoryId: p.categoryId,
+        imageUrl: p.imageUrl,
+      })),
+    });
+  }
 }

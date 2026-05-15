@@ -23,6 +23,13 @@ export const PASSWORD_RESET_EXPIRY_HOURS = 1;
 // ─── Database ──────────────────────────────────────────────────
 export const DB_CONNECTION_TIMEOUT_MS = 10_000;
 
+// ─── CSV Import ────────────────────────────────────────────────
+export const CSV_MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+export const CSV_MAX_LINES = 10000; // 10k linhas
+export const CSV_BATCH_SIZE = 50; // Processamento em batch
+export const CSV_IMPORT_TIMEOUT_MS = 30000; // 30 segundos
+export const SUPPORTED_PLATFORMS = ['XBOX', 'STEAM/PC', 'NINTENDO E-SHOP', 'PLAYSTATION'] as const;
+
 export function parsePageParam(value: string | undefined, defaultValue: number): number {
   const parsed = parseInt(value ?? '', 10);
   if (Number.isNaN(parsed) || parsed < 1) return defaultValue;
