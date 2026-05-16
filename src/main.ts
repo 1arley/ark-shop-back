@@ -1,6 +1,16 @@
 // IMPORTANT: instrument.ts must be imported first — initializes Sentry before anything else
 import './instrument';
 
+// Safety net: log unhandled rejections instead of crashing
+process.on('unhandledRejection', reason => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  logger.error(`Unhandled Promise Rejection: ${message}`);
+});
+
+process.on('uncaughtException', error => {
+  logger.error(`Uncaught Exception: ${String(error)}`);
+});
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, INestApplication, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';

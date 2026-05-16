@@ -45,6 +45,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
+    await this.$disconnect().catch(error => {
+      this.logger.warn(`Database disconnect warning during shutdown: ${String(error)}`);
+    });
   }
 }
