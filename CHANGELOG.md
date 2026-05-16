@@ -1,3 +1,9 @@
+# [1.19.0](https://github.com/1arley/ark-shop-back/compare/v1.18.0...v1.19.0) (2026-05-16)
+
+### Features
+
+- integrate Resend for email delivery, add email verification and OTP password reset ([c9c4c60](https://github.com/1arley/ark-shop-back/commit/c9c4c608ce212cf19e3a60218d897c09a82f4891))
+
 # [1.18.0](https://github.com/1arley/ark-shop-back/compare/v1.17.0...v1.18.0) (2026-05-16)
 
 ### Features
