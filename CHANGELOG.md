@@ -1,3 +1,9 @@
+# [1.18.0](https://github.com/1arley/ark-shop-back/compare/v1.17.0...v1.18.0) (2026-05-16)
+
+### Features
+
+- adicionar 'Lembrar de mim' com auto-refresh de token e logout por inatividade ([00e81ab](https://github.com/1arley/ark-shop-back/commit/00e81ab68457bd92c999e7b7179f1fab3fcacd63))
+
 # [1.17.0](https://github.com/1arley/ark-shop-back/compare/v1.16.2...v1.17.0) (2026-05-15)
 
 ### Features
