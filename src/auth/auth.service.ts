@@ -63,8 +63,8 @@ export class AuthService {
     });
 
     // Generate tokens for auto-login after registration
-    const tokens = await this.getTokens(user.id, user.email, user.role);
-    await this.createRefreshToken(user.id, tokens.refresh_token);
+    const tokens = await this.getTokens(user.id, user.email, user.role, { rememberMe: false });
+    await this.createRefreshToken(user.id, tokens.refresh_token, { rememberMe: false });
 
     const { password: _, ...userWithoutPassword } = user;
 
@@ -75,7 +75,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
+    const { email, password, rememberMe } = loginDto;
 
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -91,11 +91,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const tokens = await this.getTokens(user.id, user.email, user.role);
+    const tokens = await this.getTokens(user.id, user.email, user.role, { rememberMe });
 
     // Não revoga tokens de outras sessões: cada dispositivo/contexto mantém
     // seu próprio refresh token. Tokens antigos expiram naturalmente.
-    await this.createRefreshToken(user.id, tokens.refresh_token);
+    await this.createRefreshToken(user.id, tokens.refresh_token, { rememberMe });
 
     const { password: _, ...userWithoutPassword } = user;
 
@@ -120,6 +120,7 @@ export class AuthService {
 
   /**
    * Rotaciona o refresh token: revoga o token antigo e cria um novo.
+   * Preserva a configuração rememberMe do token original.
    * Apenas o token usado é revogado — outras sessões permanecem ativas.
    */
   async refreshTokens(userId: string, oldRefreshToken: string) {
@@ -131,22 +132,45 @@ export class AuthService {
       throw new UnauthorizedException('Usuário não encontrado.');
     }
 
-    const tokens = await this.getTokens(userId, user.email, user.role);
+    // Verifica se o token antigo era rememberMe (30 dias) para preservar
+    const oldTokenHash = crypto.createHash('sha256').update(oldRefreshToken).digest('hex');
+    const storedToken = await this.prisma.refreshToken.findFirst({
+      where: { token: oldTokenHash },
+    });
+
+    // Se o token expira em mais de 15 dias, era rememberMe
+    const isRememberMe = storedToken
+      ? storedToken.expiresAt.getTime() - Date.now() > 15 * 24 * 60 * 60 * 1000
+      : false;
+
+    const tokens = await this.getTokens(userId, user.email, user.role, {
+      rememberMe: isRememberMe,
+    });
 
     // Revoga APENAS o token usado (mantém outras sessões ativas)
     await this.revokeRefreshToken(oldRefreshToken).catch(() => {
       // Token já revogado ou expirado — apenas cria o novo
     });
-    await this.createRefreshToken(userId, tokens.refresh_token);
+    await this.createRefreshToken(userId, tokens.refresh_token, { rememberMe: isRememberMe });
 
     return tokens;
   }
 
-  private async getTokens(userId: string, email: string, role: string) {
+  private async getTokens(
+    userId: string,
+    email: string,
+    role: string,
+    options?: { rememberMe?: boolean },
+  ) {
     const payload = { sub: userId, email, role, jti: crypto.randomUUID() };
 
-    const accessExpiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
-    const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+    // Access token: sempre 30 minutos (renovável enquanto o usuário estiver ativo)
+    const accessExpiresIn = '30m';
+
+    // Refresh token: 30 dias se rememberMe, senão 7 dias
+    const refreshExpiresIn = options?.rememberMe
+      ? '30d'
+      : this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
@@ -164,6 +188,7 @@ export class AuthService {
       refresh_token: refreshToken,
       access_expires_in: this.parseExpiresInToSeconds(accessExpiresIn),
       refresh_expires_in: this.parseExpiresInToSeconds(refreshExpiresIn),
+      remember_me: options?.rememberMe ?? false,
     };
   }
 
@@ -190,8 +215,14 @@ export class AuthService {
     return Math.floor(this.parseExpiresInToMs(expiresIn) / 1000);
   }
 
-  private async createRefreshToken(userId: string, token: string): Promise<void> {
-    const expiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+  private async createRefreshToken(
+    userId: string,
+    token: string,
+    options?: { rememberMe?: boolean },
+  ): Promise<void> {
+    const expiresIn = options?.rememberMe
+      ? '30d'
+      : this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
     const expiresAt = new Date(Date.now() + this.parseExpiresInToMs(expiresIn));
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
