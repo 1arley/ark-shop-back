@@ -1,3 +1,9 @@
+# [1.20.0](https://github.com/1arley/ark-shop-back/compare/v1.19.2...v1.20.0) (2026-05-16)
+
+### Features
+
+- enforce email verification before accessing protected routes ([e8946a2](https://github.com/1arley/ark-shop-back/commit/e8946a2e70713d92b9cebbe8f952f33b7e6b6ac0))
+
 ## [1.19.2](https://github.com/1arley/ark-shop-back/compare/v1.19.1...v1.19.2) (2026-05-16)
 
 ### Bug Fixes
