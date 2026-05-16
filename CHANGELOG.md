@@ -1,3 +1,9 @@
+## [1.19.1](https://github.com/1arley/ark-shop-back/compare/v1.19.0...v1.19.1) (2026-05-16)
+
+### Bug Fixes
+
+- replace Bull queue with direct email service calls to fix 500 on register ([6e12621](https://github.com/1arley/ark-shop-back/commit/6e12621b760cf12803cdf5fdca3005c6a350aaf7))
+
 # [1.19.0](https://github.com/1arley/ark-shop-back/compare/v1.18.0...v1.19.0) (2026-05-16)
 
 ### Features
