@@ -64,7 +64,7 @@ describe('AuthService', () => {
       password: 'Password123!',
     };
 
-    it('deve registrar um novo usuário com sucesso', async () => {
+    it('deve registrar um novo usuário com sucesso e requerer verificação de email', async () => {
       const hashedPassword = await bcrypt.hash(registerDto.password, 10);
       const createdAt = new Date('2025-01-01T00:00:00Z');
       const updatedAt = new Date('2025-01-01T00:00:00Z');
@@ -74,24 +74,24 @@ describe('AuthService', () => {
         email: registerDto.email,
         password: hashedPassword,
         role: 'USER',
+        emailVerified: false,
         createdAt,
         updatedAt,
       };
 
-      jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-jwt-token');
-      jest.spyOn(configService, 'get').mockReturnValue('fake-secret');
-      jest.spyOn(configService, 'getOrThrow').mockReturnValue('fake-secret');
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue(createdUser);
       mockPrismaService.emailVerificationToken.create.mockResolvedValue({ id: '1' });
 
       const result = await service.register(registerDto);
 
-      expect(result).toHaveProperty('access_token', 'fake-jwt-token');
-      expect(result).toHaveProperty('refresh_token', 'fake-jwt-token');
+      expect(result).toHaveProperty('message');
+      expect(result).toHaveProperty('emailVerificationRequired', true);
       expect(result).toHaveProperty('user');
       expect(result.user.email).toBe(registerDto.email);
       expect(result.user).not.toHaveProperty('password');
+      expect(result.user).not.toHaveProperty('access_token');
+      expect(result.user).not.toHaveProperty('refresh_token');
       expect(result.user.createdAt).toEqual(createdAt);
       expect(result.user.updatedAt).toEqual(updatedAt);
 
@@ -99,6 +99,7 @@ describe('AuthService', () => {
         where: { email: registerDto.email },
       });
       expect(prisma.user.create).toHaveBeenCalled();
+      expect(prisma.emailVerificationToken.create).toHaveBeenCalled();
     });
 
     it('deve lançar ConflictException se email já existir', async () => {
@@ -118,7 +119,7 @@ describe('AuthService', () => {
       password: 'Password123!',
     };
 
-    it('deve fazer login com credenciais válidas e retornar tokens', async () => {
+    it('deve fazer login com credenciais válidas e retornar tokens com flag emailVerified', async () => {
       const hashedPassword = await bcrypt.hash(loginDto.password, 10);
       const user = {
         id: '1',
@@ -126,6 +127,7 @@ describe('AuthService', () => {
         email: loginDto.email,
         password: hashedPassword,
         role: 'USER',
+        emailVerified: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -140,6 +142,29 @@ describe('AuthService', () => {
       expect(result.user).not.toHaveProperty('password');
       expect(result).toHaveProperty('access_token', 'fake-jwt-token');
       expect(result).toHaveProperty('refresh_token', 'fake-jwt-token');
+      expect(result).toHaveProperty('emailVerified', true);
+    });
+
+    it('deve retornar emailVerified: false quando usuario nao verificou email', async () => {
+      const hashedPassword = await bcrypt.hash(loginDto.password, 10);
+      const user = {
+        id: '1',
+        name: 'Test User',
+        email: loginDto.email,
+        password: hashedPassword,
+        role: 'USER',
+        emailVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-jwt-token');
+      jest.spyOn(configService, 'get').mockReturnValue('fake-secret');
+      mockPrismaService.user.findUnique.mockResolvedValue(user);
+
+      const result = await service.login(loginDto);
+
+      expect(result).toHaveProperty('emailVerified', false);
     });
 
     it('deve lançar UnauthorizedException se usuário não existe', async () => {
@@ -153,6 +178,7 @@ describe('AuthService', () => {
         email: loginDto.email,
         password: await bcrypt.hash('DifferentPassword', 10),
         role: 'USER',
+        emailVerified: false,
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
@@ -170,6 +196,7 @@ describe('AuthService', () => {
         email: 'test@example.com',
         password: 'hashed-password',
         role: 'USER',
+        emailVerified: true,
         createdAt,
         updatedAt,
       };
@@ -184,6 +211,7 @@ describe('AuthService', () => {
         name: 'Test User',
         email: 'test@example.com',
         role: 'USER',
+        emailVerified: true,
         createdAt,
         updatedAt,
       });
@@ -204,6 +232,7 @@ describe('AuthService', () => {
         id: '1',
         email: 'test@example.com',
         role: 'USER',
+        emailVerified: true,
       };
 
       jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-jwt-token');

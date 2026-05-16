@@ -5,6 +5,8 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   role: Role;
+  name?: string | null;
+  emailVerified: boolean;
   refreshToken?: string;
 }
 

@@ -17,6 +17,7 @@ import { ForgotPasswordDto } from '@/auth/dto/forgot-password.dto';
 import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
+import { SkipEmailVerification } from '@/auth/decorators/skip-email-verification.decorator';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -33,6 +34,7 @@ function getCookieOptions(maxAgeSeconds: number) {
 }
 
 @ApiTags('auth')
+@SkipEmailVerification()
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -40,24 +42,13 @@ export class AuthController {
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiRegisterUser()
-  async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+  async register(@Body() registerDto: RegisterDto) {
     const result = await this.authService.register(registerDto);
 
-    res.cookie(
-      ACCESS_TOKEN_COOKIE,
-      result.access_token,
-      getCookieOptions(result.access_expires_in),
-    );
-    res.cookie(
-      REFRESH_TOKEN_COOKIE,
-      result.refresh_token,
-      getCookieOptions(result.refresh_expires_in),
-    );
-
     return {
-      access_token: result.access_token,
-      refresh_token: result.refresh_token,
+      message: result.message,
       user: result.user,
+      emailVerificationRequired: result.emailVerificationRequired,
     };
   }
 
@@ -82,6 +73,7 @@ export class AuthController {
       access_token: result.access_token,
       refresh_token: result.refresh_token,
       user: result.user,
+      emailVerified: result.emailVerified,
     };
   }
 

@@ -11,6 +11,7 @@ import { UserModule } from '@/user/user.module';
 import { LoggerModule } from '@/logger/logger.module';
 import { MetricsModule } from '@/metrics/metrics.module';
 import { HealthModule } from '@/health/health.module';
+import { EmailVerifiedGuard } from '@/auth/email-verified.guard';
 
 // D'Ark Games Store Modules
 import { ProductsModule } from '@/modules/products/products.module';
@@ -95,6 +96,10 @@ if (process.env.SENTRY_DSN) {
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: EmailVerifiedGuard,
     },
   ],
 })

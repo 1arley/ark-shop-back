@@ -46,35 +46,37 @@ describe('AuthController', () => {
       password: 'Password123!',
     };
 
-    it('should register a new user successfully', async () => {
+    it('should register a new user successfully without tokens (email verification required)', async () => {
       const mockResponse = {
-        access_token: 'fake-access-token',
-        refresh_token: 'fake-refresh-token',
-        access_expires_in: 900,
-        refresh_expires_in: 604800,
+        message: 'Registration successful. Please check your email to verify your account.',
         user: {
           id: '1',
           name: 'Test User',
           email: 'test@example.com',
           role: 'USER',
+          emailVerified: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
+        emailVerificationRequired: true,
       };
 
       mockAuthService.register.mockResolvedValue(mockResponse);
 
-      const result = await controller.register(registerDto, mockRes());
+      const result = await controller.register(registerDto);
 
-      expect(result.access_token).toBe('fake-access-token');
+      expect(result.message).toBe(mockResponse.message);
+      expect(result.emailVerificationRequired).toBe(true);
       expect(result.user.email).toBe('test@example.com');
+      expect(result).not.toHaveProperty('access_token');
+      expect(result).not.toHaveProperty('refresh_token');
       expect(authService.register).toHaveBeenCalledWith(registerDto);
     });
 
     it('should propagate ConflictException when email already exists', async () => {
       mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
-      await expect(controller.register(registerDto, mockRes())).rejects.toThrow(ConflictException);
+      await expect(controller.register(registerDto)).rejects.toThrow(ConflictException);
       expect(authService.register).toHaveBeenCalledWith(registerDto);
     });
 
@@ -82,7 +84,7 @@ describe('AuthController', () => {
       const invalidDto = { ...registerDto, email: 'invalid-email' };
       mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
-      await expect(controller.register(invalidDto, mockRes())).rejects.toThrow(ConflictException);
+      await expect(controller.register(invalidDto)).rejects.toThrow(ConflictException);
     });
   });
 
@@ -92,13 +94,14 @@ describe('AuthController', () => {
       password: 'Password123!',
     };
 
-    it('should login successfully and return tokens', async () => {
+    it('should login successfully and return tokens with emailVerified flag', async () => {
       const serviceResponse = {
         user: {
           id: '1',
           name: 'Test User',
           email: 'test@example.com',
           role: 'USER',
+          emailVerified: true,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -106,6 +109,7 @@ describe('AuthController', () => {
         refresh_token: 'fake-refresh-token',
         access_expires_in: 900,
         refresh_expires_in: 604800,
+        emailVerified: true,
       };
 
       mockAuthService.login.mockResolvedValue(serviceResponse);
@@ -114,6 +118,7 @@ describe('AuthController', () => {
 
       expect(result.access_token).toBe('fake-access-token');
       expect(result.user.email).toBe('test@example.com');
+      expect(result.emailVerified).toBe(true);
       expect(authService.login).toHaveBeenCalledWith(loginDto);
     });
 
@@ -202,7 +207,7 @@ describe('AuthController', () => {
       mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
       try {
-        await controller.register(registerDto, mockRes());
+        await controller.register(registerDto);
       } catch (error) {
         expect((error as { message?: string }).message).not.toContain('password');
         expect((error as { message?: string }).message).not.toContain('hashed');
@@ -237,23 +242,22 @@ describe('AuthController', () => {
       };
 
       const mockResponse = {
-        access_token: 'fake-access-token',
-        refresh_token: 'fake-refresh-token',
-        access_expires_in: 900,
-        refresh_expires_in: 604800,
+        message: 'Registration successful. Please check your email to verify your account.',
         user: {
           id: '1',
           name: largeDto.name,
           email: largeDto.email,
           role: 'USER',
+          emailVerified: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
+        emailVerificationRequired: true,
       };
 
       mockAuthService.register.mockResolvedValue(mockResponse);
 
-      const result = await controller.register(largeDto, mockRes());
+      const result = await controller.register(largeDto);
 
       expect(result.user.name).toBe(largeDto.name);
       expect(authService.register).toHaveBeenCalledWith(largeDto);
@@ -268,24 +272,26 @@ describe('AuthController', () => {
       };
 
       const mockResponse = {
-        message: 'Usuário cadastrado com sucesso.',
+        message: 'Registration successful. Please check your email to verify your account.',
         user: {
           id: '1',
           name: 'Test User',
           email: 'test@example.com',
           role: 'USER',
+          emailVerified: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
+        emailVerificationRequired: true,
       };
 
       mockAuthService.register.mockResolvedValue(mockResponse);
 
       // Simulate multiple calls
       const promises = [
-        controller.register(registerDto, mockRes()),
-        controller.register(registerDto, mockRes()),
-        controller.register(registerDto, mockRes()),
+        controller.register(registerDto),
+        controller.register(registerDto),
+        controller.register(registerDto),
       ];
 
       const results = await Promise.allSettled(promises);

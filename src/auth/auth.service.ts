@@ -79,21 +79,18 @@ export class AuthService {
       },
     });
 
-    // Send verification email (non-blocking — registration should succeed even if email fails)
-    this.emailService.sendEmailVerification(email, verificationCode, email).catch(err => {
+    // Send verification email — non-blocking so registration always succeeds
+    // (user can request resend if email fails)
+    this.emailService.sendEmailVerification(email, verificationCode, name).catch(err => {
       this.logger.warn(
         `Failed to send verification email: ${err instanceof Error ? err.message : err}`,
       );
     });
 
-    // Generate tokens for auto-login after registration
-    const tokens = await this.getTokens(user.id, user.email, user.role, { rememberMe: false });
-    await this.createRefreshToken(user.id, tokens.refresh_token, { rememberMe: false });
-
     const { password: _, ...userWithoutPassword } = user;
 
     return {
-      ...tokens,
+      message: 'Registration successful. Please check your email to verify your account.',
       user: userWithoutPassword,
       emailVerificationRequired: true,
     };
@@ -127,6 +124,7 @@ export class AuthService {
     return {
       ...tokens,
       user: userWithoutPassword,
+      emailVerified: user.emailVerified,
     };
   }
 
