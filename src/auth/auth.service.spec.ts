@@ -25,6 +25,9 @@ describe('AuthService', () => {
       findFirst: jest.fn(),
       delete: jest.fn(),
     },
+    emailVerificationToken: {
+      create: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -78,6 +81,7 @@ describe('AuthService', () => {
       jest.spyOn(configService, 'getOrThrow').mockReturnValue('fake-secret');
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue(createdUser);
+      mockPrismaService.emailVerificationToken.create.mockResolvedValue({ id: '1' });
 
       const result = await service.register(registerDto);
 

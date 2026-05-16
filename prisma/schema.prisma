@@ -77,6 +77,7 @@ model User {
   name String?
   avatarUrl String?
   role Role @default(USER)
+  emailVerified Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   refreshTokens RefreshToken[]
@@ -85,6 +86,7 @@ model User {
   wallet Wallet?
   notifications Notification[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   sellers Seller[]
   cart Cart?
 
@@ -115,6 +117,19 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([token])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([code])
 }
 
 // ============================

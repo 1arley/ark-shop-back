@@ -13,6 +13,8 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { RegisterDto } from '@/auth/dto/register.dto';
 import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
+import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
+import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '@/modules/email/email.service';
 import { InjectQueue } from '@nestjs/bull';
@@ -22,6 +24,10 @@ import {
   DEFAULT_BCRYPT_SALT_ROUNDS,
   PASSWORD_RESET_EXPIRY_HOURS,
   HOUR_IN_MS,
+  EMAIL_VERIFICATION_CODE_LENGTH,
+  EMAIL_VERIFICATION_EXPIRY_HOURS,
+  PASSWORD_RESET_CODE_LENGTH,
+  MINUTE_IN_MS,
 } from '@/common/constants';
 
 @Injectable()
@@ -62,6 +68,26 @@ export class AuthService {
       },
     });
 
+    // Generate email verification code
+    const verificationCode = this.generateNumericCode(EMAIL_VERIFICATION_CODE_LENGTH);
+    const codeHash = crypto.createHash('sha256').update(verificationCode).digest('hex');
+    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_HOURS * HOUR_IN_MS);
+
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        userId: user.id,
+        code: codeHash,
+        expiresAt,
+      },
+    });
+
+    // Send verification email via Bull queue
+    await this.emailQueue.add('send-email-verification', {
+      to: email,
+      verificationCode,
+      email,
+    });
+
     // Generate tokens for auto-login after registration
     const tokens = await this.getTokens(user.id, user.email, user.role, { rememberMe: false });
     await this.createRefreshToken(user.id, tokens.refresh_token, { rememberMe: false });
@@ -71,6 +97,7 @@ export class AuthService {
     return {
       ...tokens,
       user: userWithoutPassword,
+      emailVerificationRequired: true,
     };
   }
 
@@ -263,7 +290,7 @@ export class AuthService {
     });
 
     if (!user) {
-      return { message: 'Se o email existir, um link de redefinição será enviado.' };
+      return { message: 'Se o email existir, um link de redefinicao sera enviado.' };
     }
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -285,10 +312,52 @@ export class AuthService {
     });
 
     // Envia email via fila Bull para garantir entrega e evitar race condition
-    // (token já foi criado, mas a fila permite retry automático em caso de falha)
+    // (token ja foi criado, mas a fila permite retry automatico em caso de falha)
     await this.emailQueue.add('send-password-reset', { to: email, resetToken: token, email });
 
-    return { message: 'Se o email existir, um link de redefinição será enviado.' };
+    return { message: 'Se o email existir, um link de redefinicao sera enviado.' };
+  }
+
+  /**
+   * Solicita redefinicao de senha via codigo OTP (6 digitos).
+   * Alternativa ao link de redefinicao.
+   */
+  async forgotPasswordWithCode(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return { message: 'Se o email existir, um codigo de redefinicao sera enviado.' };
+    }
+
+    const resetCode = this.generateNumericCode(PASSWORD_RESET_CODE_LENGTH);
+    const codeHash = crypto.createHash('sha256').update(resetCode).digest('hex');
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_CODE_LENGTH * MINUTE_IN_MS);
+
+    // Invalida codigos anteriores nao usados
+    await this.prisma.passwordResetToken.deleteMany({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+    });
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token: codeHash,
+        expiresAt,
+      },
+    });
+
+    await this.emailQueue.add('send-password-reset-code', {
+      to: email,
+      resetCode,
+      email,
+    });
+
+    return { message: 'Se o email existir, um codigo de redefinicao sera enviado.' };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -296,7 +365,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw new BadRequestException('Token inválido ou expirado.');
+      throw new BadRequestException('Token invalido ou expirado.');
     }
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -311,7 +380,7 @@ export class AuthService {
     });
 
     if (!resetToken) {
-      throw new BadRequestException('Token inválido ou expirado.');
+      throw new BadRequestException('Token invalido ou expirado.');
     }
 
     const saltRounds = parseInt(
@@ -330,6 +399,154 @@ export class AuthService {
       }),
     ]);
 
+    // Revoga todos os refresh tokens apos redefinicao de senha
+    await this.revokeAllUserRefreshTokens(user.id);
+
     return { message: 'Senha redefinida com sucesso.' };
+  }
+
+  /**
+   * Redefine senha usando codigo OTP recebido por email.
+   */
+  async resetPasswordWithCode(dto: ResetPasswordWithCodeDto) {
+    const { code, email, password } = dto;
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('Codigo invalido ou expirado.');
+    }
+
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+    const resetToken = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        token: codeHash,
+        userId: user.id,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!resetToken) {
+      throw new BadRequestException('Codigo invalido ou expirado.');
+    }
+
+    const saltRounds = parseInt(
+      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
+    );
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      }),
+    ]);
+
+    // Revoga todos os refresh tokens apos redefinicao de senha
+    await this.revokeAllUserRefreshTokens(user.id);
+
+    return { message: 'Senha redefinida com sucesso.' };
+  }
+
+  /**
+   * Verifica o email do usuario usando o codigo recebido.
+   */
+  async verifyEmail(dto: VerifyEmailDto) {
+    const { email, code } = dto;
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('Codigo de verificacao invalido.');
+    }
+
+    if (user.emailVerified) {
+      return { message: 'Email ja verificado.', emailVerified: true };
+    }
+
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+    const verificationToken = await this.prisma.emailVerificationToken.findFirst({
+      where: {
+        code: codeHash,
+        userId: user.id,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!verificationToken) {
+      throw new BadRequestException('Codigo de verificacao invalido ou expirado.');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true },
+      }),
+    ]);
+
+    return { message: 'Email verificado com sucesso.', emailVerified: true };
+  }
+
+  /**
+   * Reenvia o email de verificacao para o usuario.
+   */
+  async resendVerificationEmail(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return { message: 'Se o email existir, um novo codigo sera enviado.' };
+    }
+
+    if (user.emailVerified) {
+      return { message: 'Email ja esta verificado.', emailVerified: true };
+    }
+
+    // Invalida codigos anteriores nao usados
+    await this.prisma.emailVerificationToken.deleteMany({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+    });
+
+    const verificationCode = this.generateNumericCode(EMAIL_VERIFICATION_CODE_LENGTH);
+    const codeHash = crypto.createHash('sha256').update(verificationCode).digest('hex');
+    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_HOURS * HOUR_IN_MS);
+
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        userId: user.id,
+        code: codeHash,
+        expiresAt,
+      },
+    });
+
+    await this.emailQueue.add('send-email-verification', {
+      to: email,
+      verificationCode,
+      email,
+    });
+
+    return { message: 'Se o email existir, um novo codigo sera enviado.' };
+  }
+
+  /**
+   * Gera um codigo numerico aleatorio de tamanho especificado.
+   */
+  private generateNumericCode(length: number): string {
+    let code = '';
+    for (let i = 0; i < length; i++) {
+      code += crypto.randomInt(0, 10).toString();
+    }
+    return code;
   }
 }

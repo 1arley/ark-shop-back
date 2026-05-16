@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import type { Order, OrderItem, Product, Payment } from '@prisma/client';
 
 export interface EmailOptions {
@@ -8,10 +8,6 @@ export interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
-  attachments?: Array<{
-    filename: string;
-    content: Buffer | string;
-  }>;
 }
 
 interface OrderWithRelations extends Order {
@@ -28,61 +24,35 @@ interface OrderItemWithProduct {
 
 @Injectable()
 export class EmailService {
-  private readonly transporter: nodemailer.Transporter;
+  private readonly resend: Resend;
   private readonly logger = new Logger(EmailService.name);
   private readonly from: string;
-  private isReady = false;
 
   constructor(private readonly configService: ConfigService) {
-    const smtpHost = this.configService.get<string>('SMTP_HOST');
-    const smtpPort = this.configService.get<string>('SMTP_PORT');
-    const smtpUser = this.configService.get<string>('SMTP_USER');
-    const smtpPass = this.configService.get<string>('SMTP_PASS');
+    const apiKey = this.configService.getOrThrow<string>('RESEND_API_KEY');
     const emailFrom = this.configService.get<string>('EMAIL_FROM');
-    this.from = emailFrom ?? "D'Ark Games Store <noreply@darkgames.com>";
+    this.from = emailFrom ?? "D'Ark Games Store <onboarding@resend.dev>";
 
-    // Configure transporter
-    this.transporter = nodemailer.createTransport({
-      host: smtpHost ?? 'smtp.mailtrap.io', // Default to Mailtrap for testing
-      port: smtpPort ? parseInt(smtpPort) : 2525,
-      secure: false,
-      auth: smtpHost
-        ? {
-            user: smtpUser,
-            pass: smtpPass,
-          }
-        : undefined,
-    });
-
-    // Verify connection configuration
-    this.transporter.verify(error => {
-      if (error) {
-        this.logger.error(`Email transporter unhealthy: ${error.message}`);
-        this.isReady = false;
-      } else {
-        this.logger.log('Email service ready.');
-        this.isReady = true;
-      }
-    });
+    this.resend = new Resend(apiKey);
+    this.logger.log('Resend email service initialized.');
   }
 
   async send(options: EmailOptions): Promise<boolean> {
-    if (!this.isReady) {
-      this.logger.warn('Email not sent — transporter not ready.');
-      return false;
-    }
-
     try {
-      const info = await this.transporter.sendMail({
+      const { data, error } = await this.resend.emails.send({
         from: this.from,
         to: options.to,
         subject: options.subject,
         html: options.html,
         text: options.text,
-        attachments: options.attachments,
       });
 
-      this.logger.log(`Email sent: ${info.messageId}`);
+      if (error) {
+        this.logger.error(`Failed to send email: ${error.message}`);
+        throw new Error(error.message);
+      }
+
+      this.logger.log(`Email sent: ${data?.id}`);
       return true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -98,23 +68,23 @@ export class EmailService {
   ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #333;">Order Confirmation</h1>
-        <p>Thank you for your order!</p>
+        <h1 style="color: #333;">Confirmacao de Pedido</h1>
+        <p>Obrigado pelo seu pedido!</p>
         
         <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-          <h2>Order #${order.id}</h2>
-          <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
-          <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
+          <h2>Pedido #${order.id}</h2>
+          <p><strong>Data:</strong> ${new Date(order.createdAt).toLocaleDateString('pt-BR')}</p>
+          <p><strong>Total:</strong> R$ ${Number(order.total).toFixed(2)}</p>
           <p><strong>Status:</strong> ${order.status}</p>
         </div>
 
-        <h3>Order Items:</h3>
+        <h3>Itens do Pedido:</h3>
         <ul>
           ${items
             .map(
               item => `
             <li>
-              ${item.product.name} x ${item.quantity} - $${item.price.toFixed(2)}
+              ${item.product.name} x ${item.quantity} - R$ ${Number(item.price).toFixed(2)}
             </li>
           `,
             )
@@ -122,30 +92,30 @@ export class EmailService {
         </ul>
 
         <p style="margin-top: 30px;">
-          You can view your order details and download your keys once delivered.
+          Voce pode ver os detalhes do seu pedido e baixar suas chaves assim que forem entregues.
         </p>
 
-        <p>Thank you for shopping with D'Ark Games Store!</p>
+        <p>Obrigado por comprar na D'Ark Games Store!</p>
       </div>
     `;
 
     const text = `
-Order Confirmation
+Confirmacao de Pedido
 
-Order #: ${order.id}
-Date: ${new Date(order.createdAt).toLocaleDateString()}
-Total: $${order.total.toFixed(2)}
+Pedido #: ${order.id}
+Data: ${new Date(order.createdAt).toLocaleDateString('pt-BR')}
+Total: R$ ${Number(order.total).toFixed(2)}
 Status: ${order.status}
 
-Items:
-${items.map(item => `- ${item.product.name} x ${item.quantity} - $${item.price.toFixed(2)}`).join('\n')}
+Itens:
+${items.map(item => `- ${item.product.name} x ${item.quantity} - R$ ${Number(item.price).toFixed(2)}`).join('\n')}
 
-Thank you for shopping with D'Ark Games Store!
+Obrigado por comprar na D'Ark Games Store!
     `;
 
     return this.send({
       to,
-      subject: `Order Confirmation #${order.id}`,
+      subject: `Confirmacao de Pedido #${order.id}`,
       html,
       text,
     });
@@ -158,15 +128,15 @@ Thank you for shopping with D'Ark Games Store!
   ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #27ae60;">Your Keys Are Ready!</h1>
-        <p>Thank you for your purchase. Your digital keys are ready to use.</p>
+        <h1 style="color: #27ae60;">Suas Chaves Estao Prontas!</h1>
+        <p>Obrigado pela sua compra. Suas chaves digitais estao prontas para uso.</p>
         
         <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-          <h2>Order #${order.id}</h2>
-          <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+          <h2>Pedido #${order.id}</h2>
+          <p><strong>Data:</strong> ${new Date(order.createdAt).toLocaleDateString('pt-BR')}</p>
         </div>
 
-        <h3>Your Keys:</h3>
+        <h3>Suas Chaves:</h3>
         <div style="background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 15px;">
           ${keys
             .map(
@@ -181,73 +151,161 @@ Thank you for shopping with D'Ark Games Store!
         </div>
 
         <p style="margin-top: 20px; color: #e74c3c;">
-          <strong>Important:</strong> Keep your keys safe! Once revealed, keys cannot be replaced.
+          <strong>Importante:</strong> Guarde suas chaves com seguranca! Uma vez reveladas, as chaves nao podem ser substituidas.
         </p>
 
-        <p>Enjoy your games!</p>
+        <p>Aproveite seus jogos!</p>
       </div>
     `;
 
     const text = `
-Your Keys Are Ready!
+Suas Chaves Estao Prontas!
 
-Order #: ${order.id}
-Date: ${new Date(order.createdAt).toLocaleDateString()}
+Pedido #: ${order.id}
+Data: ${new Date(order.createdAt).toLocaleDateString('pt-BR')}
 
-Your Keys:
+Suas Chaves:
 ${keys.map(k => `${k.productName}: ${k.key}`).join('\n')}
 
-Important: Keep your keys safe! Once revealed, keys cannot be replaced.
+Importante: Guarde suas chaves com seguranca! Uma vez reveladas, as chaves nao podem ser substituidas.
 
-Enjoy your games!
+Aproveite seus jogos!
     `;
 
     return this.send({
       to,
-      subject: `Your Digital Keys - Order #${order.id}`,
+      subject: `Suas Chaves Digitais - Pedido #${order.id}`,
       html,
       text,
     });
   }
 
   async sendPasswordReset(to: string, resetToken: string, email: string): Promise<boolean> {
-    const resetUrl = `${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    const frontendUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #3498db;">Password Reset Request</h1>
-        <p>You requested a password reset for your D'Ark Games Store account.</p>
-        
+        <h1 style="color: #3498db;">Redefinicao de Senha</h1>
+        <p>Voce solicitou a redefinicao de senha da sua conta D'Ark Games Store.</p>
+
         <div style="text-align: center; margin: 30px 0;">
           <a href="${resetUrl}" style="background: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            Reset Password
+            Redefinir Senha
           </a>
         </div>
 
         <p style="color: #666; font-size: 14px;">
-          This link will expire in 1 hour. If you didn't request this reset, please ignore this email.
+          Este link expira em 1 hora. Se voce nao solicitou esta redefinicao, ignore este email.
         </p>
 
         <p style="margin-top: 30px;">
-          Or copy and paste this URL:<br>
+          Ou copie e cole esta URL:<br>
           <code style="background: #f0f0f0; padding: 5px; word-break: break-all;">${resetUrl}</code>
         </p>
       </div>
     `;
 
     const text = `
-Password Reset Request
+Redefinicao de Senha
 
-You requested a password reset for your D'Ark Games Store account.
+Voce solicitou a redefinicao de senha da sua conta D'Ark Games Store.
 
-Reset URL: ${resetUrl}
+URL de redefinicao: ${resetUrl}
 
-This link will expire in 1 hour. If you didn't request this reset, please ignore this email.
+Este link expira em 1 hora. Se voce nao solicitou esta redefinicao, ignore este email.
     `;
 
     return this.send({
       to,
-      subject: 'Password Reset Request',
+      subject: "Redefinicao de Senha - D'Ark Games Store",
+      html,
+      text,
+    });
+  }
+
+  async sendEmailVerification(
+    to: string,
+    verificationCode: string,
+    email: string,
+  ): Promise<boolean> {
+    const frontendUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    const verificationUrl = `${frontendUrl}/verify-email?code=${verificationCode}&email=${encodeURIComponent(email)}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #27ae60;">Verifique seu Email</h1>
+        <p>Bem-vindo a D'Ark Games Store! Para concluir seu cadastro, verifique seu email.</p>
+
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+          <p style="font-size: 14px; color: #666; margin-bottom: 10px;">Seu codigo de verificacao:</p>
+          <p style="font-size: 32px; font-weight: bold; color: #27ae60; letter-spacing: 8px; margin: 0;">${verificationCode}</p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verificationUrl}" style="background: #27ae60; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Verificar Email
+          </a>
+        </div>
+
+        <p style="color: #666; font-size: 14px;">
+          Este codigo expira em 24 horas. Se voce nao criou uma conta, ignore este email.
+        </p>
+      </div>
+    `;
+
+    const text = `
+Verifique seu Email
+
+Bem-vindo a D'Ark Games Store! Para concluir seu cadastro, verifique seu email.
+
+Seu codigo de verificacao: ${verificationCode}
+
+Ou acesse: ${verificationUrl}
+
+Este codigo expira em 24 horas. Se voce nao criou uma conta, ignore este email.
+    `;
+
+    return this.send({
+      to,
+      subject: "Verifique seu Email - D'Ark Games Store",
+      html,
+      text,
+    });
+  }
+
+  async sendPasswordResetWithCode(to: string, resetCode: string, _email: string): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #e74c3c;">Redefinicao de Senha</h1>
+        <p>Voce solicitou a redefinicao de senha da sua conta D'Ark Games Store.</p>
+
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+          <p style="font-size: 14px; color: #666; margin-bottom: 10px;">Seu codigo de redefinicao:</p>
+          <p style="font-size: 32px; font-weight: bold; color: #e74c3c; letter-spacing: 8px; margin: 0;">${resetCode}</p>
+        </div>
+
+        <p style="color: #666; font-size: 14px;">
+          Use este codigo na pagina de redefinicao de senha. Ele expira em 10 minutos.
+          Se voce nao solicitou esta redefinicao, ignore este email.
+        </p>
+      </div>
+    `;
+
+    const text = `
+Redefinicao de Senha
+
+Voce solicitou a redefinicao de senha da sua conta D'Ark Games Store.
+
+Seu codigo de redefinicao: ${resetCode}
+
+Use este codigo na pagina de redefinicao de senha. Ele expira em 10 minutos.
+Se voce nao solicitou esta redefinicao, ignore este email.
+    `;
+
+    return this.send({
+      to,
+      subject: "Codigo de Redefinicao de Senha - D'Ark Games Store",
       html,
       text,
     });
@@ -260,41 +318,41 @@ This link will expire in 1 hour. If you didn't request this reset, please ignore
   ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2ecc71;">Payment Receipt</h1>
-        <p>Your payment has been processed successfully.</p>
+        <h1 style="color: #2ecc71;">Recibo de Pagamento</h1>
+        <p>Seu pagamento foi processado com sucesso.</p>
         
         <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-          <h2>Payment Details</h2>
-          <p><strong>Transaction ID:</strong> ${payment.id}</p>
-          <p><strong>Amount:</strong> $${payment.amount.toFixed(2)}</p>
-          <p><strong>Date:</strong> ${new Date(payment.createdAt).toLocaleDateString()}</p>
-          <p><strong>Method:</strong> ${payment.method}</p>
+          <h2>Detalhes do Pagamento</h2>
+          <p><strong>ID da Transacao:</strong> ${payment.id}</p>
+          <p><strong>Valor:</strong> R$ ${Number(payment.amount).toFixed(2)}</p>
+          <p><strong>Data:</strong> ${new Date(payment.createdAt).toLocaleDateString('pt-BR')}</p>
+          <p><strong>Metodo:</strong> ${payment.method}</p>
           <p><strong>Status:</strong> ${payment.status}</p>
         </div>
 
-        <p>Order #${order.id} has been confirmed and will be processed shortly.</p>
+        <p>Pedido #${order.id} foi confirmado e sera processado em breve.</p>
 
-        <p>Thank you for your purchase!</p>
+        <p>Obrigado pela sua compra!</p>
       </div>
     `;
 
     const text = `
-Payment Receipt
+Recibo de Pagamento
 
-Transaction ID: ${payment.id}
-Amount: $${payment.amount.toFixed(2)}
-Date: ${new Date(payment.createdAt).toLocaleDateString()}
-Method: ${payment.method}
+ID da Transacao: ${payment.id}
+Valor: R$ ${Number(payment.amount).toFixed(2)}
+Data: ${new Date(payment.createdAt).toLocaleDateString('pt-BR')}
+Metodo: ${payment.method}
 Status: ${payment.status}
 
-Order #${order.id} has been confirmed.
+Pedido #${order.id} foi confirmado.
 
-Thank you for your purchase!
+Obrigado pela sua compra!
     `;
 
     return this.send({
       to,
-      subject: `Payment Receipt - ${payment.amount.toFixed(2)}`,
+      subject: `Recibo de Pagamento - R$ ${Number(payment.amount).toFixed(2)}`,
       html,
       text,
     });

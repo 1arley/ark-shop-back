@@ -15,6 +15,8 @@ import { extractRefreshToken } from '@/auth/token-extractor.util';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
 import { ForgotPasswordDto } from '@/auth/dto/forgot-password.dto';
 import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
+import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
+import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -152,8 +154,52 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redefinir senha com token' })
   @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Token inválido ou expirado.' })
+  @ApiResponse({ status: 400, description: 'Token invalido ou expirado.' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Post('forgot-password-code')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 solicitacoes/minuto
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Solicitar redefinicao de senha via codigo OTP' })
+  @ApiResponse({
+    status: 200,
+    description: 'Se o email existir, um codigo de redefinicao sera enviado.',
+  })
+  async forgotPasswordWithCode(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPasswordWithCode(dto.email);
+  }
+
+  @Post('reset-password-code')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Redefinir senha com codigo OTP' })
+  @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Codigo invalido ou expirado.' })
+  async resetPasswordWithCode(@Body() dto: ResetPasswordWithCodeDto) {
+    return this.authService.resetPasswordWithCode(dto);
+  }
+
+  @Post('verify-email')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verificar email com codigo recebido' })
+  @ApiResponse({ status: 200, description: 'Email verificado com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Codigo de verificacao invalido ou expirado.' })
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
+  }
+
+  @Post('resend-verification')
+  @Throttle({ default: { limit: 2, ttl: 60000 } }) // 2 solicitacoes/minuto
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reenviar email de verificacao' })
+  @ApiResponse({
+    status: 200,
+    description: 'Se o email existir, um novo codigo sera enviado.',
+  })
+  async resendVerification(@Body() dto: ForgotPasswordDto) {
+    return this.authService.resendVerificationEmail(dto.email);
   }
 }

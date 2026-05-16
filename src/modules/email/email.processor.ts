@@ -51,6 +51,34 @@ export class EmailProcessor {
     }
   }
 
+  @Process('send-email-verification')
+  async handleEmailVerification(job: Job) {
+    const { to, verificationCode, email } = job.data;
+    this.logger.log(`Sending email verification to ${to}`);
+
+    try {
+      await this.emailService.sendEmailVerification(to, verificationCode, email);
+      this.logger.log(`Email verification sent to ${to}`);
+    } catch (error: any) {
+      this.logger.error(`Failed to send email verification: ${error.message || error}`);
+      throw error;
+    }
+  }
+
+  @Process('send-password-reset-code')
+  async handlePasswordResetCode(job: Job) {
+    const { to, resetCode, email } = job.data;
+    this.logger.log(`Sending password reset code to ${to}`);
+
+    try {
+      await this.emailService.sendPasswordResetWithCode(to, resetCode, email);
+      this.logger.log(`Password reset code sent to ${to}`);
+    } catch (error: any) {
+      this.logger.error(`Failed to send password reset code: ${error.message || error}`);
+      throw error;
+    }
+  }
+
   @Process('send-payment-receipt')
   async handlePaymentReceipt(job: Job) {
     const { to, payment, order } = job.data;
