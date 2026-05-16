@@ -17,8 +17,7 @@ import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '@/modules/email/email.service';
-import { InjectQueue } from '@nestjs/bull';
-import type { Queue } from 'bull';
+
 import type { StringValue } from 'ms';
 import {
   DEFAULT_BCRYPT_SALT_ROUNDS,
@@ -39,7 +38,6 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
-    @InjectQueue('email') private readonly emailQueue: Queue,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -81,11 +79,11 @@ export class AuthService {
       },
     });
 
-    // Send verification email via Bull queue
-    await this.emailQueue.add('send-email-verification', {
-      to: email,
-      verificationCode,
-      email,
+    // Send verification email (non-blocking — registration should succeed even if email fails)
+    this.emailService.sendEmailVerification(email, verificationCode, email).catch(err => {
+      this.logger.warn(
+        `Failed to send verification email: ${err instanceof Error ? err.message : err}`,
+      );
     });
 
     // Generate tokens for auto-login after registration
@@ -311,9 +309,12 @@ export class AuthService {
       },
     });
 
-    // Envia email via fila Bull para garantir entrega e evitar race condition
-    // (token ja foi criado, mas a fila permite retry automatico em caso de falha)
-    await this.emailQueue.add('send-password-reset', { to: email, resetToken: token, email });
+    // Send password reset email (non-blocking — token already created)
+    this.emailService.sendPasswordReset(email, token, email).catch(err => {
+      this.logger.warn(
+        `Failed to send password reset email: ${err instanceof Error ? err.message : err}`,
+      );
+    });
 
     return { message: 'Se o email existir, um link de redefinicao sera enviado.' };
   }
@@ -351,10 +352,11 @@ export class AuthService {
       },
     });
 
-    await this.emailQueue.add('send-password-reset-code', {
-      to: email,
-      resetCode,
-      email,
+    // Send password reset code email (non-blocking — code already created)
+    this.emailService.sendPasswordResetWithCode(email, resetCode, email).catch(err => {
+      this.logger.warn(
+        `Failed to send password reset code email: ${err instanceof Error ? err.message : err}`,
+      );
     });
 
     return { message: 'Se o email existir, um codigo de redefinicao sera enviado.' };
@@ -530,10 +532,11 @@ export class AuthService {
       },
     });
 
-    await this.emailQueue.add('send-email-verification', {
-      to: email,
-      verificationCode,
-      email,
+    // Send verification email (non-blocking — code already created)
+    this.emailService.sendEmailVerification(email, verificationCode, email).catch(err => {
+      this.logger.warn(
+        `Failed to send verification email: ${err instanceof Error ? err.message : err}`,
+      );
     });
 
     return { message: 'Se o email existir, um novo codigo sera enviado.' };

@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { BullModule } from '@nestjs/bull';
+import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
@@ -57,32 +56,6 @@ if (process.env.SENTRY_DSN) {
 
     // ─── Schedule (cron jobs) ─────────────────────────────────────
     ScheduleModule.forRoot(),
-
-    // ─── BullMQ / Redis — lazy connect, não trava se Redis estiver off ──
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get<string>('REDIS_HOST', 'localhost'),
-          port: configService.get<number>('REDIS_PORT', 6379),
-          password: configService.get<string>('REDIS_PASSWORD') || undefined,
-          // Não travar a inicialização se Redis estiver offline
-          enableReadyCheck: false,
-          maxRetriesPerRequest: null,
-          lazyConnect: true,
-        },
-        defaultJobOptions: {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 2000 },
-          removeOnComplete: true,
-          removeOnFail: false,
-        },
-      }),
-      inject: [ConfigService],
-    }),
-    BullModule.registerQueue({
-      name: 'email',
-    }),
 
     // ─── Rate Limiting ────────────────────────────────────────────
     // General API: 60 requests per minute

@@ -5,7 +5,6 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { EmailService } from '@/modules/email/email.service';
-import { getQueueToken } from '@nestjs/bull';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
@@ -37,10 +36,13 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: { signAsync: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn(), getOrThrow: jest.fn() } },
-        { provide: EmailService, useValue: { sendPasswordReset: jest.fn() } },
         {
-          provide: getQueueToken('email'),
-          useValue: { add: jest.fn().mockResolvedValue(undefined) },
+          provide: EmailService,
+          useValue: {
+            sendEmailVerification: jest.fn().mockResolvedValue(true),
+            sendPasswordReset: jest.fn().mockResolvedValue(true),
+            sendPasswordResetWithCode: jest.fn().mockResolvedValue(true),
+          },
         },
       ],
     }).compile();

@@ -2,8 +2,6 @@ import { Injectable, BadRequestException, ForbiddenException, Logger } from '@ne
 import { OrdersRepository } from './orders.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, KeyStatus } from '@prisma/client';
-import type { Queue } from 'bull';
-import { InjectQueue } from '@nestjs/bull';
 import { KeysService } from '@/modules/keys/keys.service';
 
 @Injectable()
@@ -12,7 +10,6 @@ export class OrdersService {
 
   constructor(
     private readonly ordersRepository: OrdersRepository,
-    @InjectQueue('email') private readonly emailQueue: Queue,
     private readonly keysService: KeysService,
   ) {}
 
