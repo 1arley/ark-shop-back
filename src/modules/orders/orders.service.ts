@@ -3,6 +3,7 @@ import { OrdersRepository } from './orders.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, KeyStatus } from '@prisma/client';
 import { KeysService } from '@/modules/keys/keys.service';
+import { CouponsService } from '@/modules/coupons/coupons.service';
 
 @Injectable()
 export class OrdersService {
@@ -11,10 +12,67 @@ export class OrdersService {
   constructor(
     private readonly ordersRepository: OrdersRepository,
     private readonly keysService: KeysService,
+    private readonly couponsService: CouponsService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto, userId: string) {
-    return this.ordersRepository.create(createOrderDto, userId);
+    let couponData: { couponId: string; discountAmount: number } | undefined;
+
+    // Validate and calculate discount if coupon code is provided
+    if (createOrderDto.couponCode) {
+      // First calculate subtotal to validate coupon
+      const subtotal = await this.calculateSubtotal(createOrderDto);
+
+      const validationResult = await this.couponsService.validateAndCalculate({
+        code: createOrderDto.couponCode,
+        subtotal,
+      });
+
+      if (!validationResult.valid) {
+        throw new BadRequestException(validationResult.message);
+      }
+
+      couponData = {
+        couponId: validationResult.coupon!.id,
+        discountAmount: validationResult.discountAmount,
+      };
+    }
+
+    const order = await this.ordersRepository.create(createOrderDto, userId, couponData);
+
+    // Mark coupon as used after successful order creation
+    if (couponData) {
+      await this.couponsService.markAsUsed(couponData.couponId);
+      this.logger.log(
+        `Coupon ${createOrderDto.couponCode} used for order ${order.id} — discount: R$ ${couponData.discountAmount.toFixed(2)}`,
+      );
+    }
+
+    return order;
+  }
+
+  /**
+   * Calculate subtotal from order items (without discount).
+   */
+  private async calculateSubtotal(createOrderDto: CreateOrderDto): Promise<number> {
+    const productIds = createOrderDto.items.map(i => i.productId);
+    const products = await this.ordersRepository.getProductsByIds(productIds);
+
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    let subtotal = 0;
+    for (const item of createOrderDto.items) {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        throw new BadRequestException(`Product ${item.productId} not found`);
+      }
+      if (!product.isActive) {
+        throw new BadRequestException(`Product ${product.name} is not active`);
+      }
+      subtotal += product.price.toNumber() * item.quantity;
+    }
+
+    return subtotal;
   }
 
   async findById(id: string) {

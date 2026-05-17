@@ -11,7 +11,11 @@ export class OrdersRepository {
     private readonly keysEncryption: KeysEncryptionProvider,
   ) {}
 
-  async create(createOrderDto: CreateOrderDto, userId: string) {
+  async create(
+    createOrderDto: CreateOrderDto,
+    userId: string,
+    couponData?: { couponId: string; discountAmount: number },
+  ) {
     const { items } = createOrderDto;
 
     // Batch fetch all products in a single query (fixes N+1)
@@ -22,8 +26,8 @@ export class OrdersRepository {
 
     const productMap = new Map(products.map(p => [p.id, p]));
 
-    // Calculate total and validate products
-    let total = 0;
+    // Calculate subtotal and validate products
+    let subtotal = 0;
     for (const item of items) {
       const product = productMap.get(item.productId);
 
@@ -35,8 +39,11 @@ export class OrdersRepository {
         throw new BadRequestException(`Product ${product.name} is not active`);
       }
 
-      total += product.price.toNumber() * item.quantity;
+      subtotal += product.price.toNumber() * item.quantity;
     }
+
+    const discountAmount = couponData?.discountAmount ?? 0;
+    const total = subtotal - discountAmount;
 
     // Create order with items in a transaction
     // Salva o preço real de cada item no momento da compra para integridade financeira
@@ -44,7 +51,10 @@ export class OrdersRepository {
       data: {
         userId,
         status: OrderStatus.PENDING,
+        subtotal,
         total,
+        discountAmount,
+        couponId: couponData?.couponId ?? null,
         items: {
           create: items.map(item => ({
             productId: item.productId,
@@ -60,6 +70,7 @@ export class OrdersRepository {
           },
         },
         payment: true,
+        coupon: true,
       },
     });
 
@@ -198,6 +209,15 @@ export class OrdersRepository {
         },
       },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Fetch products by IDs (used by OrdersService for subtotal calculation).
+   */
+  async getProductsByIds(ids: string[]) {
+    return this.prisma.product.findMany({
+      where: { id: { in: ids } },
     });
   }
 

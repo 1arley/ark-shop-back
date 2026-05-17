@@ -28,6 +28,7 @@ import { NotificationsModule } from '@/modules/notifications/notifications.modul
 import { SellersModule } from '@/modules/sellers/sellers.module';
 import { UploadModule } from '@/modules/upload/upload.module';
 import { WalletModule } from '@/modules/wallet/wallet.module';
+import { CouponsModule } from '@/modules/coupons/coupons.module';
 
 // ─── Sentry (optional — 14-day trial) ────────────────────────────
 // Só ativa se SENTRY_DSN estiver configurado no ambiente
@@ -59,12 +60,26 @@ if (process.env.SENTRY_DSN) {
     ScheduleModule.forRoot(),
 
     // ─── Rate Limiting ────────────────────────────────────────────
-    // General API: 60 requests per minute
-    // Auth endpoints have stricter per-route limits (configured in auth.controller)
+    // Multiple throttlers for different endpoint types:
+    // - default: 60 req/min (general API)
+    // - auth: stricter limits per-route in auth.controller
+    // - admin: 120 req/min
+    // - webhook: 100 req/min (payment webhooks can be bursty)
     ThrottlerModule.forRoot([
       {
+        name: 'default',
         ttl: 60000,
         limit: 60,
+      },
+      {
+        name: 'admin',
+        ttl: 60000,
+        limit: 120,
+      },
+      {
+        name: 'webhook',
+        ttl: 60000,
+        limit: 100,
       },
     ]),
 
@@ -89,6 +104,7 @@ if (process.env.SENTRY_DSN) {
     SellersModule,
     UploadModule,
     WalletModule,
+    CouponsModule,
   ],
   controllers: [AppController],
   providers: [

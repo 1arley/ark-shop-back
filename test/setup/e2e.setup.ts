@@ -26,15 +26,13 @@ beforeAll(async () => {
   prismaService = moduleRef.get<PrismaService>(PrismaService);
 
   // Clean up any existing data
-  await prismaService.refreshToken.deleteMany();
-  await prismaService.user.deleteMany();
+  await cleanupDatabase();
 });
 
 afterAll(async () => {
   try {
     if (prismaService) {
-      await prismaService.refreshToken.deleteMany();
-      await prismaService.user.deleteMany();
+      await cleanupDatabase();
     }
 
     if (app) {
@@ -46,6 +44,24 @@ afterAll(async () => {
     }
   }
 });
+
+async function cleanupDatabase() {
+  await prismaService.refreshToken.deleteMany();
+  await prismaService.passwordResetToken.deleteMany();
+  await prismaService.emailVerificationToken.deleteMany();
+  await prismaService.coupon.deleteMany();
+  await prismaService.orderItem.deleteMany();
+  await prismaService.order.deleteMany();
+  await prismaService.cartItem.deleteMany();
+  await prismaService.cart.deleteMany();
+  await prismaService.key.deleteMany();
+  await prismaService.product.deleteMany();
+  await prismaService.category.deleteMany();
+  await prismaService.seller.deleteMany();
+  await prismaService.walletTransaction.deleteMany();
+  await prismaService.wallet.deleteMany();
+  await prismaService.user.deleteMany();
+}
 
 export function getApp(): INestApplication {
   return app;
@@ -67,6 +83,11 @@ export async function createTestUser(
       password: await bcrypt.hash(password, 1),
       name,
       role,
+      emailVerified: true,
     },
   });
+}
+
+export async function cleanupTestData() {
+  await cleanupDatabase();
 }

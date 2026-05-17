@@ -3,10 +3,12 @@ name: CI
 on:
   pull_request:
     branches: [main, dev]
+  push:
+    branches: [dev]
 
 jobs:
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests + Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -28,8 +30,27 @@ jobs:
       - name: Run linter
         run: npm run lint
 
-      - name: Run tests
-        run: npx dotenv-cli -e .env.test -- npm test
+      - name: Run tests with coverage
+        run: npx dotenv-cli -e .env.test -- npm run test:cov
+
+      - name: Check coverage threshold (30%)
+        run: |
+          COVERAGE=$(npx dotenv-cli -e .env.test -- npm run test:cov -- --json --coverageReporters=json-summary 2>/dev/null | tail -1)
+          TOTAL=$(echo "$COVERAGE" | jq '.total.lines.pct')
+          echo "Line coverage: ${TOTAL}%"
+          if (( $(echo "$TOTAL < 30" | bc -l) )); then
+            echo "❌ Coverage ${TOTAL}% is below 30% threshold"
+            exit 1
+          fi
+          echo "✅ Coverage ${TOTAL}% meets threshold"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
 
   e2e-tests:
     name: E2E Tests
@@ -75,8 +96,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build Docker image
-        run: docker build -t nestjs-template:test .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: production
+          load: true
+          tags: nestjs-template:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Verify image
         run: docker images nestjs-template:test
+
+      - name: Security scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: nestjs-template:test
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'

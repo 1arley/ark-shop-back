@@ -1,5 +1,13 @@
-import { IsNumber, IsArray, ValidateNested, IsUUID, IsEnum } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsNumber,
+  IsArray,
+  ValidateNested,
+  IsUUID,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class OrderItemDto {
@@ -18,6 +26,11 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items!: OrderItemDto[];
+
+  @ApiPropertyOptional({ description: 'Coupon code to apply discount' })
+  @IsString()
+  @IsOptional()
+  couponCode?: string;
 }
 
 export class UpdateOrderStatusDto {

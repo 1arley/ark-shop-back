@@ -1,0 +1,164 @@
+# ============================================
+# D'Ark Games Store — Deploy Pipeline
+# ============================================
+# Triggers:
+#   - Push to dev    → deploy to staging (automatic)
+#   - Manual dispatch → deploy to production
+#   - Release tag    → deploy to production (automatic)
+# ============================================
+
+name: Deploy
+
+on:
+  # Staging: automatic on push to dev
+  push:
+    branches: [dev]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+  # Production: manual trigger or release tag
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      version:
+        description: 'Docker image tag (leave empty for latest)'
+        required: false
+        type: string
+
+  release:
+    types: [published]
+
+env:
+  DOCKER_IMAGE: arthuriarley/ark-shop-back
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  # ─── Determine target environment ────────────────────────────────
+  determine-env:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      image-tag: ${{ steps.set-env.outputs.image-tag }}
+
+    steps:
+      - id: set-env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "image-tag=${{ github.event.inputs.version || 'latest' }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "image-tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "image-tag=dev" >> $GITHUB_OUTPUT
+          else
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "image-tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+  # ─── Deploy ──────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to ${{ needs.determine-env.outputs.environment }}
+    runs-on: ubuntu-latest
+    needs: determine-env
+
+    environment:
+      name: ${{ needs.determine-env.outputs.environment }}
+      url: ${{ needs.determine-env.outputs.environment == 'production' && 'https://api.arkshop.com' || 'https://staging.api.arkshop.com' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Pull Docker image
+        run: docker pull ${{ env.DOCKER_IMAGE }}:${{ needs.determine-env.outputs.image-tag }}
+
+      - name: Deploy via Railway
+        if: ${{ needs.determine-env.outputs.environment == 'production' }}
+        env:
+          RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RAILWAY_DEPLOY_HOOK" ]; then
+            curl -X POST "$RAILWAY_DEPLOY_HOOK" \
+              -H "Content-Type: application/json" \
+              -d '{"imageTag": "${{ needs.determine-env.outputs.image-tag }}"}'
+            echo "✅ Deployed to production"
+          else
+            echo "⚠️  RAILWAY_DEPLOY_HOOK not set"
+            exit 1
+          fi
+
+      - name: Deploy to Staging (Railway)
+        if: ${{ needs.determine-env.outputs.environment == 'staging' }}
+        env:
+          RAILWAY_STAGING_DEPLOY_HOOK: ${{ secrets.RAILWAY_STAGING_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RAILWAY_STAGING_DEPLOY_HOOK" ]; then
+            curl -X POST "$RAILWAY_STAGING_DEPLOY_HOOK" \
+              -H "Content-Type: application/json" \
+              -d '{"imageTag": "dev"}'
+            echo "✅ Deployed to staging"
+          else
+            echo "⚠️  RAILWAY_STAGING_DEPLOY_HOOK not set — skipping"
+          fi
+
+      - name: Health check after deploy
+        run: |
+          URL="${{ needs.determine-env.outputs.environment == 'production' && 'https://api.arkshop.com' || 'https://staging.api.arkshop.com' }}"
+          echo "Waiting 30s for deployment..."
+          sleep 30
+
+          MAX_RETRIES=10
+          RETRY=0
+          while [ $RETRY -lt $MAX_RETRIES ]; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/api/v1/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check passed (HTTP $STATUS)"
+              exit 0
+            fi
+            RETRY=$((RETRY + 1))
+            echo "⏳ Health check attempt $RETRY/$MAX_RETRIES (HTTP $STATUS)"
+            sleep 10
+          done
+
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          exit 1
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            STATUS="${{ job.status }}"
+            EMOJI="${STATUS == 'success' && '✅' || '❌'}"
+            curl -X POST "$DISCORD_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "embeds": [{
+                  "title": "'"$EMOJI"' Deploy ${{ needs.determine-env.outputs.environment }}",
+                  "description": "Commit: ${{ github.event.head_commit.message || github.sha }}\nBranch: ${{ github.ref_name }}\nImage: ${{ env.DOCKER_IMAGE }}:${{ needs.determine-env.outputs.image-tag }}",
+                  "color": '"$([ "$STATUS" = "success" ] && echo 3066993 || echo 15158332)"',
+                  "footer": { "text": "GitHub Actions • ${{ github.repository }}" }
+                }]
+              }'
+          fi
