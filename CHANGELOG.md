@@ -1,3 +1,9 @@
+## [1.20.1](https://github.com/1arley/ark-shop-back/compare/v1.20.0...v1.20.1) (2026-05-17)
+
+### Bug Fixes
+
+- **email:** log verification code to console as fallback when Resend fails ([629ac82](https://github.com/1arley/ark-shop-back/commit/629ac8210e9c438ef00d52a925b732c3743cc776))
+
 # [1.20.0](https://github.com/1arley/ark-shop-back/compare/v1.19.2...v1.20.0) (2026-05-16)
 
 ### Features
