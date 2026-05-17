@@ -49,7 +49,8 @@ export class EmailService {
 
       if (error) {
         this.logger.error(`Failed to send email: ${error.message}`);
-        throw new Error(error.message);
+        this.logFallback(options, error.message);
+        return false;
       }
 
       this.logger.log(`Email sent: ${data?.id}`);
@@ -57,8 +58,23 @@ export class EmailService {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to send email: ${message}`);
-      throw error;
+      this.logFallback(options, message);
+      return false;
     }
+  }
+
+  /**
+   * Logs email content to console as fallback when Resend fails (e.g. sandbox mode).
+   * Useful for development without a verified domain.
+   */
+  private logFallback(options: EmailOptions, reason: string) {
+    this.logger.warn(
+      `\n📧 EMAIL FALLBACK (Resend failed: ${reason})\n` +
+        `  To: ${options.to}\n` +
+        `  Subject: ${options.subject}\n` +
+        `  Text: ${options.text || '(see html)'}\n` +
+        `  ─────────────────────────────────`,
+    );
   }
 
   async sendOrderConfirmation(
