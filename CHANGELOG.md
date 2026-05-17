@@ -1,3 +1,9 @@
+## [1.20.2](https://github.com/1arley/ark-shop-back/compare/v1.20.1...v1.20.2) (2026-05-17)
+
+### Bug Fixes
+
+- resolve ESLint errors in tests and coupon repository ([18614fe](https://github.com/1arley/ark-shop-back/commit/18614fed8540afdd67aa72312e5fefb9788f2644))
+
 ## [1.20.1](https://github.com/1arley/ark-shop-back/compare/v1.20.0...v1.20.1) (2026-05-17)
 
 ### Bug Fixes
