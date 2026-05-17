@@ -95,6 +95,7 @@ describe('PaymentsService', () => {
     jest.clearAllMocks();
   });
 
+  // ─── createPayment ───────────────────────────────────────────────
   describe('createPayment', () => {
     it('should create PIX payment with QR code', async () => {
       const paymentIntent = {
@@ -131,6 +132,117 @@ describe('PaymentsService', () => {
       expect(result).toEqual(mockPayment);
     });
 
+    it('should create PIX payment com dados do pagador', async () => {
+      const paymentIntent = {
+        id: 'asaas-pix-2',
+        providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
+      };
+
+      mockOrdersService.findById.mockResolvedValue({
+        user: { email: 'user@email.com', name: 'João Silva' },
+      });
+      mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
+      mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
+
+      await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        50,
+        PaymentProvider.ASAAS,
+        PaymentMethod.PIX,
+        '123.456.789-00',
+        '1990-01-01',
+      );
+
+      expect(mockPaymentProvider.createPaymentIntent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payerCpf: '123.456.789-00',
+          payerBirthDate: '1990-01-01',
+          payerEmail: 'user@email.com',
+          payerName: 'João Silva',
+        }),
+      );
+    });
+
+    it('should create PIX payment sem dados do usuário quando order não tem user', async () => {
+      const paymentIntent = {
+        id: 'asaas-pix-3',
+        providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
+      };
+
+      mockOrdersService.findById.mockResolvedValue({});
+      mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
+      mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
+
+      await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        PaymentMethod.PIX,
+      );
+
+      expect(mockPaymentProvider.createPaymentIntent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payerEmail: undefined,
+          payerName: undefined,
+        }),
+      );
+    });
+
+    it('should create PIX payment com QR code vazio quando providerData não tem pix_qr_code', async () => {
+      const paymentIntent = {
+        id: 'asaas-pix-4',
+        providerData: {},
+      };
+
+      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
+      mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
+
+      await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        PaymentMethod.PIX,
+      );
+
+      expect(mockPaymentsRepository.createPixPayment).toHaveBeenCalledWith(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        expect.objectContaining({
+          pixQrCode: '',
+          pixCode: '',
+        }),
+      );
+    });
+
+    it('should create standard payment for non-PIX method', async () => {
+      mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
+      mockPaymentsRepository.createPayment.mockResolvedValue(mockPayment);
+
+      const result = await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        PaymentMethod.CREDIT_CARD,
+      );
+
+      expect(mockPaymentsRepository.createPayment).toHaveBeenCalledWith(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        PaymentMethod.CREDIT_CARD,
+      );
+      expect(mockOrdersService.findById).not.toHaveBeenCalled();
+      expect(result).toEqual(mockPayment);
+    });
+
     it('should fallback to default provider if selected is not registered', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
       mockOrdersService.findById.mockResolvedValue({ user: {} });
@@ -144,15 +256,418 @@ describe('PaymentsService', () => {
         'order-id-1',
         'user-id-1',
         100,
-        'MERCADO_PAGO' as PaymentProvider, // not registered
+        'MERCADO_PAGO' as PaymentProvider,
         PaymentMethod.PIX,
       );
 
-      // Should have fallen back to default (ASAAS)
+      expect(mockProviderFactory.getProvider).toHaveBeenCalledWith(PaymentProvider.ASAAS);
+    });
+
+    it('should use explicit provider when registered', async () => {
+      mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
+      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockPaymentProvider.createPaymentIntent.mockResolvedValue({
+        id: 'pix-1',
+        providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
+      });
+      mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
+
+      await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        PaymentMethod.PIX,
+      );
+
+      expect(mockProviderFactory.getProvider).toHaveBeenCalledWith(PaymentProvider.ASAAS);
+    });
+
+    it('should use default provider when none specified', async () => {
+      mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
+      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockPaymentProvider.createPaymentIntent.mockResolvedValue({
+        id: 'pix-1',
+        providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
+      });
+      mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
+
+      await service.createPayment('order-id-1', 'user-id-1', 100, undefined, PaymentMethod.PIX);
+
+      expect(mockProviderFactory.getDefaultProvider).toHaveBeenCalled();
+      expect(mockProviderFactory.getProvider).toHaveBeenCalledWith(PaymentProvider.ASAAS);
+    });
+
+    it('should create PIX payment com expiresAt em 15 minutos', async () => {
+      const fixedDate = Date.parse('2026-01-01T00:00:00.000Z');
+      jest.useFakeTimers();
+      jest.setSystemTime(fixedDate);
+
+      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockPaymentProvider.createPaymentIntent.mockResolvedValue({
+        id: 'pix-1',
+        providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
+      });
+      mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
+
+      await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        PaymentMethod.PIX,
+      );
+
+      expect(mockPaymentsRepository.createPixPayment).toHaveBeenCalledWith(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        expect.objectContaining({
+          expiresAt: new Date('2026-01-01T00:15:00.000Z'),
+        }),
+      );
+
+      jest.useRealTimers();
+    });
+
+    it('should fallback para default quando fallback provider também não está registrado', async () => {
+      mockProviderFactory.getRegisteredProviders.mockReturnValue([]);
+      mockProviderFactory.getDefaultProvider.mockReturnValue(PaymentProvider.ASAAS);
+      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockPaymentProvider.createPaymentIntent.mockResolvedValue({
+        id: 'pix-1',
+        providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
+      });
+      mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
+
+      await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        100,
+        'STRIPE' as PaymentProvider,
+        PaymentMethod.PIX,
+      );
+
       expect(mockProviderFactory.getProvider).toHaveBeenCalledWith(PaymentProvider.ASAAS);
     });
   });
 
+  // ─── processPayment ──────────────────────────────────────────────
+  describe('processPayment', () => {
+    it('should approve payment when provider returns approved', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
+      mockPaymentProvider.verifyPayment.mockResolvedValue({ status: 'approved' });
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+
+      const result = await service.processPayment('payment-id-1', 'asaas-tx-1');
+
+      expect(mockPaymentsRepository.approvePayment).toHaveBeenCalledWith(
+        'payment-id-1',
+        'asaas-tx-1',
+        undefined,
+      );
+      expect(result).toEqual(mockApprovedPayment);
+    });
+
+    it('should approve payment with webhookData', async () => {
+      const webhookData = { event: 'PAYMENT_RECEIVED' };
+      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
+      mockPaymentProvider.verifyPayment.mockResolvedValue({ status: 'approved' });
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+
+      const result = await service.processPayment('payment-id-1', 'asaas-tx-1', webhookData);
+
+      expect(mockPaymentsRepository.approvePayment).toHaveBeenCalledWith(
+        'payment-id-1',
+        'asaas-tx-1',
+        webhookData,
+      );
+      expect(result).toEqual(mockApprovedPayment);
+    });
+
+    it('should reject payment when provider returns non-approved', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
+      mockPaymentProvider.verifyPayment.mockResolvedValue({ status: 'pending' });
+      mockPaymentsRepository.rejectPayment.mockResolvedValue(undefined);
+
+      const result = await service.processPayment('payment-id-1', 'asaas-tx-1');
+
+      expect(mockPaymentsRepository.rejectPayment).toHaveBeenCalledWith(
+        'payment-id-1',
+        'Payment not approved',
+      );
+      expect(result).toBeUndefined();
+    });
+
+    it('should throw BadRequestException when payment already processed', async () => {
+      const rejectedPayment = { ...mockPayment, status: PaymentStatus.REJECTED };
+      mockPaymentsRepository.findById.mockResolvedValue(rejectedPayment);
+
+      await expect(service.processPayment('payment-id-1', 'asaas-tx-1')).rejects.toThrow(
+        BadRequestException,
+      );
+
+      await expect(service.processPayment('payment-id-1', 'asaas-tx-1')).rejects.toThrow(
+        'Payment already processed (status: REJECTED)',
+      );
+    });
+
+    it('should throw when payment is already approved', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockApprovedPayment);
+
+      await expect(service.processPayment('payment-id-1', 'asaas-tx-1')).rejects.toThrow(
+        'Payment already processed (status: APPROVED)',
+      );
+    });
+  });
+
+  // ─── refundPayment ───────────────────────────────────────────────
+  describe('refundPayment', () => {
+    it('should refund approved payment', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockApprovedPayment);
+      mockPaymentProvider.refundPayment.mockResolvedValue({ id: 'refund-1' });
+      mockPaymentsRepository.updatePaymentStatus.mockResolvedValue({
+        ...mockApprovedPayment,
+        status: PaymentStatus.REFUNDED,
+      });
+
+      const result = await service.refundPayment('payment-id-1');
+
+      expect(mockPaymentProvider.refundPayment).toHaveBeenCalledWith('asaas-tx-1', undefined);
+      expect(mockPaymentsRepository.updatePaymentStatus).toHaveBeenCalledWith(
+        'payment-id-1',
+        PaymentStatus.REFUNDED,
+        undefined,
+        { refundResult: { id: 'refund-1' } },
+      );
+      expect(result.refundResult).toEqual({ id: 'refund-1' });
+    });
+
+    it('should refund approved payment with partial amount', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockApprovedPayment);
+      mockPaymentProvider.refundPayment.mockResolvedValue({ id: 'refund-2', value: 50 });
+      mockPaymentsRepository.updatePaymentStatus.mockResolvedValue({
+        ...mockApprovedPayment,
+        status: PaymentStatus.REFUNDED,
+      });
+
+      const result = await service.refundPayment('payment-id-1', 50);
+
+      expect(mockPaymentProvider.refundPayment).toHaveBeenCalledWith('asaas-tx-1', 50);
+      expect(result.refundResult).toEqual({ id: 'refund-2', value: 50 });
+    });
+
+    it('should throw if payment is not approved', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
+
+      await expect(service.refundPayment('payment-id-1')).rejects.toThrow(
+        'Can only refund approved payments',
+      );
+    });
+
+    it('should throw if payment is rejected', async () => {
+      const rejectedPayment = { ...mockPayment, status: PaymentStatus.REJECTED };
+      mockPaymentsRepository.findById.mockResolvedValue(rejectedPayment);
+
+      await expect(service.refundPayment('payment-id-1')).rejects.toThrow(
+        'Can only refund approved payments',
+      );
+    });
+
+    it('should throw if payment missing providerTxId', async () => {
+      const paymentNoTx = { ...mockApprovedPayment, providerTxId: null };
+      mockPaymentsRepository.findById.mockResolvedValue(paymentNoTx);
+
+      await expect(service.refundPayment('payment-id-1')).rejects.toThrow(
+        'Payment missing provider transaction ID',
+      );
+    });
+
+    it('should throw if providerTxId is undefined', async () => {
+      const paymentNoTx = { ...mockApprovedPayment, providerTxId: undefined };
+      mockPaymentsRepository.findById.mockResolvedValue(paymentNoTx);
+
+      await expect(service.refundPayment('payment-id-1')).rejects.toThrow(
+        'Payment missing provider transaction ID',
+      );
+    });
+  });
+
+  // ─── getPayment ──────────────────────────────────────────────────
+  describe('getPayment', () => {
+    it('should return payment by ID', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
+
+      const result = await service.getPayment('payment-id-1');
+
+      expect(result).toEqual(mockPayment);
+      expect(mockPaymentsRepository.findById).toHaveBeenCalledWith('payment-id-1');
+    });
+  });
+
+  // ─── getPaymentByOrderId ─────────────────────────────────────────
+  describe('getPaymentByOrderId', () => {
+    it('should return payment by order ID', async () => {
+      mockPaymentsRepository.findByOrderId.mockResolvedValue(mockPayment);
+
+      const result = await service.getPaymentByOrderId('order-id-1');
+
+      expect(result).toEqual(mockPayment);
+      expect(mockPaymentsRepository.findByOrderId).toHaveBeenCalledWith('order-id-1');
+    });
+
+    it('should return null when no payment exists for order', async () => {
+      mockPaymentsRepository.findByOrderId.mockResolvedValue(null);
+
+      const result = await service.getPaymentByOrderId('order-id-999');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // ─── getUserPayments ─────────────────────────────────────────────
+  describe('getUserPayments', () => {
+    it('should return paginated payments for user', async () => {
+      const paginatedResult = {
+        data: [mockPayment],
+        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      };
+      mockPaymentsRepository.getPaymentsByUser.mockResolvedValue(paginatedResult);
+
+      const result = await service.getUserPayments('user-id-1', 1, 10);
+
+      expect(result).toEqual(paginatedResult);
+      expect(mockPaymentsRepository.getPaymentsByUser).toHaveBeenCalledWith('user-id-1', 1, 10);
+    });
+
+    it('should use default pagination values', async () => {
+      mockPaymentsRepository.getPaymentsByUser.mockResolvedValue({
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      });
+
+      await service.getUserPayments('user-id-1');
+
+      expect(mockPaymentsRepository.getPaymentsByUser).toHaveBeenCalledWith('user-id-1', 1, 10);
+    });
+
+    it('should handle custom pagination', async () => {
+      mockPaymentsRepository.getPaymentsByUser.mockResolvedValue({
+        data: [],
+        meta: { total: 0, page: 3, limit: 5, totalPages: 0 },
+      });
+
+      await service.getUserPayments('user-id-1', 3, 5);
+
+      expect(mockPaymentsRepository.getPaymentsByUser).toHaveBeenCalledWith('user-id-1', 3, 5);
+    });
+  });
+
+  // ─── verifyPaymentWithProvider ───────────────────────────────────
+  describe('verifyPaymentWithProvider', () => {
+    it('should verify payment with provider when found', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(mockPayment);
+      mockPaymentProvider.verifyPayment.mockResolvedValue({ status: 'approved', amount: 100 });
+
+      const result = await service.verifyPaymentWithProvider('asaas-tx-1');
+
+      expect(mockPaymentProvider.verifyPayment).toHaveBeenCalledWith('asaas-tx-1');
+      expect(result).toEqual({ status: 'approved', amount: 100 });
+    });
+
+    it('should throw BadRequestException when payment not found', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(null);
+
+      await expect(service.verifyPaymentWithProvider('nonexistent-tx')).rejects.toThrow(
+        BadRequestException,
+      );
+
+      await expect(service.verifyPaymentWithProvider('nonexistent-tx')).rejects.toThrow(
+        'Payment not found',
+      );
+    });
+  });
+
+  // ─── approvePayment ──────────────────────────────────────────────
+  describe('approvePayment', () => {
+    it('should approve payment and deliver order', async () => {
+      const order = { id: 'order-id-1', status: OrderStatus.PAID };
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockResolvedValue(order);
+      mockOrdersService.deliverOrder.mockResolvedValue(undefined);
+
+      const result = await service.approvePayment('payment-id-1', { id: 'asaas-tx-1' });
+
+      expect(mockPaymentsRepository.approvePayment).toHaveBeenCalledWith(
+        'payment-id-1',
+        'asaas-tx-1',
+        { id: 'asaas-tx-1' },
+      );
+      expect(mockOrdersService.deliverOrder).toHaveBeenCalledWith('order-id-1');
+      expect(result).toEqual(mockApprovedPayment);
+    });
+
+    it('should not deliver order when already delivered', async () => {
+      const order = { id: 'order-id-1', status: OrderStatus.DELIVERED };
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockResolvedValue(order);
+
+      await service.approvePayment('payment-id-1', { id: 'asaas-tx-1' });
+
+      expect(mockOrdersService.deliverOrder).not.toHaveBeenCalled();
+    });
+
+    it('should not throw when delivery fails', async () => {
+      const order = { id: 'order-id-1', status: OrderStatus.PAID };
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockResolvedValue(order);
+      mockOrdersService.deliverOrder.mockRejectedValue(new Error('Delivery failed'));
+
+      await expect(service.approvePayment('payment-id-1', { id: 'asaas-tx-1' })).resolves.toEqual(
+        mockApprovedPayment,
+      );
+    });
+
+    it('should not throw when order not found during delivery', async () => {
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockResolvedValue(null);
+
+      await expect(service.approvePayment('payment-id-1', { id: 'asaas-tx-1' })).resolves.toEqual(
+        mockApprovedPayment,
+      );
+    });
+  });
+
+  // ─── rejectPayment ───────────────────────────────────────────────
+  describe('rejectPayment', () => {
+    it('should reject payment with reason', async () => {
+      mockPaymentsRepository.rejectPayment.mockResolvedValue({
+        ...mockPayment,
+        status: PaymentStatus.REJECTED,
+      });
+
+      await service.rejectPayment('payment-id-1', 'Fraud detected');
+
+      expect(mockPaymentsRepository.rejectPayment).toHaveBeenCalledWith(
+        'payment-id-1',
+        'Fraud detected',
+      );
+    });
+
+    it('should reject payment without reason', async () => {
+      mockPaymentsRepository.rejectPayment.mockResolvedValue({
+        ...mockPayment,
+        status: PaymentStatus.REJECTED,
+      });
+
+      await service.rejectPayment('payment-id-1', undefined);
+
+      expect(mockPaymentsRepository.rejectPayment).toHaveBeenCalledWith('payment-id-1', undefined);
+    });
+  });
+
+  // ─── approvePaymentByProviderTxId ────────────────────────────────
   describe('approvePaymentByProviderTxId', () => {
     it('should approve payment and deliver order', async () => {
       mockPaymentsRepository.findByProviderTxId.mockResolvedValue(mockPayment);
@@ -183,6 +698,21 @@ describe('PaymentsService', () => {
       expect(result).toEqual(alreadyApproved);
     });
 
+    it('should be idempotent — skip if order status is PAID', async () => {
+      const paymentWithPaidOrder = {
+        ...mockPayment,
+        status: PaymentStatus.PENDING,
+        order: { status: OrderStatus.PAID },
+      };
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(paymentWithPaidOrder);
+
+      const result = await service.approvePaymentByProviderTxId('asaas-tx-1', {});
+
+      expect(mockPaymentsRepository.approvePayment).not.toHaveBeenCalled();
+      expect(ordersService.deliverOrder).not.toHaveBeenCalled();
+      expect(result).toEqual(paymentWithPaidOrder);
+    });
+
     it('should throw if payment not found', async () => {
       mockPaymentsRepository.findByProviderTxId.mockResolvedValue(null);
 
@@ -192,8 +722,41 @@ describe('PaymentsService', () => {
     });
   });
 
-  describe('refundPayment', () => {
-    it('should refund approved payment', async () => {
+  // ─── rejectPaymentByProviderTxId ─────────────────────────────────
+  describe('rejectPaymentByProviderTxId', () => {
+    it('should reject payment by provider transaction ID', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(mockPayment);
+      mockPaymentsRepository.rejectPayment.mockResolvedValue({
+        ...mockPayment,
+        status: PaymentStatus.REJECTED,
+      });
+
+      const result = await service.rejectPaymentByProviderTxId('asaas-tx-1', 'Cancelled by user');
+
+      expect(mockPaymentsRepository.rejectPayment).toHaveBeenCalledWith(
+        'payment-id-1',
+        'Cancelled by user',
+      );
+      expect(result).toEqual(expect.objectContaining({ status: PaymentStatus.REJECTED }));
+    });
+
+    it('should throw if payment not found', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(null);
+
+      await expect(service.rejectPaymentByProviderTxId('nonexistent-tx', 'reason')).rejects.toThrow(
+        BadRequestException,
+      );
+
+      await expect(service.rejectPaymentByProviderTxId('nonexistent-tx', 'reason')).rejects.toThrow(
+        'Payment not found',
+      );
+    });
+  });
+
+  // ─── refundPaymentByProviderTxId ─────────────────────────────────
+  describe('refundPaymentByProviderTxId', () => {
+    it('should refund payment by provider transaction ID', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(mockApprovedPayment);
       mockPaymentsRepository.findById.mockResolvedValue(mockApprovedPayment);
       mockPaymentProvider.refundPayment.mockResolvedValue({ id: 'refund-1' });
       mockPaymentsRepository.updatePaymentStatus.mockResolvedValue({
@@ -201,63 +764,99 @@ describe('PaymentsService', () => {
         status: PaymentStatus.REFUNDED,
       });
 
-      const result = await service.refundPayment('payment-id-1');
+      const result = await service.refundPaymentByProviderTxId('asaas-tx-1');
 
-      expect(mockPaymentProvider.refundPayment).toHaveBeenCalledWith('asaas-tx-1', undefined);
       expect(result.refundResult).toEqual({ id: 'refund-1' });
     });
 
-    it('should throw if payment is not approved', async () => {
-      mockPaymentsRepository.findById.mockResolvedValue(mockPayment); // PENDING
+    it('should refund with partial amount', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(mockApprovedPayment);
+      mockPaymentsRepository.findById.mockResolvedValue(mockApprovedPayment);
+      mockPaymentProvider.refundPayment.mockResolvedValue({ id: 'refund-2', value: 30 });
+      mockPaymentsRepository.updatePaymentStatus.mockResolvedValue({
+        ...mockApprovedPayment,
+        status: PaymentStatus.REFUNDED,
+      });
 
-      await expect(service.refundPayment('payment-id-1')).rejects.toThrow(
+      const result = await service.refundPaymentByProviderTxId('asaas-tx-1', 30);
+
+      expect(mockPaymentProvider.refundPayment).toHaveBeenCalledWith('asaas-tx-1', 30);
+      expect(result.refundResult).toEqual({ id: 'refund-2', value: 30 });
+    });
+
+    it('should throw if payment not found', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(null);
+
+      await expect(service.refundPaymentByProviderTxId('nonexistent-tx')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw if payment is not approved', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(mockPayment);
+      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
+
+      await expect(service.refundPaymentByProviderTxId('asaas-tx-1')).rejects.toThrow(
         'Can only refund approved payments',
       );
     });
-
-    it('should throw if payment missing providerTxId', async () => {
-      const paymentNoTx = { ...mockApprovedPayment, providerTxId: null };
-      mockPaymentsRepository.findById.mockResolvedValue(paymentNoTx);
-
-      await expect(service.refundPayment('payment-id-1')).rejects.toThrow(
-        'Payment missing provider transaction ID',
-      );
-    });
   });
 
-  describe('rejectPayment', () => {
-    it('should reject payment with reason', async () => {
-      mockPaymentsRepository.rejectPayment.mockResolvedValue({
-        ...mockPayment,
-        status: PaymentStatus.REJECTED,
+  // ─── deliverOrderByPayment ───────────────────────────────────────
+  describe('deliverOrderByPayment (via approvePayment)', () => {
+    it('should deliver order successfully', async () => {
+      const order = { id: 'order-id-1', status: OrderStatus.PAID };
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockResolvedValue(order);
+      mockOrdersService.deliverOrder.mockResolvedValue(undefined);
+
+      await service.approvePayment('payment-id-1', { id: 'asaas-tx-1' });
+
+      expect(mockOrdersService.deliverOrder).toHaveBeenCalledWith('order-id-1');
+    });
+
+    it('should not deliver when order already delivered', async () => {
+      const order = { id: 'order-id-1', status: OrderStatus.DELIVERED };
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockResolvedValue(order);
+
+      await service.approvePayment('payment-id-1', { id: 'asaas-tx-1' });
+
+      expect(mockOrdersService.deliverOrder).not.toHaveBeenCalled();
+    });
+
+    it('should not throw when order is null', async () => {
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockResolvedValue(null);
+
+      await expect(service.approvePayment('payment-id-1', { id: 'asaas-tx-1' })).resolves.toEqual(
+        mockApprovedPayment,
+      );
+
+      expect(mockOrdersService.deliverOrder).not.toHaveBeenCalled();
+    });
+
+    it('should not throw when delivery throws error', async () => {
+      const order = { id: 'order-id-1', status: OrderStatus.PAID };
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockResolvedValue(order);
+      mockOrdersService.deliverOrder.mockRejectedValue(new Error('Network error'));
+
+      await expect(service.approvePayment('payment-id-1', { id: 'asaas-tx-1' })).resolves.toEqual(
+        mockApprovedPayment,
+      );
+    });
+
+    it('should not throw when findById during delivery throws', async () => {
+      mockPaymentsRepository.approvePayment.mockResolvedValue(mockApprovedPayment);
+      mockOrdersService.findById.mockImplementationOnce(() => Promise.resolve(mockApprovedPayment));
+      mockOrdersService.findById.mockImplementationOnce(() => {
+        throw new Error('DB error');
       });
 
-      await service.rejectPayment('payment-id-1', 'Fraud detected');
-
-      expect(mockPaymentsRepository.rejectPayment).toHaveBeenCalledWith(
-        'payment-id-1',
-        'Fraud detected',
+      await expect(service.approvePayment('payment-id-1', { id: 'asaas-tx-1' })).resolves.toEqual(
+        mockApprovedPayment,
       );
-    });
-  });
-
-  describe('getPayment', () => {
-    it('should return payment by ID', async () => {
-      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
-
-      const result = await service.getPayment('payment-id-1');
-
-      expect(result).toEqual(mockPayment);
-    });
-  });
-
-  describe('getPaymentByOrderId', () => {
-    it('should return payment by order ID', async () => {
-      mockPaymentsRepository.findByOrderId.mockResolvedValue(mockPayment);
-
-      const result = await service.getPaymentByOrderId('order-id-1');
-
-      expect(result).toEqual(mockPayment);
     });
   });
 });

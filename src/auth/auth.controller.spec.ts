@@ -3,7 +3,11 @@ import { AuthController } from '@/auth/auth.controller';
 import { AuthService } from '@/auth/auth.service';
 import { RegisterDto } from '@/auth/dto/register.dto';
 import { LoginDto } from '@/auth/dto/login.dto';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ForgotPasswordDto } from '@/auth/dto/forgot-password.dto';
+import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
+import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
+import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
+import { ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { AuthenticatedRequest } from '@/common/interfaces/request.interface';
 import type { Response } from 'express';
 
@@ -23,6 +27,11 @@ describe('AuthController', () => {
     refreshTokens: jest.fn(),
     forgotPassword: jest.fn(),
     resetPassword: jest.fn(),
+    forgotPasswordWithCode: jest.fn(),
+    resetPasswordWithCode: jest.fn(),
+    verifyEmail: jest.fn(),
+    resendVerificationEmail: jest.fn(),
+    revokeRefreshToken: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -192,6 +201,193 @@ describe('AuthController', () => {
       await expect(
         controller.refreshTokens(mockRequest as unknown as AuthenticatedRequest, mockRes()),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('logout', () => {
+    it('deve revogar refresh token e limpar cookies quando token esta presente', async () => {
+      const mockRequest = {
+        user: { id: '1', email: 'test@example.com', role: 'USER', emailVerified: true },
+        cookies: { refresh_token: 'some-refresh-token' },
+        get: jest.fn().mockReturnValue(undefined),
+      } as unknown as AuthenticatedRequest;
+      const res = mockRes();
+
+      mockAuthService.revokeRefreshToken.mockResolvedValue(undefined);
+
+      const result = await controller.logout(mockRequest, res);
+
+      expect(result).toEqual({ message: 'Logout realizado com sucesso.' });
+      expect(authService.revokeRefreshToken).toHaveBeenCalledWith('some-refresh-token');
+      expect(res.clearCookie).toHaveBeenCalledTimes(2);
+    });
+
+    it('deve limpar cookies mesmo quando nao ha refresh token', async () => {
+      const mockRequest = {
+        user: { id: '1', email: 'test@example.com', role: 'USER', emailVerified: true },
+        cookies: {},
+        get: jest.fn().mockReturnValue(undefined),
+      } as unknown as AuthenticatedRequest;
+      const res = mockRes();
+
+      const result = await controller.logout(mockRequest, res);
+
+      expect(result).toEqual({ message: 'Logout realizado com sucesso.' });
+      expect(authService.revokeRefreshToken).not.toHaveBeenCalled();
+      expect(res.clearCookie).toHaveBeenCalledTimes(2);
+    });
+
+    it('deve limpar cookies mesmo se revogacao falhar', async () => {
+      const mockRequest = {
+        user: { id: '1', email: 'test@example.com', role: 'USER', emailVerified: true },
+        cookies: { refresh_token: 'invalid-token' },
+        get: jest.fn().mockReturnValue(undefined),
+      } as unknown as AuthenticatedRequest;
+      const res = mockRes();
+
+      mockAuthService.revokeRefreshToken.mockRejectedValue(
+        new UnauthorizedException('Token not found'),
+      );
+
+      const result = await controller.logout(mockRequest, res);
+
+      expect(result).toEqual({ message: 'Logout realizado com sucesso.' });
+      expect(res.clearCookie).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('deve solicitar redefinicao de senha com sucesso', async () => {
+      const dto: ForgotPasswordDto = { email: 'test@example.com' };
+      mockAuthService.forgotPassword.mockResolvedValue({
+        message: 'Se o email existir, um link de redefinicao sera enviado.',
+      });
+
+      const result = await controller.forgotPassword(dto);
+
+      expect(result).toEqual({
+        message: 'Se o email existir, um link de redefinicao sera enviado.',
+      });
+      expect(authService.forgotPassword).toHaveBeenCalledWith('test@example.com');
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('deve redefinir senha com sucesso', async () => {
+      const dto: ResetPasswordDto = {
+        token: 'valid-token',
+        email: 'test@example.com',
+        password: 'NewPassword123!',
+      };
+      mockAuthService.resetPassword.mockResolvedValue({
+        message: 'Senha redefinida com sucesso.',
+      });
+
+      const result = await controller.resetPassword(dto);
+
+      expect(result).toEqual({ message: 'Senha redefinida com sucesso.' });
+      expect(authService.resetPassword).toHaveBeenCalledWith(dto);
+    });
+
+    it('deve propagar BadRequestException para token invalido', async () => {
+      const dto: ResetPasswordDto = {
+        token: 'invalid-token',
+        email: 'test@example.com',
+        password: 'NewPassword123!',
+      };
+      mockAuthService.resetPassword.mockRejectedValue(
+        new BadRequestException('Token invalido ou expirado.'),
+      );
+
+      await expect(controller.resetPassword(dto)).rejects.toThrow(BadRequestException);
+      expect(authService.resetPassword).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe('forgotPasswordWithCode', () => {
+    it('deve solicitar redefinicao de senha via codigo com sucesso', async () => {
+      const dto: ForgotPasswordDto = { email: 'test@example.com' };
+      mockAuthService.forgotPasswordWithCode.mockResolvedValue({
+        message: 'Se o email existir, um codigo de redefinicao sera enviado.',
+      });
+
+      const result = await controller.forgotPasswordWithCode(dto);
+
+      expect(result).toEqual({
+        message: 'Se o email existir, um codigo de redefinicao sera enviado.',
+      });
+      expect(authService.forgotPasswordWithCode).toHaveBeenCalledWith('test@example.com');
+    });
+  });
+
+  describe('resetPasswordWithCode', () => {
+    it('deve redefinir senha com codigo com sucesso', async () => {
+      const dto: ResetPasswordWithCodeDto = {
+        code: '123456',
+        email: 'test@example.com',
+        password: 'NewPassword123!',
+      };
+      mockAuthService.resetPasswordWithCode.mockResolvedValue({
+        message: 'Senha redefinida com sucesso.',
+      });
+
+      const result = await controller.resetPasswordWithCode(dto);
+
+      expect(result).toEqual({ message: 'Senha redefinida com sucesso.' });
+      expect(authService.resetPasswordWithCode).toHaveBeenCalledWith(dto);
+    });
+
+    it('deve propagar BadRequestException para codigo invalido', async () => {
+      const dto: ResetPasswordWithCodeDto = {
+        code: 'invalid',
+        email: 'test@example.com',
+        password: 'NewPassword123!',
+      };
+      mockAuthService.resetPasswordWithCode.mockRejectedValue(
+        new BadRequestException('Codigo invalido ou expirado.'),
+      );
+
+      await expect(controller.resetPasswordWithCode(dto)).rejects.toThrow(BadRequestException);
+      expect(authService.resetPasswordWithCode).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe('verifyEmail', () => {
+    it('deve verificar email com sucesso', async () => {
+      const dto: VerifyEmailDto = { email: 'test@example.com', code: '123456' };
+      mockAuthService.verifyEmail.mockResolvedValue({
+        message: 'Email verificado com sucesso.',
+        emailVerified: true,
+      });
+
+      const result = await controller.verifyEmail(dto);
+
+      expect(result).toEqual({ message: 'Email verificado com sucesso.', emailVerified: true });
+      expect(authService.verifyEmail).toHaveBeenCalledWith(dto);
+    });
+
+    it('deve propagar BadRequestException para codigo invalido', async () => {
+      const dto: VerifyEmailDto = { email: 'test@example.com', code: 'invalid' };
+      mockAuthService.verifyEmail.mockRejectedValue(
+        new BadRequestException('Codigo de verificacao invalido ou expirado.'),
+      );
+
+      await expect(controller.verifyEmail(dto)).rejects.toThrow(BadRequestException);
+      expect(authService.verifyEmail).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe('resendVerification', () => {
+    it('deve reenviar email de verificacao com sucesso', async () => {
+      const dto: ForgotPasswordDto = { email: 'test@example.com' };
+      mockAuthService.resendVerificationEmail.mockResolvedValue({
+        message: 'Se o email existir, um novo codigo sera enviado.',
+      });
+
+      const result = await controller.resendVerification(dto);
+
+      expect(result).toEqual({ message: 'Se o email existir, um novo codigo sera enviado.' });
+      expect(authService.resendVerificationEmail).toHaveBeenCalledWith('test@example.com');
     });
   });
 

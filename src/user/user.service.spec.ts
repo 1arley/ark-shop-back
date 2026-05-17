@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from '@/user/user.service';
 import { PrismaService } from '@/prisma/prisma.service';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 
@@ -15,6 +15,8 @@ describe('UserService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -257,6 +259,348 @@ describe('UserService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       await expect(service.findByEmail('notfound@example.com')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─── Novos testes para métodos adicionados ──────────────────────
+
+  describe('updateProfile', () => {
+    const updateProfileDto = {
+      name: 'Updated Name',
+      email: 'updated@example.com',
+      avatarUrl: 'https://example.com/avatar.jpg',
+    };
+
+    it('deve atualizar o perfil com sucesso', async () => {
+      const existingUser = {
+        id: 'user-1',
+        name: 'Old Name',
+        email: 'old@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        avatarUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedUser = {
+        id: 'user-1',
+        name: updateProfileDto.name,
+        email: updateProfileDto.email,
+        password: 'hashed',
+        role: Role.USER,
+        avatarUrl: updateProfileDto.avatarUrl,
+        createdAt: existingUser.createdAt,
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser) // findUnique para verificar existência
+        .mockResolvedValueOnce(null); // email não existe (sem conflito)
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.updateProfile('user-1', updateProfileDto);
+
+      expect(result).not.toHaveProperty('password');
+      expect(result.name).toBe(updateProfileDto.name);
+      expect(result.email).toBe(updateProfileDto.email);
+      expect(result.avatarUrl).toBe(updateProfileDto.avatarUrl);
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: {
+          name: updateProfileDto.name,
+          email: updateProfileDto.email,
+          avatarUrl: updateProfileDto.avatarUrl,
+        },
+      });
+    });
+
+    it('deve lançar NotFoundException se usuário não existir', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.updateProfile('user-999', { name: 'New Name' })).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar ConflictException se email já estiver em uso por outro usuário', async () => {
+      const existingUser = {
+        id: 'user-1',
+        name: 'Test',
+        email: 'old@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser) // findUnique para verificar existência
+        .mockResolvedValueOnce({ id: 'user-2', email: 'new@example.com' }); // email já existe
+
+      await expect(service.updateProfile('user-1', { email: 'new@example.com' })).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('deve permitir atualização parcial (apenas nome)', async () => {
+      const existingUser = {
+        id: 'user-1',
+        name: 'Old Name',
+        email: 'old@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        avatarUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedUser = {
+        ...existingUser,
+        name: 'New Name',
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(existingUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.updateProfile('user-1', { name: 'New Name' });
+
+      expect(result.name).toBe('New Name');
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: {
+          name: 'New Name',
+          email: undefined,
+          avatarUrl: undefined,
+        },
+      });
+    });
+
+    it('não deve verificar conflito de email se email não for alterado', async () => {
+      const existingUser = {
+        id: 'user-1',
+        name: 'Test',
+        email: 'same@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedUser = {
+        ...existingUser,
+        name: 'New Name',
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(existingUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.updateProfile('user-1', {
+        name: 'New Name',
+        email: 'same@example.com',
+      });
+
+      expect(result.name).toBe('New Name');
+      // Não deve chamar findUnique para verificar email (pois é o mesmo)
+      expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('adminUpdateUser', () => {
+    const adminUpdateDto = {
+      name: 'Admin Updated Name',
+      email: 'admin-updated@example.com',
+      role: Role.ADMIN,
+      avatarUrl: 'https://example.com/avatar.jpg',
+    };
+
+    it('deve atualizar usuário com sucesso (SUPERADMIN)', async () => {
+      const targetUser = {
+        id: 'user-1',
+        name: 'Old Name',
+        email: 'old@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        avatarUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedUser = {
+        ...targetUser,
+        name: adminUpdateDto.name,
+        email: adminUpdateDto.email,
+        role: adminUpdateDto.role,
+        avatarUrl: adminUpdateDto.avatarUrl,
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(targetUser) // findUnique para verificar existência
+        .mockResolvedValueOnce(null); // email não existe (sem conflito)
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.adminUpdateUser(
+        'user-1',
+        adminUpdateDto,
+        'superadmin-1',
+        'SUPERADMIN',
+      );
+
+      expect(result).not.toHaveProperty('password');
+      expect(result.name).toBe(adminUpdateDto.name);
+      expect(result.role).toBe(adminUpdateDto.role);
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: {
+          name: adminUpdateDto.name,
+          email: adminUpdateDto.email,
+          role: adminUpdateDto.role,
+          avatarUrl: adminUpdateDto.avatarUrl,
+        },
+      });
+    });
+
+    it('deve lançar ForbiddenException se ADMIN tentar alterar cargo', async () => {
+      const targetUser = {
+        id: 'user-1',
+        name: 'Test',
+        email: 'test@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(targetUser);
+
+      await expect(
+        service.adminUpdateUser('user-1', { role: Role.ADMIN }, 'admin-1', 'ADMIN'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar ForbiddenException se ADMIN tentar modificar SUPERADMIN', async () => {
+      const targetUser = {
+        id: 'superadmin-1',
+        name: 'Super Admin',
+        email: 'super@example.com',
+        password: 'hashed',
+        role: Role.SUPERADMIN,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(targetUser);
+
+      await expect(
+        service.adminUpdateUser('superadmin-1', { name: 'New Name' }, 'admin-1', 'ADMIN'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar ForbiddenException se usuário tentar alterar seu próprio cargo', async () => {
+      const targetUser = {
+        id: 'user-1',
+        name: 'Test',
+        email: 'test@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(targetUser);
+
+      await expect(
+        service.adminUpdateUser('user-1', { role: Role.ADMIN }, 'user-1', 'SUPERADMIN'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar ConflictException se email já estiver em uso', async () => {
+      const targetUser = {
+        id: 'user-1',
+        name: 'Test',
+        email: 'old@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(targetUser)
+        .mockResolvedValueOnce({ id: 'user-2', email: 'taken@example.com' });
+
+      await expect(
+        service.adminUpdateUser(
+          'user-1',
+          { email: 'taken@example.com' },
+          'superadmin-1',
+          'SUPERADMIN',
+        ),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar NotFoundException se usuário alvo não existir', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.adminUpdateUser('user-999', { name: 'New Name' }, 'superadmin-1', 'SUPERADMIN'),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteUser', () => {
+    it('deve deletar usuário com sucesso (SUPERADMIN)', async () => {
+      const targetUser = {
+        id: 'user-1',
+        name: 'Test',
+        email: 'test@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(targetUser);
+      mockPrismaService.user.delete.mockResolvedValue(targetUser);
+
+      const result = await service.deleteUser('user-1', 'SUPERADMIN');
+
+      expect(result).toEqual({ message: 'Usuário removido com sucesso.' });
+      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+    });
+
+    it('deve lançar ForbiddenException se ADMIN tentar deletar SUPERADMIN', async () => {
+      const targetUser = {
+        id: 'superadmin-1',
+        name: 'Super Admin',
+        email: 'super@example.com',
+        password: 'hashed',
+        role: Role.SUPERADMIN,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(targetUser);
+
+      await expect(service.deleteUser('superadmin-1', 'ADMIN')).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar NotFoundException se usuário não existir', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.deleteUser('user-999', 'SUPERADMIN')).rejects.toThrow(NotFoundException);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
     });
   });
 });

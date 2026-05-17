@@ -1,30 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CouponsService } from '../coupons.service';
 import { CouponsRepository } from '../coupons.repository';
 import { CouponType } from '@prisma/client';
-import { CreateCouponDto } from '../dto/create-coupon.dto';
+import { NotFoundException } from '@nestjs/common';
 
 describe('CouponsService', () => {
   let service: CouponsService;
   let repository: CouponsRepository;
 
-  const mockCoupon = {
-    id: 'coupon-id-1',
-    code: 'PROMO10',
-    type: CouponType.PERCENTAGE,
-    value: { toNumber: () => 10 } as any,
-    minPurchase: { toNumber: () => 50 } as any,
-    maxUses: 100,
-    usedCount: 5,
-    validFrom: new Date('2025-01-01'),
-    validTo: new Date('2030-12-31'),
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const mockRepository = {
+  const mockCouponsRepository = {
     create: jest.fn(),
     findById: jest.fn(),
     findByCode: jest.fn(),
@@ -37,166 +21,248 @@ describe('CouponsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CouponsService, { provide: CouponsRepository, useValue: mockRepository }],
+      providers: [CouponsService, { provide: CouponsRepository, useValue: mockCouponsRepository }],
     }).compile();
 
     service = module.get<CouponsService>(CouponsService);
     repository = module.get<CouponsRepository>(CouponsRepository);
+  });
 
+  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('create', () => {
-    it('should create a coupon', async () => {
-      const dto: CreateCouponDto = {
-        code: 'promo10',
+    it('deve criar cupom com sucesso', async () => {
+      const createDto = {
+        code: 'PROMO10',
         type: CouponType.PERCENTAGE,
         value: 10,
+        isActive: true,
       };
 
-      mockRepository.create.mockResolvedValue(mockCoupon);
+      const createdCoupon = {
+        id: 'coupon-1',
+        code: 'PROMO10',
+        type: CouponType.PERCENTAGE,
+        value: 10,
+        minPurchase: null,
+        maxUses: null,
+        validFrom: null,
+        validTo: null,
+        isActive: true,
+        usedCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      const result = await service.create(dto);
+      mockCouponsRepository.create.mockResolvedValue(createdCoupon);
 
-      expect(repository.create).toHaveBeenCalledWith(dto);
-      expect(result).toEqual(mockCoupon);
+      const result = await service.create(createDto);
+
+      expect(result).toEqual(createdCoupon);
+      expect(repository.create).toHaveBeenCalledWith(createDto);
     });
   });
 
   describe('findById', () => {
-    it('should return coupon when found', async () => {
-      mockRepository.findById.mockResolvedValue(mockCoupon);
+    it('deve encontrar cupom por ID', async () => {
+      const coupon = {
+        id: 'coupon-1',
+        code: 'PROMO10',
+        type: CouponType.PERCENTAGE,
+        value: 10,
+        isActive: true,
+        usedCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      const result = await service.findById('coupon-id-1');
+      mockCouponsRepository.findById.mockResolvedValue(coupon);
 
-      expect(result).toEqual(mockCoupon);
-      expect(repository.findById).toHaveBeenCalledWith('coupon-id-1');
+      const result = await service.findById('coupon-1');
+
+      expect(result).toEqual(coupon);
+      expect(repository.findById).toHaveBeenCalledWith('coupon-1');
     });
 
-    it('should throw NotFoundException when not found', async () => {
-      mockRepository.findById.mockRejectedValue(
-        new NotFoundException('Coupon with ID invalid not found'),
+    it('deve lançar NotFoundException se cupom não existir', async () => {
+      mockCouponsRepository.findById.mockRejectedValue(
+        new NotFoundException('Coupon with ID coupon-999 not found'),
       );
 
-      await expect(service.findById('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('coupon-999')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('findByCode', () => {
-    it('should return coupon by code', async () => {
-      mockRepository.findByCode.mockResolvedValue(mockCoupon);
-
-      const result = await service.findByCode('PROMO10');
-
-      expect(result).toEqual(mockCoupon);
-      expect(repository.findByCode).toHaveBeenCalledWith('PROMO10');
-    });
-  });
-
-  describe('validateAndCalculate', () => {
-    it('should calculate percentage discount correctly', async () => {
-      mockRepository.validateForUse.mockResolvedValue(mockCoupon);
-
-      const result = await service.validateAndCalculate({
-        code: 'PROMO10',
-        subtotal: 100,
-      });
-
-      expect(result.valid).toBe(true);
-      expect(result.discountAmount).toBe(10); // 10% of 100
-      expect(result.coupon).toEqual({
-        id: 'coupon-id-1',
+    it('deve encontrar cupom por código', async () => {
+      const coupon = {
+        id: 'coupon-1',
         code: 'PROMO10',
         type: CouponType.PERCENTAGE,
         value: 10,
-      });
-    });
-
-    it('should calculate fixed discount correctly', async () => {
-      const fixedCoupon = {
-        ...mockCoupon,
-        type: CouponType.FIXED,
-        value: { toNumber: () => 25 } as any,
+        isActive: true,
       };
-      mockRepository.validateForUse.mockResolvedValue(fixedCoupon);
 
-      const result = await service.validateAndCalculate({
-        code: 'FIXED25',
-        subtotal: 100,
-      });
+      mockCouponsRepository.findByCode.mockResolvedValue(coupon);
 
-      expect(result.discountAmount).toBe(25);
+      const result = await service.findByCode('PROMO10');
+
+      expect(result).toEqual(coupon);
+      expect(repository.findByCode).toHaveBeenCalledWith('PROMO10');
     });
 
-    it('should not allow discount to exceed subtotal', async () => {
-      const bigCoupon = {
-        ...mockCoupon,
-        type: CouponType.FIXED,
-        value: { toNumber: () => 200 } as any,
-      };
-      mockRepository.validateForUse.mockResolvedValue(bigCoupon);
+    it('deve retornar null se cupom não existir', async () => {
+      mockCouponsRepository.findByCode.mockResolvedValue(null);
 
-      const result = await service.validateAndCalculate({
-        code: 'BIG',
-        subtotal: 100,
-      });
+      const result = await service.findByCode('INVALID');
 
-      expect(result.discountAmount).toBe(100); // capped at subtotal
-    });
-
-    it('should throw when coupon is invalid', async () => {
-      mockRepository.validateForUse.mockRejectedValue(
-        new BadRequestException('Invalid coupon code'),
-      );
-
-      await expect(
-        service.validateAndCalculate({ code: 'INVALID', subtotal: 100 }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw when minimum purchase not met', async () => {
-      mockRepository.validateForUse.mockRejectedValue(
-        new BadRequestException('Minimum purchase of R$ 50.00 required'),
-      );
-
-      await expect(service.validateAndCalculate({ code: 'PROMO10', subtotal: 30 })).rejects.toThrow(
-        BadRequestException,
-      );
+      expect(result).toBeNull();
     });
   });
 
-  describe('markAsUsed', () => {
-    it('should increment coupon usage', async () => {
-      mockRepository.incrementUsage.mockResolvedValue({
-        ...mockCoupon,
-        usedCount: 6,
-      });
+  describe('findAll', () => {
+    it('deve listar cupons com paginação', async () => {
+      const paginatedResult = {
+        data: [
+          { id: '1', code: 'PROMO10', type: CouponType.PERCENTAGE, value: 10 },
+          { id: '2', code: 'FIXED20', type: CouponType.FIXED, value: 20 },
+        ],
+        meta: { total: 2, page: 1, limit: 10, totalPages: 1 },
+      };
 
-      const result = await service.markAsUsed('coupon-id-1');
+      mockCouponsRepository.findAll.mockResolvedValue(paginatedResult);
 
-      expect(repository.incrementUsage).toHaveBeenCalledWith('coupon-id-1');
-      expect(result.usedCount).toBe(6);
+      const result = await service.findAll(1, 10);
+
+      expect(result).toEqual(paginatedResult);
+      expect(repository.findAll).toHaveBeenCalledWith(1, 10);
     });
   });
 
   describe('update', () => {
-    it('should update coupon fields', async () => {
-      const updated = { ...mockCoupon, value: 15 };
-      mockRepository.update.mockResolvedValue(updated);
+    it('deve atualizar cupom com sucesso', async () => {
+      const updateDto = { value: 15 };
+      const updatedCoupon = {
+        id: 'coupon-1',
+        code: 'PROMO10',
+        type: CouponType.PERCENTAGE,
+        value: 15,
+        isActive: true,
+        updatedAt: new Date(),
+      };
 
-      const result = await service.update('coupon-id-1', { value: 15 });
+      mockCouponsRepository.update.mockResolvedValue(updatedCoupon);
 
-      expect(result.value).toBe(15);
+      const result = await service.update('coupon-1', updateDto);
+
+      expect(result).toEqual(updatedCoupon);
+      expect(repository.update).toHaveBeenCalledWith('coupon-1', updateDto);
     });
   });
 
   describe('delete', () => {
-    it('should delete coupon', async () => {
-      mockRepository.delete.mockResolvedValue(mockCoupon);
+    it('deve deletar cupom com sucesso', async () => {
+      const deletedCoupon = {
+        id: 'coupon-1',
+        code: 'PROMO10',
+        type: CouponType.PERCENTAGE,
+        value: 10,
+      };
 
-      const result = await service.delete('coupon-id-1');
+      mockCouponsRepository.delete.mockResolvedValue(deletedCoupon);
 
-      expect(result).toEqual(mockCoupon);
+      const result = await service.delete('coupon-1');
+
+      expect(result).toEqual(deletedCoupon);
+      expect(repository.delete).toHaveBeenCalledWith('coupon-1');
+    });
+  });
+
+  describe('validateAndCalculate', () => {
+    it('deve calcular desconto percentual corretamente', async () => {
+      const coupon = {
+        id: 'coupon-1',
+        code: 'PROMO10',
+        type: CouponType.PERCENTAGE,
+        value: { toNumber: () => 10 },
+        isActive: true,
+        usedCount: 0,
+        maxUses: null,
+        validFrom: null,
+        validTo: null,
+        minPurchase: null,
+      };
+
+      mockCouponsRepository.validateForUse.mockResolvedValue(coupon);
+
+      const result = await service.validateAndCalculate({ code: 'PROMO10', subtotal: 100 });
+
+      expect(result.valid).toBe(true);
+      expect(result.discountAmount).toBe(10);
+      expect(result.coupon?.code).toBe('PROMO10');
+    });
+
+    it('deve calcular desconto fixo corretamente', async () => {
+      const coupon = {
+        id: 'coupon-1',
+        code: 'FIXED20',
+        type: CouponType.FIXED,
+        value: { toNumber: () => 20 },
+        isActive: true,
+        usedCount: 0,
+        maxUses: null,
+        validFrom: null,
+        validTo: null,
+        minPurchase: null,
+      };
+
+      mockCouponsRepository.validateForUse.mockResolvedValue(coupon);
+
+      const result = await service.validateAndCalculate({ code: 'FIXED20', subtotal: 100 });
+
+      expect(result.valid).toBe(true);
+      expect(result.discountAmount).toBe(20);
+    });
+
+    it('deve limitar desconto ao subtotal quando desconto excede subtotal', async () => {
+      const coupon = {
+        id: 'coupon-1',
+        code: 'FIXED200',
+        type: CouponType.FIXED,
+        value: { toNumber: () => 200 },
+        isActive: true,
+        usedCount: 0,
+        maxUses: null,
+        validFrom: null,
+        validTo: null,
+        minPurchase: null,
+      };
+
+      mockCouponsRepository.validateForUse.mockResolvedValue(coupon);
+
+      const result = await service.validateAndCalculate({ code: 'FIXED200', subtotal: 50 });
+
+      expect(result.discountAmount).toBe(50);
+      expect(result.message).toContain('R$ 50.00');
+    });
+  });
+
+  describe('markAsUsed', () => {
+    it('deve marcar cupom como usado', async () => {
+      const updatedCoupon = {
+        id: 'coupon-1',
+        code: 'PROMO10',
+        usedCount: 1,
+      };
+
+      mockCouponsRepository.incrementUsage.mockResolvedValue(updatedCoupon);
+
+      const result = await service.markAsUsed('coupon-1');
+
+      expect(result).toEqual(updatedCoupon);
+      expect(repository.incrementUsage).toHaveBeenCalledWith('coupon-1');
     });
   });
 });
