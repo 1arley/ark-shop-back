@@ -1,8 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CouponsController } from '../coupons.controller';
 import { CouponsService } from '../coupons.service';
-import { CouponType } from '@prisma/client';
 import { NotFoundException } from '@nestjs/common';
+
+// Use string literals instead of CouponType enum to avoid Prisma client issues in tests
+type CouponType = 'PERCENTAGE' | 'FIXED';
+const PERCENTAGE: CouponType = 'PERCENTAGE';
+const _FIXED: CouponType = 'FIXED';
 
 describe('CouponsController', () => {
   let controller: CouponsController;
@@ -38,7 +42,7 @@ describe('CouponsController', () => {
       const dto = { code: 'PROMO10', subtotal: 100 };
       const validationResult = {
         valid: true,
-        coupon: { id: 'coupon-1', code: 'PROMO10', type: CouponType.PERCENTAGE, value: 10 },
+        coupon: { id: 'coupon-1', code: 'PROMO10', type: PERCENTAGE, value: 10 },
         discountAmount: 10,
         message: 'Discount of R$ 10.00 applied',
       };
@@ -56,7 +60,7 @@ describe('CouponsController', () => {
     it('deve criar cupom', async () => {
       const createDto = {
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
         isActive: true,
       };
@@ -64,7 +68,7 @@ describe('CouponsController', () => {
       const createdCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
         isActive: true,
         createdAt: new Date(),
@@ -83,7 +87,7 @@ describe('CouponsController', () => {
   describe('findAll (admin only)', () => {
     it('deve listar cupons com paginação', async () => {
       const paginatedResult = {
-        data: [{ id: '1', code: 'PROMO10', type: CouponType.PERCENTAGE, value: 10 }],
+        data: [{ id: '1', code: 'PROMO10', type: PERCENTAGE, value: 10 }],
         meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
       };
 
@@ -101,7 +105,7 @@ describe('CouponsController', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
         isActive: true,
       };
@@ -129,7 +133,7 @@ describe('CouponsController', () => {
       const updatedCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 15,
         updatedAt: new Date(),
       };
@@ -148,7 +152,7 @@ describe('CouponsController', () => {
       const deletedCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
       };
 

@@ -8,7 +8,12 @@ import {
   IsDateString,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CouponType } from '@prisma/client';
+
+// Coupon type as string literal enum to avoid Prisma client dependency issues
+export enum CouponType {
+  PERCENTAGE = 'PERCENTAGE',
+  FIXED = 'FIXED',
+}
 
 export class CreateCouponDto {
   @ApiProperty({ description: 'Coupon code (uppercase, alphanumeric)', example: 'PROMO10' })
