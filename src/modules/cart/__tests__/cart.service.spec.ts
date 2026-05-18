@@ -24,6 +24,7 @@ describe('CartService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const mockCart = {
@@ -168,8 +169,14 @@ describe('CartService', () => {
       mockPrismaService.cart.upsert.mockResolvedValue(mockCart);
       mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
       mockPrismaService.cart.findUnique.mockResolvedValue(mockCart);
-      mockPrismaService.cartItem.findFirst.mockResolvedValue(null);
-      mockPrismaService.cartItem.create.mockResolvedValue(mockCartItem);
+
+      const mockTx = {
+        cartItem: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue(mockCartItem),
+        },
+      };
+      mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
       mockPrismaService.cart.findUnique
         .mockResolvedValueOnce({ ...mockCart, items: [] }) // addItem: get cart
         .mockResolvedValue({ ...mockCart, items: [mockCartItem] }); // getCart: get cart with items
@@ -182,10 +189,7 @@ describe('CartService', () => {
         create: { userId: 'user-id-1' },
         update: {},
       });
-      expect(prisma.product.findUnique).toHaveBeenCalledWith({
-        where: { id: 'product-id-1' },
-      });
-      expect(prisma.cartItem.create).toHaveBeenCalledWith({
+      expect(mockTx.cartItem.create).toHaveBeenCalledWith({
         data: {
           cartId: 'cart-id-1',
           productId: 'product-id-1',
@@ -202,8 +206,14 @@ describe('CartService', () => {
       mockPrismaService.cart.upsert.mockResolvedValue(mockCart);
       mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
       mockPrismaService.cart.findUnique.mockResolvedValue(mockCart);
-      mockPrismaService.cartItem.findFirst.mockResolvedValue(existingItem);
-      mockPrismaService.cartItem.update.mockResolvedValue({ ...existingItem, quantity: 5 });
+
+      const mockTx = {
+        cartItem: {
+          findFirst: jest.fn().mockResolvedValue(existingItem),
+          update: jest.fn().mockResolvedValue({ ...existingItem, quantity: 5 }),
+        },
+      };
+      mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
       mockPrismaService.cart.findUnique
         .mockResolvedValueOnce(mockCart)
         .mockResolvedValue({ ...mockCart, items: [{ ...existingItem, quantity: 5 }] });
@@ -211,7 +221,7 @@ describe('CartService', () => {
 
       const result = await service.addItem('user-id-1', dto);
 
-      expect(prisma.cartItem.update).toHaveBeenCalledWith({
+      expect(mockTx.cartItem.update).toHaveBeenCalledWith({
         where: { id: 'cart-item-id-1' },
         data: { quantity: 5 }, // 3 + 2
       });

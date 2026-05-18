@@ -262,7 +262,20 @@ describe('OrdersRepository', () => {
         where: { id: 'order-id-1' },
         include: {
           user: true,
-          items: { include: { product: true, key: true } },
+          items: {
+            include: {
+              product: true,
+              key: {
+                select: {
+                  id: true,
+                  status: true,
+                  deliveredAt: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
+            },
+          },
           payment: true,
         },
       });
@@ -562,7 +575,18 @@ describe('OrdersRepository', () => {
         take: 10,
         include: {
           user: true,
-          items: { include: { product: true } },
+          items: {
+            include: {
+              product: true,
+              key: {
+                select: {
+                  id: true,
+                  status: true,
+                  deliveredAt: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -688,20 +712,27 @@ describe('OrdersRepository', () => {
         },
       ];
       const mockTx = {
-        key: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
         order: {
+          findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
           update: jest.fn().mockResolvedValue({ ...mockOrder, status: OrderStatus.DELIVERED }),
+        },
+        key: {
+          findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
+          update: jest.fn().mockResolvedValue({ status: KeyStatus.RESERVED }),
         },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
       const result = await repository.deliverOrderAtomic('order-id-1', items);
 
-      expect(mockTx.key.updateMany).toHaveBeenCalledWith({
+      expect(mockTx.key.findFirst).toHaveBeenCalledWith({
         where: {
           productId: 'product-id-1',
           status: KeyStatus.AVAILABLE,
         },
+      });
+      expect(mockTx.key.update).toHaveBeenCalledWith({
+        where: { id: 'key-id-1' },
         data: {
           status: KeyStatus.RESERVED,
           orderItemId: 'item-id-1',
@@ -725,8 +756,11 @@ describe('OrdersRepository', () => {
         },
       ];
       const mockTx = {
-        key: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
-        order: { update: jest.fn() },
+        order: {
+          findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
+          update: jest.fn(),
+        },
+        key: { findFirst: jest.fn().mockResolvedValue(null), update: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
@@ -748,16 +782,18 @@ describe('OrdersRepository', () => {
         },
       ];
       const mockTx = {
-        key: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
         order: {
+          findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
           update: jest.fn().mockResolvedValue({ ...mockOrder, status: OrderStatus.DELIVERED }),
         },
+        key: { findFirst: jest.fn(), update: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
       await repository.deliverOrderAtomic('order-id-1', items);
 
-      expect(mockTx.key.updateMany).not.toHaveBeenCalled();
+      expect(mockTx.key.findFirst).not.toHaveBeenCalled();
+      expect(mockTx.key.update).not.toHaveBeenCalled();
       expect(mockTx.order.update).toHaveBeenCalled();
     });
   });

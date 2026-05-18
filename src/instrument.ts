@@ -22,8 +22,32 @@ if (dsn) {
         delete event.request.headers['cookie'];
         delete event.request.headers['x-api-key'];
       }
+      // Scrub sensitive fields from request body (LGPD/GDPR compliance)
+      if (event.request?.data && typeof event.request.data === 'object') {
+        const sensitiveFields = [
+          'password',
+          'token',
+          'secret',
+          'creditCard',
+          'ssn',
+          'apiKey',
+          'refresh_token',
+          'access_token',
+          'cpf',
+          'cpfCnpj',
+        ];
+        const body = event.request.data as Record<string, unknown>;
+        for (const field of sensitiveFields) {
+          if (field in body) {
+            body[field] = '[Filtered]';
+          }
+        }
+      }
       return event;
     },
-    tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+    tracesSampleRate: Math.min(
+      1,
+      Math.max(0, parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1') || 0.1),
+    ),
   });
 }

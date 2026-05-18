@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AddToCartDto } from './dto/cart.dto';
 
@@ -86,26 +86,42 @@ export class CartService {
       throw new NotFoundException(`Product ${dto.productId} not found`);
     }
 
+    if (!product.isActive) {
+      throw new BadRequestException('Product is not available');
+    }
+
+    if (product.stock !== null && product.stock < dto.quantity) {
+      throw new BadRequestException(`Only ${product.stock} items available`);
+    }
+
+    const MAX_QUANTITY = 99;
+    if (dto.quantity > MAX_QUANTITY) {
+      throw new BadRequestException(`Maximum ${MAX_QUANTITY} items per product`);
+    }
+
     const cart = await this.prisma.cart.findUnique({ where: { userId } });
 
-    const existingItem = await this.prisma.cartItem.findFirst({
-      where: { cartId: cart!.id, productId: dto.productId },
-    });
+    // Use transaction to prevent TOCTOU race condition on concurrent adds
+    await this.prisma.$transaction(async tx => {
+      const existingItem = await tx.cartItem.findFirst({
+        where: { cartId: cart!.id, productId: dto.productId },
+      });
 
-    if (existingItem) {
-      await this.prisma.cartItem.update({
-        where: { id: existingItem.id },
-        data: { quantity: existingItem.quantity + dto.quantity },
-      });
-    } else {
-      await this.prisma.cartItem.create({
-        data: {
-          cartId: cart!.id,
-          productId: dto.productId,
-          quantity: dto.quantity,
-        },
-      });
-    }
+      if (existingItem) {
+        await tx.cartItem.update({
+          where: { id: existingItem.id },
+          data: { quantity: existingItem.quantity + dto.quantity },
+        });
+      } else {
+        await tx.cartItem.create({
+          data: {
+            cartId: cart!.id,
+            productId: dto.productId,
+            quantity: dto.quantity,
+          },
+        });
+      }
+    });
 
     return this.getCart(userId);
   }

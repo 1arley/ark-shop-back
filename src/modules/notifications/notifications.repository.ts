@@ -28,9 +28,9 @@ export class NotificationsRepository {
     return this.prisma.notification.findUnique({ where: { id } });
   }
 
-  async markAsRead(id: string) {
+  async markAsRead(id: string, userId: string) {
     return this.prisma.notification.update({
-      where: { id },
+      where: { id, userId },
       data: { readAt: new Date() },
     });
   }

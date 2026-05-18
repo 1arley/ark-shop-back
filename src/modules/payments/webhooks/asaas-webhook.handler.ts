@@ -235,11 +235,11 @@ export class AsaasWebhookHandler {
 
     if (isPixRefund) {
       this.logger.log(
-        `✅ PIX refund authorized for withdrawal ${withdrawalId}: ` +
+        `[AUTHORIZED] PIX refund for withdrawal ${withdrawalId}: ` +
           `seller bears the loss of R$${value}`,
       );
     } else {
-      this.logger.log(`✅ Withdrawal authorized: ${withdrawalId} = R$${value}`);
+      this.logger.log(`[AUTHORIZED] Withdrawal: ${withdrawalId} = R$${value}`);
     }
 
     return { processed: true, authorizationStatus: 'APPROVED' };

@@ -115,7 +115,7 @@ describe('NotificationsService', () => {
       const result = await service.markAsRead('notif-1', 'user-1');
 
       expect(result).toEqual(updatedNotification);
-      expect(repository.markAsRead).toHaveBeenCalledWith('notif-1');
+      expect(repository.markAsRead).toHaveBeenCalledWith('notif-1', 'user-1');
     });
 
     it('deve lançar NotFoundException se notificação não existir', async () => {

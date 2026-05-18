@@ -16,7 +16,9 @@ export class OrdersService {
   ) {}
 
   async create(createOrderDto: CreateOrderDto, userId: string) {
-    let couponData: { couponId: string; discountAmount: number } | undefined;
+    let couponData:
+      | { couponId: string; discountAmount: number; maxUses: number | null }
+      | undefined;
 
     // Validate and calculate discount if coupon code is provided
     if (createOrderDto.couponCode) {
@@ -35,17 +37,32 @@ export class OrdersService {
       couponData = {
         couponId: validationResult.coupon!.id,
         discountAmount: validationResult.discountAmount,
+        maxUses: validationResult.coupon!.maxUses ?? null,
       };
     }
 
     const order = await this.ordersRepository.create(createOrderDto, userId, couponData);
 
-    // Mark coupon as used after successful order creation
+    // Mark coupon as used atomically after successful order creation.
+    // Uses conditional increment to prevent TOCTOU race conditions where
+    // concurrent orders could exceed maxUses.
     if (couponData) {
-      await this.couponsService.markAsUsed(couponData.couponId);
-      this.logger.log(
-        `Coupon ${createOrderDto.couponCode} used for order ${order.id} — discount: R$ ${couponData.discountAmount.toFixed(2)}`,
+      const incremented = await this.couponsService.markAsUsedIfAvailable(
+        couponData.couponId,
+        couponData.maxUses,
       );
+      if (!incremented) {
+        // Coupon reached maxUses between validation and this increment — order still valid
+        // but coupon discount was applied. Log for audit.
+        this.logger.warn(
+          `Coupon ${createOrderDto.couponCode} reached maxUses during order ${order.id} — ` +
+            'discount was applied but usage count could not be incremented',
+        );
+      } else {
+        this.logger.log(
+          `Coupon ${createOrderDto.couponCode} used for order ${order.id} — discount: R$ ${couponData.discountAmount.toFixed(2)}`,
+        );
+      }
     }
 
     return order;

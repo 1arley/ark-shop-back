@@ -9,8 +9,16 @@ import { CreateUserDto } from '@/dto/create-user.dto';
 import { UpdateProfileDto } from '@/user/dto/update-profile.dto';
 import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { DEFAULT_PAGE_SIZE } from '@/common/constants';
+import { DEFAULT_PAGE_SIZE, DEFAULT_BCRYPT_SALT_ROUNDS } from '@/common/constants';
 import { Role } from '@prisma/client';
+
+/**
+ * Remove sensitive fields from user records before returning to clients.
+ */
+function sanitizeUser<T extends { password: string }>(user: T): Omit<T, 'password'> {
+  const { password: _, ...safe } = user;
+  return safe;
+}
 
 @Injectable()
 export class UserService {
@@ -27,7 +35,7 @@ export class UserService {
       throw new ConflictException('Email já cadastrado.');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, DEFAULT_BCRYPT_SALT_ROUNDS);
 
     const user = await this.prisma.user.create({
       data: {
@@ -38,8 +46,7 @@ export class UserService {
       },
     });
 
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return sanitizeUser(user);
   }
 
   async findById(id: string) {
@@ -51,8 +58,7 @@ export class UserService {
       throw new NotFoundException('Usuário não encontrado.');
     }
 
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return sanitizeUser(user);
   }
 
   async findAll(page: number = 1, limit: number = DEFAULT_PAGE_SIZE) {
@@ -67,10 +73,7 @@ export class UserService {
       this.prisma.user.count(),
     ]);
 
-    const safeUsers = users.map(user => {
-      const { password: _, ...userWithoutPassword } = user;
-      return userWithoutPassword;
-    });
+    const safeUsers = users.map(user => sanitizeUser(user));
 
     return {
       data: safeUsers,
@@ -92,8 +95,7 @@ export class UserService {
       throw new NotFoundException('Usuário não encontrado.');
     }
 
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return sanitizeUser(user);
   }
 
   async findByEmail(email: string) {
@@ -105,8 +107,7 @@ export class UserService {
       throw new NotFoundException('Usuário não encontrado.');
     }
 
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return sanitizeUser(user);
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
@@ -131,8 +132,7 @@ export class UserService {
       },
     });
 
-    const { password: _, ...userWithoutPassword } = updated;
-    return userWithoutPassword;
+    return sanitizeUser(updated);
   }
 
   async adminUpdateUser(
@@ -182,8 +182,7 @@ export class UserService {
       },
     });
 
-    const { password: _, ...userWithoutPassword } = updated;
-    return userWithoutPassword;
+    return sanitizeUser(updated);
   }
 
   async deleteUser(id: string, requestingUserRole: string) {

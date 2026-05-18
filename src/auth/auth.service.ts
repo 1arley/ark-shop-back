@@ -26,6 +26,7 @@ import {
   EMAIL_VERIFICATION_CODE_LENGTH,
   EMAIL_VERIFICATION_EXPIRY_HOURS,
   PASSWORD_RESET_CODE_LENGTH,
+  PASSWORD_RESET_CODE_EXPIRY_MINUTES,
   MINUTE_IN_MS,
 } from '@/common/constants';
 
@@ -145,6 +146,7 @@ export class AuthService {
    * Rotaciona o refresh token: revoga o token antigo e cria um novo.
    * Preserva a configuração rememberMe do token original.
    * Apenas o token usado é revogado — outras sessões permanecem ativas.
+   * Uses atomic delete to prevent race conditions on concurrent refresh.
    */
   async refreshTokens(userId: string, oldRefreshToken: string) {
     const user = await this.prisma.user.findUnique({
@@ -155,25 +157,34 @@ export class AuthService {
       throw new UnauthorizedException('Usuário não encontrado.');
     }
 
-    // Verifica se o token antigo era rememberMe (30 dias) para preservar
     const oldTokenHash = crypto.createHash('sha256').update(oldRefreshToken).digest('hex');
     const storedToken = await this.prisma.refreshToken.findFirst({
       where: { token: oldTokenHash },
     });
 
-    // Se o token expira em mais de 15 dias, era rememberMe
-    const isRememberMe = storedToken
-      ? storedToken.expiresAt.getTime() - Date.now() > 15 * 24 * 60 * 60 * 1000
-      : false;
+    if (!storedToken) {
+      throw new UnauthorizedException('Refresh token inválido ou expirado.');
+    }
+
+    // Derive rememberMe from configured expiry values instead of magic number
+    const refreshExpiryDays = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+    const normalExpiryMs = this.parseExpiresInToMs(refreshExpiryDays);
+    const remainingMs = storedToken.expiresAt.getTime() - Date.now();
+    const isRememberMe = remainingMs > normalExpiryMs;
 
     const tokens = await this.getTokens(userId, user.email, user.role, {
       rememberMe: isRememberMe,
     });
 
-    // Revoga APENAS o token usado (mantém outras sessões ativas)
-    await this.revokeRefreshToken(oldRefreshToken).catch(() => {
-      // Token já revogado ou expirado — apenas cria o novo
+    // Atomic revocation: deleteMany returns count, only one caller succeeds
+    const deleted = await this.prisma.refreshToken.deleteMany({
+      where: { token: oldTokenHash, userId },
     });
+
+    if (deleted.count === 0) {
+      throw new UnauthorizedException('Refresh token já foi utilizado.');
+    }
+
     await this.createRefreshToken(userId, tokens.refresh_token, { rememberMe: isRememberMe });
 
     return tokens;
@@ -332,7 +343,7 @@ export class AuthService {
 
     const resetCode = this.generateNumericCode(PASSWORD_RESET_CODE_LENGTH);
     const codeHash = crypto.createHash('sha256').update(resetCode).digest('hex');
-    const expiresAt = new Date(Date.now() + PASSWORD_RESET_CODE_LENGTH * MINUTE_IN_MS);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_CODE_EXPIRY_MINUTES * MINUTE_IN_MS);
 
     // Invalida codigos anteriores nao usados
     await this.prisma.passwordResetToken.deleteMany({

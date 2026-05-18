@@ -25,6 +25,12 @@ export class PaymentsService {
     payerCpf?: string,
     payerBirthDate?: string,
   ) {
+    // Verify order ownership — user can only pay for their own orders
+    const order = await this.ordersService.findById(orderId);
+    if (!order || order.user.id !== userId) {
+      throw new BadRequestException('You can only create payments for your own orders');
+    }
+
     // Resolve provider: use explicit value or fall back to default
     let selectedProvider = provider || this.providerFactory.getDefaultProvider();
 
@@ -42,10 +48,8 @@ export class PaymentsService {
     if (method === PaymentMethod.PIX) {
       const providerImpl = this.providerFactory.getProvider(selectedProvider);
 
-      // Fetch user info for Mercado Pago payer data
-      const order = await this.ordersService.findById(orderId);
-      const userEmail = order?.user?.email ?? undefined;
-      const userName = order?.user?.name ?? undefined;
+      const userEmail = order.user.email ?? undefined;
+      const userName = order.user.name ?? undefined;
 
       const paymentIntent = await providerImpl.createPaymentIntent({
         amount,
@@ -190,6 +194,18 @@ export class PaymentsService {
 
     if (!payment) {
       throw new BadRequestException('Payment not found');
+    }
+
+    // Verify payment amount matches expected amount (prevent fraud)
+    if (paymentInfo.value !== undefined && paymentInfo.value !== null) {
+      const expectedAmount = Number(payment.amount);
+      const receivedAmount = Number(paymentInfo.value);
+      if (Math.abs(expectedAmount - receivedAmount) > 0.01) {
+        this.logger.error(
+          `Payment amount mismatch: expected ${expectedAmount}, received ${receivedAmount} for payment ${providerTxId}`,
+        );
+        throw new BadRequestException('Payment amount mismatch');
+      }
     }
 
     // Idempotência: se já aprovado, retorna sem reprocessar

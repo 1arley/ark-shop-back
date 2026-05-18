@@ -96,30 +96,31 @@ export class CouponsRepository {
   /**
    * Validate coupon for use: check active, dates, max uses, min purchase.
    * Returns the coupon if valid, throws BadRequestException otherwise.
+   * Uses generic error messages to prevent coupon enumeration.
    */
   async validateForUse(code: string, subtotal: number) {
     const coupon = await this.findByCode(code);
 
     if (!coupon) {
-      throw new BadRequestException('Invalid coupon code');
+      throw new BadRequestException('Invalid or expired coupon code');
     }
 
     if (!coupon.isActive) {
-      throw new BadRequestException('Coupon is no longer active');
+      throw new BadRequestException('Invalid or expired coupon code');
     }
 
     const now = new Date();
 
     if (coupon.validFrom && coupon.validFrom > now) {
-      throw new BadRequestException('Coupon is not yet valid');
+      throw new BadRequestException('Invalid or expired coupon code');
     }
 
     if (coupon.validTo && coupon.validTo < now) {
-      throw new BadRequestException('Coupon has expired');
+      throw new BadRequestException('Invalid or expired coupon code');
     }
 
     if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) {
-      throw new BadRequestException('Coupon has reached maximum uses');
+      throw new BadRequestException('Invalid or expired coupon code');
     }
 
     if (coupon.minPurchase !== null && subtotal < coupon.minPurchase.toNumber()) {
@@ -132,7 +133,31 @@ export class CouponsRepository {
   }
 
   /**
-   * Increment usedCount atomically.
+   * Atomically increment usedCount only if maxUses has not been reached.
+   * Returns true if the increment succeeded, false if maxUses was exceeded.
+   * This prevents TOCTOU race conditions on concurrent coupon usage.
+   */
+  async incrementUsageIfAvailable(id: string, maxUses: number | null): Promise<boolean> {
+    if (maxUses === null) {
+      // Unlimited uses — just increment
+      await this.prisma.coupon.update({
+        where: { id },
+        data: { usedCount: { increment: 1 } },
+      });
+      return true;
+    }
+
+    // Atomic conditional increment: only succeeds if usedCount < maxUses
+    const result = await this.prisma.coupon.updateMany({
+      where: { id, usedCount: { lt: maxUses } },
+      data: { usedCount: { increment: 1 } },
+    });
+
+    return result.count > 0;
+  }
+
+  /**
+   * Increment usedCount atomically (legacy — prefer incrementUsageIfAvailable).
    */
   async incrementUsage(id: string) {
     return this.prisma.coupon.update({

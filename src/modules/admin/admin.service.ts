@@ -16,6 +16,7 @@ import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
 import { ConfigService } from '@nestjs/config';
 import { SellersService } from '@/modules/sellers/sellers.service';
 import { CreateSellerDto, UpdateSellerDto } from '@/modules/sellers/dto/create-seller.dto';
+import { AdminCreateProductDto, AdminUpdateProductDto } from './dto/admin-product.dto';
 
 @Injectable()
 export class AdminService {
@@ -71,11 +72,11 @@ export class AdminService {
     return this.adminRepository.findAllProducts(page, limit, search);
   }
 
-  async createProduct(dto: any) {
+  async createProduct(dto: AdminCreateProductDto) {
     return this.productsService.create(dto);
   }
 
-  async updateProduct(id: string, dto: any) {
+  async updateProduct(id: string, dto: AdminUpdateProductDto) {
     return this.productsService.update(id, dto);
   }
 
@@ -217,6 +218,7 @@ export class AdminService {
     }
 
     // Delete in order to avoid FK issues — wrapped in a transaction for atomicity
+    // Excludes ADMIN and SUPERADMIN users for safety
     await this.prisma.$transaction([
       this.prisma.fraudLog.deleteMany(),
       this.prisma.notification.deleteMany(),
@@ -230,7 +232,9 @@ export class AdminService {
       this.prisma.category.deleteMany(),
       this.prisma.seller.deleteMany(),
       this.prisma.refreshToken.deleteMany(),
-      this.prisma.user.deleteMany(),
+      this.prisma.user.deleteMany({
+        where: { role: { notIn: ['ADMIN', 'SUPERADMIN'] } },
+      }),
     ]);
 
     return { message: 'Demo data cleared' };

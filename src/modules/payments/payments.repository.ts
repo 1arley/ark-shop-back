@@ -1,14 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
-import { PaymentProviderFactory } from './payment-provider.factory';
 
 @Injectable()
 export class PaymentsRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly providerFactory: PaymentProviderFactory,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createPayment(
     orderId: string,
@@ -119,9 +115,22 @@ export class PaymentsRepository {
   }
 
   async approvePayment(id: string, providerTxId: string, webhookData?: any) {
-    const payment = await this.findById(id);
-
     return this.prisma.$transaction(async tx => {
+      // Fetch payment inside transaction for atomicity
+      const payment = await tx.payment.findUnique({
+        where: { id },
+        include: { order: true },
+      });
+
+      if (!payment) {
+        throw new NotFoundException(`Payment with ID ${id} not found`);
+      }
+
+      // Idempotency: if already approved, return as-is
+      if (payment.status === PaymentStatus.APPROVED) {
+        return payment;
+      }
+
       // Update payment status
       const updatedPayment = await tx.payment.update({
         where: { id },
@@ -144,9 +153,16 @@ export class PaymentsRepository {
   }
 
   async rejectPayment(id: string, reason?: string) {
-    const payment = await this.findById(id);
-
     return this.prisma.$transaction(async tx => {
+      const payment = await tx.payment.findUnique({
+        where: { id },
+        include: { order: true },
+      });
+
+      if (!payment) {
+        throw new NotFoundException(`Payment with ID ${id} not found`);
+      }
+
       await tx.payment.update({
         where: { id },
         data: {
@@ -198,7 +214,6 @@ export class PaymentsRepository {
   }
 
   async findByProviderTxId(providerTxId: string) {
-    // Find by providerTxId using findFirst since it's not a unique index
     return this.prisma.payment.findFirst({
       where: { providerTxId },
       include: {

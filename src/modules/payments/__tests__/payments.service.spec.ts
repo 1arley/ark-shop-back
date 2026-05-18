@@ -107,7 +107,7 @@ describe('PaymentsService', () => {
       };
 
       mockOrdersService.findById.mockResolvedValue({
-        user: { email: 'test@test.com', name: 'Test User' },
+        user: { id: 'user-id-1', email: 'test@test.com', name: 'Test User' },
       });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
       mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
@@ -139,7 +139,7 @@ describe('PaymentsService', () => {
       };
 
       mockOrdersService.findById.mockResolvedValue({
-        user: { email: 'user@email.com', name: 'João Silva' },
+        user: { id: 'user-id-1', email: 'user@email.com', name: 'João Silva' },
       });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
       mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
@@ -170,7 +170,7 @@ describe('PaymentsService', () => {
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
       };
 
-      mockOrdersService.findById.mockResolvedValue({});
+      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
       mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
 
@@ -196,7 +196,7 @@ describe('PaymentsService', () => {
         providerData: {},
       };
 
-      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
       mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
 
@@ -222,6 +222,7 @@ describe('PaymentsService', () => {
 
     it('should create standard payment for non-PIX method', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
+      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
       mockPaymentsRepository.createPayment.mockResolvedValue(mockPayment);
 
       const result = await service.createPayment(
@@ -239,13 +240,13 @@ describe('PaymentsService', () => {
         PaymentProvider.ASAAS,
         PaymentMethod.CREDIT_CARD,
       );
-      expect(mockOrdersService.findById).not.toHaveBeenCalled();
+      expect(mockOrdersService.findById).toHaveBeenCalledWith('order-id-1');
       expect(result).toEqual(mockPayment);
     });
 
     it('should fallback to default provider if selected is not registered', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
-      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -265,7 +266,7 @@ describe('PaymentsService', () => {
 
     it('should use explicit provider when registered', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
-      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -285,7 +286,7 @@ describe('PaymentsService', () => {
 
     it('should use default provider when none specified', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
-      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -303,7 +304,7 @@ describe('PaymentsService', () => {
       jest.useFakeTimers();
       jest.setSystemTime(fixedDate);
 
-      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -334,7 +335,7 @@ describe('PaymentsService', () => {
     it('should fallback para default quando fallback provider também não está registrado', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([]);
       mockProviderFactory.getDefaultProvider.mockReturnValue(PaymentProvider.ASAAS);
-      mockOrdersService.findById.mockResolvedValue({ user: {} });
+      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },

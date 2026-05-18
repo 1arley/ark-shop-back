@@ -349,11 +349,13 @@ describe('PaymentsRepository', () => {
   describe('approvePayment', () => {
     it('should approve payment and update order to PAID', async () => {
       const updatedPayment = { ...mockPayment, status: PaymentStatus.APPROVED };
-      mockPrismaPayment.findUnique.mockResolvedValue(mockPayment);
 
       const transactionMock = jest.fn(async cb => {
         const mockTx = {
-          payment: { update: jest.fn().mockResolvedValue(updatedPayment) },
+          payment: {
+            findUnique: jest.fn().mockResolvedValue(mockPayment),
+            update: jest.fn().mockResolvedValue(updatedPayment),
+          },
           order: { update: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }) },
         };
         return cb(mockTx);
@@ -370,11 +372,13 @@ describe('PaymentsRepository', () => {
 
     it('should approve payment without webhookData', async () => {
       const updatedPayment = { ...mockPayment, status: PaymentStatus.APPROVED };
-      mockPrismaPayment.findUnique.mockResolvedValue(mockPayment);
 
       const transactionMock = jest.fn(async cb => {
         const mockTx = {
-          payment: { update: jest.fn().mockResolvedValue(updatedPayment) },
+          payment: {
+            findUnique: jest.fn().mockResolvedValue(mockPayment),
+            update: jest.fn().mockResolvedValue(updatedPayment),
+          },
           order: { update: jest.fn().mockResolvedValue({}) },
         };
         return cb(mockTx);
@@ -390,11 +394,12 @@ describe('PaymentsRepository', () => {
   // ─── rejectPayment ───────────────────────────────────────────────
   describe('rejectPayment', () => {
     it('should reject payment and update order to CANCELLED', async () => {
-      mockPrismaPayment.findUnique.mockResolvedValue(mockPayment);
-
       const transactionMock = jest.fn(async cb => {
         const mockTx = {
-          payment: { update: jest.fn().mockResolvedValue({ status: PaymentStatus.REJECTED }) },
+          payment: {
+            findUnique: jest.fn().mockResolvedValue(mockPayment),
+            update: jest.fn().mockResolvedValue({ status: PaymentStatus.REJECTED }),
+          },
           order: { update: jest.fn().mockResolvedValue({ status: OrderStatus.CANCELLED }) },
         };
         return cb(mockTx);
@@ -409,11 +414,12 @@ describe('PaymentsRepository', () => {
     });
 
     it('should reject payment without reason', async () => {
-      mockPrismaPayment.findUnique.mockResolvedValue(mockPayment);
-
       const transactionMock = jest.fn(async cb => {
         const mockTx = {
-          payment: { update: jest.fn().mockResolvedValue({ status: PaymentStatus.REJECTED }) },
+          payment: {
+            findUnique: jest.fn().mockResolvedValue(mockPayment),
+            update: jest.fn().mockResolvedValue({ status: PaymentStatus.REJECTED }),
+          },
           order: { update: jest.fn().mockResolvedValue({}) },
         };
         return cb(mockTx);

@@ -255,11 +255,17 @@ describe('AuthService', () => {
       };
 
       jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-jwt-token');
-      jest.spyOn(configService, 'get').mockReturnValue('fake-secret');
+      jest.spyOn(configService, 'get').mockReturnValue('7d');
       mockPrismaService.user.findUnique.mockResolvedValue(user);
 
-      // Mock findFirst to return null since we're testing the happy path
-      mockPrismaService.refreshToken.findFirst.mockResolvedValue(null);
+      const storedToken = {
+        id: 'rt1',
+        token: 'hashed-token',
+        userId: '1',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      };
+      mockPrismaService.refreshToken.findFirst.mockResolvedValue(storedToken);
+      mockPrismaService.refreshToken.deleteMany.mockResolvedValue({ count: 1 });
 
       const result = await service.refreshTokens('1', 'old-refresh-token');
 
@@ -282,7 +288,7 @@ describe('AuthService', () => {
         emailVerified: true,
       };
 
-      const futureDate = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000); // 20 dias no futuro
+      const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 dias no futuro
       mockPrismaService.user.findUnique.mockResolvedValue(user);
       mockPrismaService.refreshToken.findFirst.mockResolvedValue({
         id: 'rt1',
@@ -291,14 +297,15 @@ describe('AuthService', () => {
         expiresAt: futureDate,
       });
       jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-jwt-token');
-      jest.spyOn(configService, 'get').mockReturnValue('fake-secret');
+      jest.spyOn(configService, 'get').mockReturnValue('7d');
+      mockPrismaService.refreshToken.deleteMany.mockResolvedValue({ count: 1 });
 
       const result = await service.refreshTokens('1', 'old-refresh-token');
 
       expect(result).toHaveProperty('remember_me', true);
     });
 
-    it('deve tratar token ja revogado durante refresh sem lancar erro', async () => {
+    it('deve lancar UnauthorizedException se refresh token nao existir', async () => {
       const user = {
         id: '1',
         email: 'test@example.com',
@@ -308,16 +315,36 @@ describe('AuthService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
       mockPrismaService.refreshToken.findFirst.mockResolvedValue(null);
+
+      await expect(service.refreshTokens('1', 'old-refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('deve lancar UnauthorizedException se deleteMany retornar count 0 (token ja usado)', async () => {
+      const user = {
+        id: '1',
+        email: 'test@example.com',
+        role: 'USER',
+        emailVerified: true,
+      };
+
+      const storedToken = {
+        id: 'rt1',
+        token: 'hashed-token',
+        userId: '1',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      };
+      mockPrismaService.user.findUnique.mockResolvedValue(user);
+      mockPrismaService.refreshToken.findFirst.mockResolvedValue(storedToken);
       jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-jwt-token');
-      jest.spyOn(configService, 'get').mockReturnValue('fake-secret');
-      // revokeRefreshToken vai lancar NotFoundException, mas deve ser capturado
-      mockPrismaService.refreshToken.findFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
+      jest.spyOn(configService, 'get').mockReturnValue('7d');
+      // Simulate concurrent access: token was already deleted by another request
+      mockPrismaService.refreshToken.deleteMany.mockResolvedValue({ count: 0 });
 
-      const result = await service.refreshTokens('1', 'old-refresh-token');
-
-      expect(result).toHaveProperty('access_token', 'fake-jwt-token');
+      await expect(service.refreshTokens('1', 'old-refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 

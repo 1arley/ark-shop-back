@@ -85,7 +85,16 @@ export class OrdersRepository {
         items: {
           include: {
             product: true,
-            key: true,
+            key: {
+              // Exclude encrypted keyData from API responses
+              select: {
+                id: true,
+                status: true,
+                deliveredAt: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
           },
         },
         payment: true,
@@ -111,7 +120,16 @@ export class OrdersRepository {
           items: {
             include: {
               product: true,
-              key: true,
+              key: {
+                // Exclude encrypted keyData from API responses
+                select: {
+                  id: true,
+                  status: true,
+                  deliveredAt: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
             },
           },
           payment: true,
@@ -205,6 +223,13 @@ export class OrdersRepository {
         items: {
           include: {
             product: true,
+            key: {
+              select: {
+                id: true,
+                status: true,
+                deliveredAt: true,
+              },
+            },
           },
         },
       },
@@ -276,31 +301,42 @@ export class OrdersRepository {
 
   /**
    * Atomically reserve keys and mark order as delivered.
-   * Uses updateMany with WHERE condition on KeyStatus.AVAILABLE to prevent
-   * TOCTOU race conditions where concurrent requests could grab the same key.
+   * Reserves exactly ONE key per item by finding first available key
+   * then updating that specific key within the transaction.
    */
   async deliverOrderAtomic(
     orderId: string,
     items: Array<{ id: string; productId: string; key: any; product: { name: string } }>,
   ) {
     return this.prisma.$transaction(async tx => {
+      // Re-verify order status inside transaction to prevent concurrent delivery
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order || order.status !== OrderStatus.PAID) {
+        throw new BadRequestException('Order must be in PAID status to deliver');
+      }
+
       for (const item of items) {
         if (!item.key) {
-          // Atomic reserve: updateMany only affects keys still AVAILABLE
-          const result = await tx.key.updateMany({
+          // Find ONE available key first
+          const availableKey = await tx.key.findFirst({
             where: {
               productId: item.productId,
               status: KeyStatus.AVAILABLE,
             },
+          });
+
+          if (!availableKey) {
+            throw new BadRequestException(`No available keys for product: ${item.product.name}`);
+          }
+
+          // Atomically update that specific key only
+          await tx.key.update({
+            where: { id: availableKey.id },
             data: {
               status: KeyStatus.RESERVED,
               orderItemId: item.id,
             },
           });
-
-          if (result.count === 0) {
-            throw new BadRequestException(`No available keys for product: ${item.product.name}`);
-          }
         }
       }
 

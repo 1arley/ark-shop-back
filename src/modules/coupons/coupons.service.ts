@@ -12,6 +12,7 @@ export interface CouponValidationResult {
     code: string;
     type: CouponType;
     value: number;
+    maxUses: number | null;
   };
   discountAmount: number;
   message: string;
@@ -79,6 +80,7 @@ export class CouponsService {
         code: coupon.code,
         type: coupon.type,
         value: coupon.value.toNumber(),
+        maxUses: coupon.maxUses,
       },
       discountAmount,
       message: `Discount of R$ ${discountAmount.toFixed(2)} applied`,
@@ -92,5 +94,15 @@ export class CouponsService {
   async markAsUsed(couponId: string) {
     this.logger.log(`Marking coupon ${couponId} as used`);
     return this.couponsRepository.incrementUsage(couponId);
+  }
+
+  /**
+   * Atomically increment coupon usage count only if maxUses has not been reached.
+   * Returns true if the increment succeeded, false if maxUses was exceeded.
+   * Use this inside the order creation transaction to prevent race conditions.
+   */
+  async markAsUsedIfAvailable(couponId: string, maxUses: number | null): Promise<boolean> {
+    this.logger.log(`Attempting to mark coupon ${couponId} as used (maxUses: ${maxUses})`);
+    return this.couponsRepository.incrementUsageIfAvailable(couponId, maxUses);
   }
 }

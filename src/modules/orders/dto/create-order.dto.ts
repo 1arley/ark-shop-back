@@ -6,6 +6,8 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Min,
+  Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -17,6 +19,8 @@ export class OrderItemDto {
 
   @ApiProperty({ description: 'Quantity' })
   @IsNumber()
+  @Min(1)
+  @Max(100)
   quantity!: number;
 }
 

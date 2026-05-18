@@ -71,6 +71,7 @@ describe('OrdersService', () => {
   const mockCouponsService = {
     validateAndCalculate: jest.fn(),
     markAsUsed: jest.fn(),
+    markAsUsedIfAvailable: jest.fn().mockResolvedValue(true),
   };
 
   beforeEach(async () => {
@@ -114,7 +115,13 @@ describe('OrdersService', () => {
     it('should create order with coupon discount', async () => {
       const validationResult = {
         valid: true,
-        coupon: { id: 'coupon-id-1', code: 'PROMO10', type: 'PERCENTAGE', value: 10 },
+        coupon: {
+          id: 'coupon-id-1',
+          code: 'PROMO10',
+          type: 'PERCENTAGE',
+          value: 10,
+          maxUses: null,
+        },
         discountAmount: 10,
         message: 'Discount applied',
       };
@@ -139,10 +146,11 @@ describe('OrdersService', () => {
         code: 'PROMO10',
         subtotal: 100,
       });
-      expect(couponsService.markAsUsed).toHaveBeenCalledWith('coupon-id-1');
+      expect(couponsService.markAsUsedIfAvailable).toHaveBeenCalledWith('coupon-id-1', null);
       expect(ordersRepository.create).toHaveBeenCalledWith(expect.any(Object), 'user-id-1', {
         couponId: 'coupon-id-1',
         discountAmount: 10,
+        maxUses: null,
       });
     });
 

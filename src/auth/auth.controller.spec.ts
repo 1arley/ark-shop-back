@@ -125,7 +125,9 @@ describe('AuthController', () => {
 
       const result = await controller.login(loginDto, mockRes());
 
-      expect(result.access_token).toBe('fake-access-token');
+      // Tokens are in httpOnly cookies, NOT in response body
+      expect(result).not.toHaveProperty('access_token');
+      expect(result).not.toHaveProperty('refresh_token');
       expect(result.user.email).toBe('test@example.com');
       expect(result.emailVerified).toBe(true);
       expect(authService.login).toHaveBeenCalledWith(loginDto);
@@ -171,7 +173,9 @@ describe('AuthController', () => {
         mockRes(),
       );
 
-      expect(result.access_token).toBe('new-access-token');
+      // Tokens are in httpOnly cookies, NOT in response body
+      expect(result).not.toHaveProperty('access_token');
+      expect(result).not.toHaveProperty('refresh_token');
       expect(authService.refreshTokens).toHaveBeenCalledWith('1', 'old-refresh-token');
     });
 

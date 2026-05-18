@@ -22,7 +22,7 @@ export class NotificationsService {
 
   async markAsRead(id: string, userId: string) {
     await this.findOne(id, userId);
-    return this.repository.markAsRead(id);
+    return this.repository.markAsRead(id, userId);
   }
 
   async markAllAsRead(userId: string) {

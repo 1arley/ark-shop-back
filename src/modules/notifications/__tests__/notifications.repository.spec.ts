@@ -92,11 +92,11 @@ describe('NotificationsRepository', () => {
 
       mockPrismaService.notification.update.mockResolvedValue(updatedNotification);
 
-      const result = await repository.markAsRead('notif-1');
+      const result = await repository.markAsRead('notif-1', 'user-1');
 
       expect(result).toEqual(updatedNotification);
       expect(prisma.notification.update).toHaveBeenCalledWith({
-        where: { id: 'notif-1' },
+        where: { id: 'notif-1', userId: 'user-1' },
         data: { readAt: expect.any(Date) },
       });
     });

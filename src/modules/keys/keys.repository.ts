@@ -111,6 +111,16 @@ export class KeysRepository {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        // Exclude encrypted keyData from list responses
+        select: {
+          id: true,
+          productId: true,
+          status: true,
+          orderItemId: true,
+          deliveredAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       }),
       this.prisma.key.count({ where: { productId } }),
     ]);
