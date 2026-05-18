@@ -1,3 +1,9 @@
+## [1.20.3](https://github.com/1arley/ark-shop-back/compare/v1.20.2...v1.20.3) (2026-05-18)
+
+### Bug Fixes
+
+- **security:** resolve critical security vulnerabilities and race conditions ([916510f](https://github.com/1arley/ark-shop-back/commit/916510f2f2995c24982ce5055970517422681330))
+
 ## [1.20.2](https://github.com/1arley/ark-shop-back/compare/v1.20.1...v1.20.2) (2026-05-17)
 
 ### Bug Fixes
