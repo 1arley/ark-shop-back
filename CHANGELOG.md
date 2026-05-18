@@ -1,3 +1,9 @@
+## [1.20.4](https://github.com/1arley/ark-shop-back/compare/v1.20.3...v1.20.4) (2026-05-18)
+
+### Bug Fixes
+
+- **coupons:** replace Prisma CouponType enum with string literals to fix tests ([f9cf13a](https://github.com/1arley/ark-shop-back/commit/f9cf13ad0580de3ffd976fc33f99457c4078a905))
+
 ## [1.20.3](https://github.com/1arley/ark-shop-back/compare/v1.20.2...v1.20.3) (2026-05-18)
 
 ### Bug Fixes
