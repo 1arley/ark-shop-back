@@ -6,10 +6,12 @@
 # Stage 1: Base
 FROM node:22-bookworm-slim AS base
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    dumb-init wget ca-certificates \
-    && apt-get upgrade -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get dist-upgrade -y --no-install-recommends && \
+    apt-get install -y --no-install-recommends \
+        dumb-init wget ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 WORKDIR /app
 
@@ -37,6 +39,12 @@ RUN npm run build
 
 # Stage 4: Production
 FROM base AS production
+
+# Apply latest security patches in final stage
+RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
 
 ENV NODE_ENV=production
 ENV PORT=3000

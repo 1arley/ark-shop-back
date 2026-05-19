@@ -112,7 +112,7 @@ jobs:
       - name: Verify image
         run: docker images nestjs-template:test
 
-      - name: Security scan (Trivy)
+      - name: Security scan (Trivy) — debug table output
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: nestjs-template:test
