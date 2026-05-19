@@ -108,17 +108,18 @@ jobs:
           tags: nestjs-template:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            CACHE_BUST=${{ github.run_id }}
 
       - name: Verify image
         run: docker images nestjs-template:test
 
-      - name: Security scan (Trivy) — debug table output
+      - name: Security scan (Trivy) — list vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: nestjs-template:test
           format: 'table'
           exit-code: '0'
-          ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
           scanners: 'vuln'
 
@@ -129,7 +130,6 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           exit-code: '1'
-          ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
           scanners: 'vuln'
 

@@ -40,8 +40,10 @@ RUN npm run build
 # Stage 4: Production
 FROM base AS production
 
-# Apply latest security patches in final stage
-RUN apt-get update && \
+# Cache bust: forces apt-get to re-run on every CI build
+ARG CACHE_BUST
+RUN echo "Cache bust: ${CACHE_BUST}" && \
+    apt-get update && \
     apt-get upgrade -y --no-install-recommends && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
