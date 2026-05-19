@@ -1,0 +1,10 @@
+# Trivy ignore file — Enterprise Security Policy
+#
+# RULES:
+# - Only add CVEs that have NO fix available from upstream vendor
+# - Every entry MUST include an expiry date (max 90 days)
+# - Review all entries quarterly — remove if fix becomes available
+# - Document the reason and tracking ticket
+#
+# FORMAT:
+# # CVE-XXXX-XXXX — reason / ticket / expiry:YYYY-MM-DD
