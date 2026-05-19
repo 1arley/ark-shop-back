@@ -44,7 +44,7 @@ FROM base AS production
 ARG CACHE_BUST
 RUN echo "Cache bust: ${CACHE_BUST}" && \
     apt-get update && \
-    apt-get upgrade -y --no-install-recommends && \
+    apt-get dist-upgrade -y --no-install-recommends && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
 
