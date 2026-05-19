@@ -4,9 +4,11 @@
 # ============================================
 
 # Stage 1: Base
-FROM node:22-alpine AS base
+FROM node:22-bookworm-slim AS base
 
-RUN apk add --no-cache dumb-init wget
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    dumb-init wget ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
