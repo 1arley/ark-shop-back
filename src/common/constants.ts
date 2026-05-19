@@ -26,6 +26,8 @@ export const PASSWORD_RESET_CODE_EXPIRY_MINUTES = 10;
 
 // ─── Database ──────────────────────────────────────────────────
 export const DB_CONNECTION_TIMEOUT_MS = 10_000;
+export const DEFAULT_DB_POOL_MAX = 10;
+export const DEFAULT_DB_POOL_IDLE_MS = 30_000;
 
 // ─── CSV Import ────────────────────────────────────────────────
 export const CSV_MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB

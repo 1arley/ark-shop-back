@@ -1,0 +1,32 @@
+---
+description: Backend best practices from installed agent skills (NestJS, Prisma, JWT, Postgres, Docker, Sentry)
+globs: src/**/*.ts, prisma/**, test/**, docker-compose*.yml, .github/workflows/**
+alwaysApply: false
+---
+
+# Backend best practices (ark-shop-back)
+
+Apply these skills when editing this codebase:
+
+| Skill | Focus |
+|-------|--------|
+| `nestjs-clean-typescript` | Typed NestJS modules, naming, small functions |
+| `prisma` | Schema indexes, `select`/`include`, transactions |
+| `jwt-security` | Minimal JWT payload (`sub`, `role`, `jti`), hashed refresh tokens, `iss`/`aud` |
+| `supabase-postgres-best-practices` | Composite indexes, query patterns |
+| `postgresql-code-review` | SQL/migration review |
+| `test-driven-development` | Tests before behavior changes |
+| `systematic-debugging` | Reproduce before fixing |
+| `verification-before-completion` | Run `npm run lint` and `npm run test` |
+| `docker-compose-orchestration` | Compose healthchecks, test stack |
+| `github-actions-docs` | CI workflow changes |
+| `sentry` | No PII in events; scrub auth headers |
+
+## Project-specific rules
+
+- Never put email or passwords in JWT payloads.
+- Use `select` on Prisma reads; avoid returning `password` fields.
+- Refresh tokens: store SHA-256 hash only; rotate on refresh.
+- Keys module: never log or expose plaintext `keyData`.
+- Payment webhooks: verify signatures using raw body middleware.
+- After `prisma/schema.prisma` changes: `npm run prisma:migrate` and `npm run prisma:generate`.

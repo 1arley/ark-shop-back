@@ -35,13 +35,29 @@ if (dsn) {
           'access_token',
           'cpf',
           'cpfCnpj',
+          'keyData',
+          'pixCode',
+          'pixQrCode',
+          'code',
+          'KEYS_ENCRYPTION_KEY',
         ];
-        const body = event.request.data as Record<string, unknown>;
-        for (const field of sensitiveFields) {
-          if (field in body) {
-            body[field] = '[Filtered]';
+        const scrub = (value: unknown): unknown => {
+          if (Array.isArray(value)) {
+            return value.map(scrub);
           }
-        }
+          if (value && typeof value === 'object') {
+            const record = value as Record<string, unknown>;
+            for (const [key, nested] of Object.entries(record)) {
+              if (sensitiveFields.includes(key)) {
+                record[key] = '[Filtered]';
+              } else {
+                record[key] = scrub(nested);
+              }
+            }
+          }
+          return value;
+        };
+        scrub(event.request.data);
       }
       return event;
     },

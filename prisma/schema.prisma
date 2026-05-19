@@ -109,6 +109,8 @@ model RefreshToken {
   updatedAt DateTime   @updatedAt
 
   @@index([userId])
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
 }
 
 model PasswordResetToken {
@@ -122,6 +124,7 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([token])
+  @@index([userId, usedAt, expiresAt])
 }
 
 model EmailVerificationToken {
@@ -135,6 +138,7 @@ model EmailVerificationToken {
 
   @@index([userId])
   @@index([code])
+  @@index([userId, usedAt, expiresAt])
 }
 
 // ============================
@@ -169,23 +173,23 @@ model WalletTransaction {
 // PRODUCTS MODULE
 // ============================
 model Product {
-id String @id @default(uuid())
-name String
-description String?
-price Decimal @db.Decimal(10, 2)
-imageUrl String?
-stock Int @default(0)
-isActive Boolean @default(true)
-categoryId String?
-category Category? @relation(fields: [categoryId], references: [id])
-keys Key[]
-orderItems OrderItem[]
-cartItems CartItem[]
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal    @db.Decimal(10, 2)
+  imageUrl    String?
+  stock       Int        @default(0)
+  isActive    Boolean    @default(true)
+  categoryId  String?
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  keys        Key[]
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-@@index([categoryId])
-@@index([isActive])
+  @@index([categoryId])
+  @@index([isActive])
 }
 
 model Category {
@@ -282,9 +286,11 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
- @@index([orderId])
- @@index([userId])
- @@index([providerTxId])
+  @@index([orderId])
+  @@index([userId])
+  @@index([providerTxId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ============================
@@ -305,6 +311,8 @@ model FraudLog {
 
   @@index([userId])
   @@index([orderId])
+  @@index([createdAt])
+  @@index([riskLevel])
 }
 
 // ============================
@@ -342,17 +350,18 @@ model Cart {
 }
 
 model CartItem {
-id String @id @default(uuid())
-cartId String
-cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
-productId String
-product Product @relation(fields: [productId], references: [id])
-quantity Int @default(1)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-@@index([cartId])
-@@index([productId])
+  @@index([cartId])
+  @@index([productId])
+  @@unique([cartId, productId])
 }
 
 // ============================

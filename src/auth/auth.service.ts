@@ -19,6 +19,8 @@ import { ConfigService } from '@nestjs/config';
 import { EmailService } from '@/modules/email/email.service';
 
 import type { StringValue } from 'ms';
+import type { JwtPayload } from '@/auth/interfaces/jwt-payload.interface';
+import { userPublicSelect } from '@/common/prisma/user-public.select';
 import {
   DEFAULT_BCRYPT_SALT_ROUNDS,
   PASSWORD_RESET_EXPIRY_HOURS,
@@ -102,6 +104,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { email },
+      select: { ...userPublicSelect, password: true },
     });
 
     if (!user) {
@@ -114,7 +117,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const tokens = await this.getTokens(user.id, user.email, user.role, { rememberMe });
+    const tokens = await this.getTokens(user.id, user.role, { rememberMe });
 
     // Não revoga tokens de outras sessões: cada dispositivo/contexto mantém
     // seu próprio refresh token. Tokens antigos expiram naturalmente.
@@ -132,14 +135,14 @@ export class AuthService {
   async validateUser(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: userPublicSelect,
     });
 
     if (!user) {
       throw new UnauthorizedException('User not found.');
     }
 
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return user;
   }
 
   /**
@@ -151,6 +154,7 @@ export class AuthService {
   async refreshTokens(userId: string, oldRefreshToken: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: { id: true, email: true, role: true },
     });
 
     if (!user) {
@@ -172,7 +176,7 @@ export class AuthService {
     const remainingMs = storedToken.expiresAt.getTime() - Date.now();
     const isRememberMe = remainingMs > normalExpiryMs;
 
-    const tokens = await this.getTokens(userId, user.email, user.role, {
+    const tokens = await this.getTokens(userId, user.role, {
       rememberMe: isRememberMe,
     });
 
@@ -190,31 +194,22 @@ export class AuthService {
     return tokens;
   }
 
-  private async getTokens(
-    userId: string,
-    email: string,
-    role: string,
-    options?: { rememberMe?: boolean },
-  ) {
-    const payload = { sub: userId, email, role, jti: crypto.randomUUID() };
+  private async getTokens(userId: string, role: string, options?: { rememberMe?: boolean }) {
+    const payload: JwtPayload = {
+      sub: userId,
+      role,
+      jti: crypto.randomUUID(),
+    };
 
-    // Access token: sempre 30 minutos (renovável enquanto o usuário estiver ativo)
-    const accessExpiresIn = '30m';
+    const accessExpiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
 
-    // Refresh token: 30 dias se rememberMe, senão 7 dias
     const refreshExpiresIn = options?.rememberMe
       ? '30d'
       : this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
-        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        expiresIn: accessExpiresIn as StringValue,
-      }),
-      this.jwtService.signAsync(payload, {
-        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        expiresIn: refreshExpiresIn as StringValue,
-      }),
+      this.jwtService.signAsync(payload, this.buildSignOptions(accessExpiresIn, 'access')),
+      this.jwtService.signAsync(payload, this.buildSignOptions(refreshExpiresIn, 'refresh')),
     ]);
 
     return {
@@ -230,6 +225,19 @@ export class AuthService {
    * Parse a string like "15m", "7d", "1h" into milliseconds.
    * Used by both parseExpiresInToSeconds and createRefreshToken (DRY).
    */
+  private buildSignOptions(expiresIn: string, kind: 'access' | 'refresh') {
+    const secretKey = kind === 'access' ? 'JWT_ACCESS_SECRET' : 'JWT_REFRESH_SECRET';
+    const issuer = this.configService.get<string>('JWT_ISSUER');
+    const audience = this.configService.get<string>('JWT_AUDIENCE');
+
+    return {
+      secret: this.configService.getOrThrow<string>(secretKey),
+      expiresIn: expiresIn as StringValue,
+      ...(issuer ? { issuer } : {}),
+      ...(audience ? { audience } : {}),
+    };
+  }
+
   private parseExpiresInToMs(expiresIn: string): number {
     const match = expiresIn.match(/^(\d+)([smhd])$/);
     if (!match) return 7 * 24 * 60 * 60 * 1000; // default 7 dias

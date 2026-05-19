@@ -3,6 +3,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { OrderStatus, KeyStatus } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
+import { userPublicSelect } from '@/common/prisma/user-public.select';
 
 @Injectable()
 export class OrdersRepository {
@@ -81,7 +82,7 @@ export class OrdersRepository {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
-        user: true,
+        user: { select: userPublicSelect },
         items: {
           include: {
             product: true,
@@ -219,7 +220,7 @@ export class OrdersRepository {
     return this.prisma.order.findMany({
       take: limit,
       include: {
-        user: true,
+        user: { select: userPublicSelect },
         items: {
           include: {
             product: true,

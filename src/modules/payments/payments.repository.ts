@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
+import { userPublicSelect } from '@/common/prisma/user-public.select';
 
 @Injectable()
 export class PaymentsRepository {
@@ -74,7 +75,7 @@ export class PaymentsRepository {
             },
           },
         },
-        user: true,
+        user: { select: userPublicSelect },
       },
     });
 
@@ -90,7 +91,7 @@ export class PaymentsRepository {
       where: { orderId },
       include: {
         order: true,
-        user: true,
+        user: { select: userPublicSelect },
       },
     });
   }
@@ -218,7 +219,7 @@ export class PaymentsRepository {
       where: { providerTxId },
       include: {
         order: true,
-        user: true,
+        user: { select: userPublicSelect },
       },
     });
   }

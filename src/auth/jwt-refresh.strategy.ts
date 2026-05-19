@@ -11,8 +11,8 @@ import { extractRefreshToken } from '@/auth/token-extractor.util';
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
   constructor(
-    private configService: ConfigService,
-    private prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {
     super({
       jwtFromRequest: extractRefreshToken,
@@ -28,40 +28,27 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       throw new UnauthorizedException('Refresh token não fornecido.');
     }
 
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    const storedToken = await this.prisma.refreshToken.findFirst({
+      where: {
+        userId: payload.sub,
+        token: tokenHash,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!storedToken) {
+      throw new UnauthorizedException('Refresh token inválido ou expirado.');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
+      select: { id: true, email: true, role: true },
     });
 
-    if (!user) throw new UnauthorizedException('Usuário não encontrado.');
-
-    const storedTokens = await this.prisma.refreshToken.findMany({
-      where: {
-        userId: user.id,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 10,
-    });
-
-    if (storedTokens.length === 0) {
-      throw new UnauthorizedException('Nenhum refresh token válido encontrado.');
-    }
-
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    let tokenValid = false;
-    for (const storedToken of storedTokens) {
-      if (tokenHash === storedToken.token) {
-        tokenValid = true;
-        break;
-      }
-    }
-
-    if (!tokenValid) {
-      throw new UnauthorizedException('Refresh token inválido ou não corresponde ao usuário.');
+    if (!user) {
+      throw new UnauthorizedException('Usuário não encontrado.');
     }
 
     return {

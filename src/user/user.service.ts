@@ -11,14 +11,11 @@ import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { DEFAULT_PAGE_SIZE, DEFAULT_BCRYPT_SALT_ROUNDS } from '@/common/constants';
 import { Role } from '@prisma/client';
-
-/**
- * Remove sensitive fields from user records before returning to clients.
- */
-function sanitizeUser<T extends { password: string }>(user: T): Omit<T, 'password'> {
-  const { password: _, ...safe } = user;
-  return safe;
-}
+import {
+  userExistsSelect,
+  userPublicSelect,
+  type UserPublic,
+} from '@/common/prisma/user-public.select';
 
 @Injectable()
 export class UserService {
@@ -29,6 +26,7 @@ export class UserService {
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
+      select: userExistsSelect,
     });
 
     if (existingUser) {
@@ -37,28 +35,28 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(password, DEFAULT_BCRYPT_SALT_ROUNDS);
 
-    const user = await this.prisma.user.create({
+    return this.prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
         role: role || Role.USER,
       },
+      select: userPublicSelect,
     });
-
-    return sanitizeUser(user);
   }
 
-  async findById(id: string) {
+  async findById(id: string): Promise<UserPublic> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      select: userPublicSelect,
     });
 
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
     }
 
-    return sanitizeUser(user);
+    return user;
   }
 
   async findAll(page: number = 1, limit: number = DEFAULT_PAGE_SIZE) {
@@ -69,14 +67,13 @@ export class UserService {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        select: userPublicSelect,
       }),
       this.prisma.user.count(),
     ]);
 
-    const safeUsers = users.map(user => sanitizeUser(user));
-
     return {
-      data: safeUsers,
+      data: users,
       meta: {
         total,
         page,
@@ -86,53 +83,51 @@ export class UserService {
     };
   }
 
-  async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-    });
-
-    if (!user) {
-      throw new NotFoundException('Usuário não encontrado.');
-    }
-
-    return sanitizeUser(user);
+  async findOne(id: string): Promise<UserPublic> {
+    return this.findById(id);
   }
 
-  async findByEmail(email: string) {
+  async findByEmail(email: string): Promise<UserPublic> {
     const user = await this.prisma.user.findUnique({
       where: { email },
+      select: userPublicSelect,
     });
 
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
     }
 
-    return sanitizeUser(user);
+    return user;
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: userExistsSelect,
+    });
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
     }
 
     if (dto.email && dto.email !== user.email) {
-      const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+      const existing = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+        select: userExistsSelect,
+      });
       if (existing) {
         throw new ConflictException('Email já cadastrado.');
       }
     }
 
-    const updated = await this.prisma.user.update({
+    return this.prisma.user.update({
       where: { id },
       data: {
         name: dto.name,
         email: dto.email,
         avatarUrl: dto.avatarUrl,
       },
+      select: userPublicSelect,
     });
-
-    return sanitizeUser(updated);
   }
 
   async adminUpdateUser(
@@ -141,13 +136,19 @@ export class UserService {
     requestingUserId: string,
     requestingUserRole: string,
   ) {
-    const target = await this.prisma.user.findUnique({ where: { id } });
+    const target = await this.prisma.user.findUnique({
+      where: { id },
+      select: userExistsSelect,
+    });
     if (!target) {
       throw new NotFoundException('Usuário não encontrado.');
     }
 
     if (dto.email && dto.email !== target.email) {
-      const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+      const existing = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+        select: userExistsSelect,
+      });
       if (existing) {
         throw new ConflictException('Email já cadastrado.');
       }
@@ -172,7 +173,7 @@ export class UserService {
       throw new ForbiddenException('Você não pode alterar seu próprio cargo.');
     }
 
-    const updated = await this.prisma.user.update({
+    return this.prisma.user.update({
       where: { id },
       data: {
         name: dto.name,
@@ -180,13 +181,15 @@ export class UserService {
         role: dto.role,
         avatarUrl: dto.avatarUrl,
       },
+      select: userPublicSelect,
     });
-
-    return sanitizeUser(updated);
   }
 
   async deleteUser(id: string, requestingUserRole: string) {
-    const target = await this.prisma.user.findUnique({ where: { id } });
+    const target = await this.prisma.user.findUnique({
+      where: { id },
+      select: userExistsSelect,
+    });
     if (!target) {
       throw new NotFoundException('Usuário não encontrado.');
     }

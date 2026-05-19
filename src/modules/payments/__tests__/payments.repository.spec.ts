@@ -198,7 +198,7 @@ describe('PaymentsRepository', () => {
               },
             },
           },
-          user: true,
+          user: { select: expect.any(Object) },
         },
       });
       expect(result).toEqual(mockPayment);
@@ -226,7 +226,7 @@ describe('PaymentsRepository', () => {
         where: { orderId: 'order-id-1' },
         include: {
           order: true,
-          user: true,
+          user: { select: expect.any(Object) },
         },
       });
       expect(result).toEqual(mockPayment);
@@ -496,7 +496,7 @@ describe('PaymentsRepository', () => {
         where: { providerTxId: 'asaas-tx-1' },
         include: {
           order: true,
-          user: true,
+          user: { select: expect.any(Object) },
         },
       });
       expect(result).toEqual(mockPayment);

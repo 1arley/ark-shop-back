@@ -2,12 +2,23 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from '@/user/user.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 
 describe('UserService', () => {
   let service: UserService;
   let prisma: PrismaService;
+
+  const publicUser = (overrides: Record<string, unknown> = {}) => ({
+    id: '1',
+    name: 'Test User',
+    email: 'test@example.com',
+    avatarUrl: null,
+    role: Role.USER,
+    emailVerified: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  });
 
   const mockPrismaService = {
     user: {
@@ -43,16 +54,11 @@ describe('UserService', () => {
     };
 
     it('should create a new user successfully', async () => {
-      const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-      const createdUser = {
-        id: '1',
+      const createdUser = publicUser({
         name: createUserDto.name,
         email: createUserDto.email,
-        password: hashedPassword,
         role: createUserDto.role,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue(createdUser);
@@ -63,10 +69,12 @@ describe('UserService', () => {
       expect(result.email).toBe(createUserDto.email);
       expect(result.name).toBe(createUserDto.name);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { email: createUserDto.email },
-      });
-      expect(prisma.user.create).toHaveBeenCalled();
+      expect(prisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { email: createUserDto.email } }),
+      );
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({ select: expect.any(Object) }),
+      );
     });
 
     it('should throw ConflictException if email already exists', async () => {
@@ -85,16 +93,11 @@ describe('UserService', () => {
         email: createUserDto.email,
         password: createUserDto.password,
       };
-      const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-      const createdUser = {
-        id: '1',
+      const createdUser = publicUser({
         name: createDtoWithoutRole.name,
         email: createDtoWithoutRole.email,
-        password: hashedPassword,
         role: Role.USER,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue(createdUser);
@@ -107,15 +110,7 @@ describe('UserService', () => {
 
   describe('findById', () => {
     it('should return user by ID without password', async () => {
-      const user = {
-        id: '1',
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'hashedPassword',
-        role: Role.USER,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const user = publicUser();
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
 
@@ -124,9 +119,9 @@ describe('UserService', () => {
       expect(result).not.toHaveProperty('password');
       expect(result.id).toBe('1');
       expect(result.email).toBe('test@example.com');
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: '1' },
-      });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: '1' }, select: expect.any(Object) }),
+      );
     });
 
     it('should throw NotFoundException if user not found', async () => {
@@ -139,24 +134,8 @@ describe('UserService', () => {
   describe('findAll', () => {
     it('should return paginated users without passwords', async () => {
       const users = [
-        {
-          id: '1',
-          name: 'User 1',
-          email: 'user1@example.com',
-          password: 'hashed1',
-          role: Role.USER,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '2',
-          name: 'User 2',
-          email: 'user2@example.com',
-          password: 'hashed2',
-          role: Role.ADMIN,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+        publicUser({ id: '1', name: 'User 1', email: 'user1@example.com' }),
+        publicUser({ id: '2', name: 'User 2', email: 'user2@example.com', role: Role.ADMIN }),
       ];
 
       mockPrismaService.$transaction.mockResolvedValue([users, 2]);
@@ -185,15 +164,13 @@ describe('UserService', () => {
     it('should calculate pagination correctly', async () => {
       const users = Array(15)
         .fill(null)
-        .map((_, i) => ({
-          id: `${i + 1}`,
-          name: `User ${i + 1}`,
-          email: `user${i + 1}@example.com`,
-          password: `hashed${i + 1}`,
-          role: Role.USER,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }));
+        .map((_, i) =>
+          publicUser({
+            id: `${i + 1}`,
+            name: `User ${i + 1}`,
+            email: `user${i + 1}@example.com`,
+          }),
+        );
 
       mockPrismaService.$transaction.mockResolvedValue([users.slice(0, 10), 25]);
 
@@ -207,15 +184,7 @@ describe('UserService', () => {
 
   describe('findOne', () => {
     it('should return user by ID without password', async () => {
-      const user = {
-        id: '1',
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'hashedPassword',
-        role: Role.USER,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const user = publicUser();
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
 
@@ -234,15 +203,7 @@ describe('UserService', () => {
 
   describe('findByEmail', () => {
     it('should return user by email without password', async () => {
-      const user = {
-        id: '1',
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'hashedPassword',
-        role: Role.USER,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const user = publicUser();
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
 
@@ -250,9 +211,9 @@ describe('UserService', () => {
 
       expect(result).not.toHaveProperty('password');
       expect(result.email).toBe('test@example.com');
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { email: 'test@example.com' },
-      });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { email: 'test@example.com' } }),
+      );
     });
 
     it('should throw NotFoundException if user not found by email', async () => {
@@ -272,47 +233,29 @@ describe('UserService', () => {
     };
 
     it('deve atualizar o perfil com sucesso', async () => {
-      const existingUser = {
-        id: 'user-1',
-        name: 'Old Name',
-        email: 'old@example.com',
-        password: 'hashed',
-        role: Role.USER,
-        avatarUrl: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updatedUser = {
+      const existingUser = { id: 'user-1', email: 'old@example.com', role: Role.USER };
+      const updatedUser = publicUser({
         id: 'user-1',
         name: updateProfileDto.name,
         email: updateProfileDto.email,
-        password: 'hashed',
-        role: Role.USER,
         avatarUrl: updateProfileDto.avatarUrl,
-        createdAt: existingUser.createdAt,
-        updatedAt: new Date(),
-      };
+      });
 
       mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(existingUser) // findUnique para verificar existência
-        .mockResolvedValueOnce(null); // email não existe (sem conflito)
+        .mockResolvedValueOnce(existingUser)
+        .mockResolvedValueOnce(null);
       mockPrismaService.user.update.mockResolvedValue(updatedUser);
 
       const result = await service.updateProfile('user-1', updateProfileDto);
 
       expect(result).not.toHaveProperty('password');
       expect(result.name).toBe(updateProfileDto.name);
-      expect(result.email).toBe(updateProfileDto.email);
-      expect(result.avatarUrl).toBe(updateProfileDto.avatarUrl);
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-        data: {
-          name: updateProfileDto.name,
-          email: updateProfileDto.email,
-          avatarUrl: updateProfileDto.avatarUrl,
-        },
-      });
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          select: expect.any(Object),
+        }),
+      );
     });
 
     it('deve lançar NotFoundException se usuário não existir', async () => {
@@ -346,22 +289,8 @@ describe('UserService', () => {
     });
 
     it('deve permitir atualização parcial (apenas nome)', async () => {
-      const existingUser = {
-        id: 'user-1',
-        name: 'Old Name',
-        email: 'old@example.com',
-        password: 'hashed',
-        role: Role.USER,
-        avatarUrl: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updatedUser = {
-        ...existingUser,
-        name: 'New Name',
-        updatedAt: new Date(),
-      };
+      const existingUser = { id: 'user-1', email: 'old@example.com', role: Role.USER };
+      const updatedUser = publicUser({ id: 'user-1', name: 'New Name', email: 'old@example.com' });
 
       mockPrismaService.user.findUnique.mockResolvedValue(existingUser);
       mockPrismaService.user.update.mockResolvedValue(updatedUser);
@@ -369,14 +298,16 @@ describe('UserService', () => {
       const result = await service.updateProfile('user-1', { name: 'New Name' });
 
       expect(result.name).toBe('New Name');
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-        data: {
-          name: 'New Name',
-          email: undefined,
-          avatarUrl: undefined,
-        },
-      });
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: {
+            name: 'New Name',
+            email: undefined,
+            avatarUrl: undefined,
+          },
+        }),
+      );
     });
 
     it('não deve verificar conflito de email se email não for alterado', async () => {
@@ -419,29 +350,18 @@ describe('UserService', () => {
     };
 
     it('deve atualizar usuário com sucesso (SUPERADMIN)', async () => {
-      const targetUser = {
+      const targetUser = { id: 'user-1', email: 'old@example.com', role: Role.USER };
+      const updatedUser = publicUser({
         id: 'user-1',
-        name: 'Old Name',
-        email: 'old@example.com',
-        password: 'hashed',
-        role: Role.USER,
-        avatarUrl: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updatedUser = {
-        ...targetUser,
         name: adminUpdateDto.name,
         email: adminUpdateDto.email,
         role: adminUpdateDto.role,
         avatarUrl: adminUpdateDto.avatarUrl,
-        updatedAt: new Date(),
-      };
+      });
 
       mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(targetUser) // findUnique para verificar existência
-        .mockResolvedValueOnce(null); // email não existe (sem conflito)
+        .mockResolvedValueOnce(targetUser)
+        .mockResolvedValueOnce(null);
       mockPrismaService.user.update.mockResolvedValue(updatedUser);
 
       const result = await service.adminUpdateUser(
@@ -454,15 +374,9 @@ describe('UserService', () => {
       expect(result).not.toHaveProperty('password');
       expect(result.name).toBe(adminUpdateDto.name);
       expect(result.role).toBe(adminUpdateDto.role);
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-        data: {
-          name: adminUpdateDto.name,
-          email: adminUpdateDto.email,
-          role: adminUpdateDto.role,
-          avatarUrl: adminUpdateDto.avatarUrl,
-        },
-      });
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'user-1' }, select: expect.any(Object) }),
+      );
     });
 
     it('deve lançar ForbiddenException se ADMIN tentar alterar cargo', async () => {

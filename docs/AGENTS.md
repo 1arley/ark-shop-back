@@ -53,5 +53,26 @@ npm run format          # prettier --write src/** test/**
 - **typecheck:** No dedicated `typecheck` script — rely on `nest build` or tsc via IDE
 - **Lint rules:** `no-explicit-any` and no-unsafe-\* rules are `warn` (not `error`) to accommodate NestJS patterns. `no-floating-promises` is `error` (unless void). Relaxed rules for test files
 
+## Installed agent skills (global)
+
+When changing backend code, prefer these skills (installed via `npx skills add`):
+
+| Skill                              | Use for                               |
+| ---------------------------------- | ------------------------------------- |
+| `nestjs-clean-typescript`          | NestJS structure, typing, naming      |
+| `prisma`                           | Schema, queries, migrations           |
+| `jwt-security`                     | Auth tokens, guards, refresh rotation |
+| `supabase-postgres-best-practices` | Indexes, Postgres performance         |
+| `postgresql-code-review`           | Migration/SQL review                  |
+| `test-driven-development`          | New behavior + tests                  |
+| `systematic-debugging`             | Failures in e2e/unit/CI               |
+| `verification-before-completion`   | Before marking work done              |
+| `requesting-code-review`           | Pre-merge review checklist            |
+| `docker-compose-orchestration`     | Docker/test compose                   |
+| `github-actions-docs`              | `.github/workflows`                   |
+| `sentry`                           | Error tracking / `instrument.ts`      |
+
+Cursor rule: `.cursor/rules/backend-best-practices.mdc` (auto-attached for `src/`, `prisma/`, tests, Docker, CI).
+
 Skills provide specialized instructions and workflows for specific tasks.
 Use the skill tool to load a skill when a task matches its description.

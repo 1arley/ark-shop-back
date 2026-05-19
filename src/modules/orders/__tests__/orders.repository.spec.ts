@@ -261,7 +261,7 @@ describe('OrdersRepository', () => {
       expect(prisma.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'order-id-1' },
         include: {
-          user: true,
+          user: { select: expect.any(Object) },
           items: {
             include: {
               product: true,
@@ -574,7 +574,7 @@ describe('OrdersRepository', () => {
       expect(prisma.order.findMany).toHaveBeenCalledWith({
         take: 10,
         include: {
-          user: true,
+          user: { select: expect.any(Object) },
           items: {
             include: {
               product: true,

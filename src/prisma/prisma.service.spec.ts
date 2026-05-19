@@ -68,15 +68,18 @@ describe('PrismaService', () => {
         warn: jest.fn(),
       };
 
+      const mockPgPool = { end: jest.fn().mockResolvedValue(undefined) };
       const mockPrismaService = {
         $connect: jest.fn().mockResolvedValue(undefined),
         $disconnect: jest.fn().mockResolvedValue(undefined),
+        pgPool: mockPgPool,
         logger: mockLogger,
       };
 
       await PrismaService.prototype.onModuleDestroy.call(mockPrismaService);
 
       expect(mockPrismaService.$disconnect).toHaveBeenCalled();
+      expect(mockPgPool.end).toHaveBeenCalled();
     });
 
     it('n\u00e3o deve lan\u00e7ar erro quando $disconnect falha', async () => {

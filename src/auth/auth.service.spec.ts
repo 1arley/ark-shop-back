@@ -213,7 +213,6 @@ describe('AuthService', () => {
         id: '1',
         name: 'Test User',
         email: 'test@example.com',
-        password: 'hashed-password',
         role: 'USER',
         emailVerified: true,
         createdAt,
@@ -225,17 +224,14 @@ describe('AuthService', () => {
       const result = await service.validateUser('1');
 
       expect(result).not.toHaveProperty('password');
-      expect(result).toEqual({
-        id: '1',
-        name: 'Test User',
-        email: 'test@example.com',
-        role: 'USER',
-        emailVerified: true,
-        createdAt,
-        updatedAt,
-      });
+      expect(result).toEqual(user);
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: '1' },
+        select: expect.objectContaining({
+          id: true,
+          email: true,
+          role: true,
+        }),
       });
     });
 
@@ -808,14 +804,23 @@ describe('AuthService', () => {
     it('deve gerar tokens com rememberMe (30d) quando flag e true', async () => {
       jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-token');
       jest.spyOn(configService, 'getOrThrow').mockReturnValue('secret');
+      jest.spyOn(configService, 'get').mockImplementation((key: string) => {
+        if (key === 'JWT_ACCESS_EXPIRES_IN') return '15m';
+        return undefined;
+      });
 
-      const result = await (service as any).getTokens('1', 'test@example.com', 'USER', {
+      const result = await (service as any).getTokens('1', 'USER', {
         rememberMe: true,
       });
 
       expect(result).toHaveProperty('remember_me', true);
       expect(result).toHaveProperty('access_token', 'fake-token');
       expect(result).toHaveProperty('refresh_token', 'fake-token');
+      expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+        1,
+        { sub: '1', role: 'USER', jti: expect.any(String) },
+        expect.objectContaining({ secret: 'secret', expiresIn: '15m' }),
+      );
       expect(jwtService.signAsync).toHaveBeenNthCalledWith(2, expect.any(Object), {
         secret: 'secret',
         expiresIn: '30d',
@@ -827,7 +832,7 @@ describe('AuthService', () => {
       jest.spyOn(configService, 'getOrThrow').mockReturnValue('secret');
       jest.spyOn(configService, 'get').mockReturnValue('7d');
 
-      const result = await (service as any).getTokens('1', 'test@example.com', 'USER', {
+      const result = await (service as any).getTokens('1', 'USER', {
         rememberMe: false,
       });
 
@@ -839,7 +844,7 @@ describe('AuthService', () => {
       jest.spyOn(configService, 'getOrThrow').mockReturnValue('secret');
       jest.spyOn(configService, 'get').mockReturnValue(undefined);
 
-      const result = await (service as any).getTokens('1', 'test@example.com', 'USER', {});
+      const result = await (service as any).getTokens('1', 'USER', {});
 
       expect(result).toHaveProperty('remember_me', false);
     });
