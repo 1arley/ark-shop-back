@@ -2,7 +2,7 @@
 import './instrument';
 
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, INestApplication, Logger, VersioningType } from '@nestjs/common';
+import { ValidationPipe, INestApplication, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { PinoLogger } from '@/logger/pino-logger.service';
@@ -53,13 +53,6 @@ export async function createApp(): Promise<INestApplication> {
   // ─── API Prefix ───────────────────────────────────────────────────
   const apiPrefix = process.env.API_PREFIX || 'api';
   app.setGlobalPrefix(apiPrefix);
-
-  // ─── API Versioning (URI-based: /api/v1/...) ─────────────────────
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: '1',
-    prefix: 'v',
-  });
 
   // ─── CORS ─────────────────────────────────────────────────────────
   const corsOrigins = process.env.CORS_ORIGIN
@@ -153,7 +146,7 @@ async function bootstrap() {
 
     await app.listen(port);
 
-    logger.log(`Application is running on: http://localhost:${port}/${apiPrefix}/v1`);
+    logger.log(`Application is running on: http://localhost:${port}/${apiPrefix}`);
     if (process.env.NODE_ENV !== 'production') {
       const swaggerPath = process.env.SWAGGER_PATH || 'api/docs';
       logger.log(`Swagger documentation: http://localhost:${port}/${swaggerPath}`);

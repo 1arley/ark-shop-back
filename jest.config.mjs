@@ -9,6 +9,7 @@ export default {
   coverageDirectory: '../coverage',
   coverageReporters: ['text', 'lcov', 'json-summary'],
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/tests/setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^~/(.*)$': '<rootDir>/$1',
