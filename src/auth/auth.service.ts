@@ -170,11 +170,7 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token inválido ou expirado.');
     }
 
-    // Derive rememberMe from configured expiry values instead of magic number
-    const refreshExpiryDays = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
-    const normalExpiryMs = this.parseExpiresInToMs(refreshExpiryDays);
-    const remainingMs = storedToken.expiresAt.getTime() - Date.now();
-    const isRememberMe = remainingMs > normalExpiryMs;
+    const isRememberMe = storedToken.rememberMe;
 
     const tokens = await this.getTokens(userId, user.role, {
       rememberMe: isRememberMe,
@@ -274,6 +270,7 @@ export class AuthService {
         token: hashedToken,
         userId,
         expiresAt,
+        rememberMe: options?.rememberMe ?? false,
       },
     });
   }

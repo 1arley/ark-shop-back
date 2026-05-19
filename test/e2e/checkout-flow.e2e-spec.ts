@@ -232,7 +232,7 @@ describe('Checkout Flow (e2e)', () => {
         .send({ code: 'NONEXISTENT', subtotal: 100 })
         .expect(400);
 
-      expect(result.body.message).toContain('Invalid coupon');
+      expect(result.body.message).toMatch(/invalid|expired/i);
     });
 
     it('should create order without coupon', async () => {

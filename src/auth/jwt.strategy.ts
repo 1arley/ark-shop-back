@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/prisma/prisma.service';
 import { JwtPayload } from '@/auth/interfaces/jwt-payload.interface';
 import { cookieOrBearerExtractor } from '@/auth/token-extractor.util';
+import { buildJwtVerifyOptions } from '@/auth/jwt-verify-options.util';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -15,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: cookieOrBearerExtractor,
       ignoreExpiration: false,
-      secretOrKey: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+      ...buildJwtVerifyOptions(configService, 'JWT_ACCESS_SECRET'),
     });
   }
 

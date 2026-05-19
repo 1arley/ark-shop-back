@@ -1,3 +1,19 @@
+## [Unreleased]
+
+### Security
+
+- Stop leaking user password hashes via `user: true` Prisma includes; use `userPublicSelect` on orders/payments APIs.
+- JWT access tokens no longer include `email` in the payload (`sub`, `role`, `jti` only). Clients must use `/user/me` or the login response for email.
+- Optional `JWT_ISSUER` / `JWT_AUDIENCE` are validated on access and refresh tokens when configured.
+
+### Changed
+
+- Refresh tokens store `rememberMe` explicitly instead of inferring from expiry duration.
+- Postgres indexes for auth tokens, payments, and fraud logs; unique `(cartId, productId)` on cart items (duplicates merged in migration).
+- Docker app healthcheck uses `wget` against `/api/v1/health/ready`.
+- Refresh endpoint accepts Bearer / `x-refresh-token` / cookie; CI reads coverage from `coverage-summary.json`.
+- E2E uses `EXPOSE_AUTH_TOKENS_IN_RESPONSE=true` in `.env.test` only (production keeps httpOnly cookies).
+
 ## [1.20.2](https://github.com/1arley/ark-shop-back/compare/v1.20.1...v1.20.2) (2026-05-17)
 
 ### Bug Fixes

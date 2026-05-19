@@ -7,6 +7,7 @@ import { JwtPayload } from '@/auth/interfaces/jwt-payload.interface';
 import { Request } from 'express';
 import * as crypto from 'crypto';
 import { extractRefreshToken } from '@/auth/token-extractor.util';
+import { buildJwtVerifyOptions } from '@/auth/jwt-verify-options.util';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
@@ -17,7 +18,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     super({
       jwtFromRequest: extractRefreshToken,
       ignoreExpiration: false,
-      secretOrKey: configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      ...buildJwtVerifyOptions(configService, 'JWT_REFRESH_SECRET'),
       passReqToCallback: true,
     });
   }

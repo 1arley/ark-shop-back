@@ -59,7 +59,9 @@ describe('AuthController (e2e)', () => {
 
       const body = response.body as RegisterResponse;
 
-      expect(body.message).toBe('Usuário cadastrado com sucesso.');
+      expect(body.message).toBe(
+        'Registration successful. Please check your email to verify your account.',
+      );
       expect(body.user).toHaveProperty('id');
       expect(body.user.email).toBe(registerDto.email);
       expect(body.user.name).toBe(registerDto.name);
@@ -90,7 +92,7 @@ describe('AuthController (e2e)', () => {
         .expect(409);
 
       const body = response.body as ErrorResponse;
-      expect(body.message).toContain('Email já cadastrado');
+      expect(body.message).toContain('Email already registered');
     });
 
     it('should return 400 when name is missing', async () => {
@@ -206,7 +208,7 @@ describe('AuthController (e2e)', () => {
         .expect(401);
 
       const body = response.body as ErrorResponse;
-      expect(body.message).toContain('Credenciais inválidas');
+      expect(body.message).toContain('Invalid credentials');
     });
 
     it('should return 401 Unauthorized for non-existent user', async () => {
@@ -223,7 +225,7 @@ describe('AuthController (e2e)', () => {
         .expect(401);
 
       const body = response.body as ErrorResponse;
-      expect(body.message).toContain('Credenciais inválidas');
+      expect(body.message).toContain('Invalid credentials');
     });
 
     it('should prevent timing attacks (similar response time for user exists/not exists)', async () => {
@@ -280,7 +282,7 @@ describe('AuthController (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/auth/refresh')
         .set('Authorization', `Bearer ${refreshToken}`)
-        .expect(201);
+        .expect(200);
 
       const body = response.body as RefreshResponse;
       expect(body).toHaveProperty('access_token');
@@ -327,7 +329,7 @@ describe('AuthController (e2e)', () => {
       const response1 = await request(app.getHttpServer())
         .post('/auth/refresh')
         .set('Authorization', `Bearer ${refreshToken}`)
-        .expect(201);
+        .expect(200);
 
       const newRefreshToken = (response1.body as RefreshResponse).refresh_token;
       expect(newRefreshToken).toBeDefined();
@@ -335,7 +337,7 @@ describe('AuthController (e2e)', () => {
       await request(app.getHttpServer())
         .post('/auth/refresh')
         .set('Authorization', `Bearer ${newRefreshToken}`)
-        .expect(201);
+        .expect(200);
 
       expect(refreshToken).not.toBe(newRefreshToken);
 
@@ -359,7 +361,7 @@ describe('AuthController (e2e)', () => {
 
       const body = loginResponse.body as ErrorResponse;
       expect(body.message).toBeDefined();
-      expect(body.message).toContain('Credenciais inválidas');
+      expect(body.message).toContain('Invalid credentials');
     });
 
     it('should have consistent responses under load', async () => {
@@ -443,7 +445,7 @@ describe('AuthController (e2e)', () => {
       const refreshResponse = await request(app.getHttpServer())
         .post('/auth/refresh')
         .set('Authorization', `Bearer ${refresh_token}`)
-        .expect(201);
+        .expect(200);
 
       const newAccessToken = (refreshResponse.body as RefreshResponse).access_token;
       expect(newAccessToken).toBeDefined();

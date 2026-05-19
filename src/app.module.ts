@@ -109,10 +109,14 @@ if (process.env.SENTRY_DSN) {
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    ...(process.env.NODE_ENV !== 'test'
+      ? [
+          {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+          },
+        ]
+      : []),
     {
       provide: APP_GUARD,
       useClass: EmailVerifiedGuard,

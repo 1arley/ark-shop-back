@@ -13,7 +13,7 @@ Audit date: 2026-05-19. Skills installed globally under `~/.agents/skills/`.
 | postgresql-code-review           | Applied           | Migration reviewed; JSONB on `FraudLog`/`Payment.webhookData` acceptable |
 | test-driven-development          | Process           | 946+ unit tests; write tests before new behavior                         |
 | systematic-debugging             | Process           | Use on failures (reproduce → root cause → fix)                           |
-| verification-before-completion   | Verified          | `npm run test` — 946 passed (last run)                                   |
+| verification-before-completion   | Verified          | `npm run test` — 947 unit + 49 e2e (last run)                            |
 | requesting-code-review           | Process           | Pre-merge checklist in skill                                             |
 | docker-compose-orchestration     | Applied           | App + Postgres healthchecks                                              |
 | github-actions-docs              | Reviewed          | CI: lint, unit cov, e2e, docker build, Trivy — aligned                   |
@@ -46,8 +46,7 @@ Audit date: 2026-05-19. Skills installed globally under `~/.agents/skills/`.
 
 1. **Payments/webhooks** — `any` for Asaas payload shapes; consider typed DTOs when API stabilizes.
 2. **RS256 JWT** — Still HS256 with secrets; asymmetric keys are a future infra change.
-3. **E2E in CI** — Run `npm run test:e2e:checkout` locally after schema changes.
-4. **Sentry CLI skill** — Read-only ops tool; use `sentry issue list` in production triage.
+3. **Sentry CLI skill** — Read-only ops tool; use `sentry issue list` in production triage.
 
 ## Verification commands
 

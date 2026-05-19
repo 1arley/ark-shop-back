@@ -124,10 +124,23 @@ describe('Token Extractor Utilities', () => {
       expect(mockReq.get).not.toHaveBeenCalled();
     });
 
+    it('deve retornar token do Authorization Bearer quando cookie e header ausentes', () => {
+      const mockReq = {
+        cookies: {},
+        get: jest.fn().mockReturnValue(undefined),
+        headers: { authorization: 'Bearer bearer-refresh-token' },
+      } as any;
+
+      const result = extractRefreshToken(mockReq);
+
+      expect(result).toBe('bearer-refresh-token');
+    });
+
     it('deve retornar null quando nem cookie nem header estao presentes', () => {
       const mockReq = {
         cookies: {},
         get: jest.fn().mockReturnValue(undefined),
+        headers: {},
       } as any;
 
       const result = extractRefreshToken(mockReq);

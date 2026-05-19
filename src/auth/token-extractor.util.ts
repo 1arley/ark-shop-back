@@ -19,10 +19,16 @@ export function extractRefreshToken(req: Request): string | null {
     return req.cookies.refresh_token;
   }
 
-  // Also check x-refresh-token header as secondary source
   const refreshHeader = req.get('x-refresh-token');
   if (refreshHeader) {
     return refreshHeader.trim();
+  }
+
+  if (req?.headers) {
+    const bearerToken = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+    if (bearerToken) {
+      return bearerToken;
+    }
   }
 
   return null;

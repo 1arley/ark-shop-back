@@ -258,6 +258,7 @@ describe('AuthService', () => {
         id: 'rt1',
         token: 'hashed-token',
         userId: '1',
+        rememberMe: false,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       };
       mockPrismaService.refreshToken.findFirst.mockResolvedValue(storedToken);
@@ -276,7 +277,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('deve preservar rememberMe quando o token antigo expira em mais de 15 dias', async () => {
+    it('deve preservar rememberMe quando o refresh token armazenado tem rememberMe true', async () => {
       const user = {
         id: '1',
         email: 'test@example.com',
@@ -284,13 +285,13 @@ describe('AuthService', () => {
         emailVerified: true,
       };
 
-      const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 dias no futuro
       mockPrismaService.user.findUnique.mockResolvedValue(user);
       mockPrismaService.refreshToken.findFirst.mockResolvedValue({
         id: 'rt1',
         token: 'hashed-token',
         userId: '1',
-        expiresAt: futureDate,
+        rememberMe: true,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       });
       jest.spyOn(jwtService, 'signAsync').mockResolvedValue('fake-jwt-token');
       jest.spyOn(configService, 'get').mockReturnValue('7d');
@@ -329,6 +330,7 @@ describe('AuthService', () => {
         id: 'rt1',
         token: 'hashed-token',
         userId: '1',
+        rememberMe: false,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       };
       mockPrismaService.user.findUnique.mockResolvedValue(user);
@@ -892,6 +894,7 @@ describe('AuthService', () => {
       const createCall = mockPrismaService.refreshToken.create.mock.calls[0];
       expect(createCall[0].data.expiresAt).toBeInstanceOf(Date);
       expect(createCall[0].data.userId).toBe('1');
+      expect(createCall[0].data.rememberMe).toBe(true);
     });
 
     it('deve criar refresh token sem rememberMe (7d por padrao)', async () => {
@@ -901,6 +904,8 @@ describe('AuthService', () => {
       await (service as any).createRefreshToken('1', 'some-token', { rememberMe: false });
 
       expect(prisma.refreshToken.create).toHaveBeenCalled();
+      const createCall = mockPrismaService.refreshToken.create.mock.calls[0];
+      expect(createCall[0].data.rememberMe).toBe(false);
     });
   });
 });

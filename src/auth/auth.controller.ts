@@ -22,6 +22,7 @@ import { SkipEmailVerification } from '@/auth/decorators/skip-email-verification
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const EXPOSE_AUTH_TOKENS_IN_BODY = process.env.EXPOSE_AUTH_TOKENS_IN_RESPONSE === 'true';
 
 function getCookieOptions(maxAgeSeconds: number) {
   return {
@@ -72,6 +73,13 @@ export class AuthController {
     return {
       user: result.user,
       emailVerified: result.emailVerified,
+      // E2E/CI: expose tokens in body (production uses httpOnly cookies only)
+      ...(EXPOSE_AUTH_TOKENS_IN_BODY
+        ? {
+            access_token: result.access_token,
+            refresh_token: result.refresh_token,
+          }
+        : {}),
     };
   }
 
@@ -95,6 +103,12 @@ export class AuthController {
 
     return {
       user: req.user,
+      ...(EXPOSE_AUTH_TOKENS_IN_BODY
+        ? {
+            access_token: result.access_token,
+            refresh_token: result.refresh_token,
+          }
+        : {}),
     };
   }
 

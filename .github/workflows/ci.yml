@@ -35,8 +35,7 @@ jobs:
 
       - name: Check coverage threshold (30%)
         run: |
-          COVERAGE=$(npx dotenv-cli -e .env.test -- npm run test:cov -- --json --coverageReporters=json-summary 2>/dev/null | tail -1)
-          TOTAL=$(echo "$COVERAGE" | jq '.total.lines.pct')
+          TOTAL=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
           echo "Line coverage: ${TOTAL}%"
           if (( $(echo "$TOTAL < 30" | bc -l) )); then
             echo "❌ Coverage ${TOTAL}% is below 30% threshold"
