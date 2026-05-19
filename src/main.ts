@@ -144,9 +144,9 @@ async function bootstrap() {
     const port = process.env.PORT || 3000;
     const apiPrefix = process.env.API_PREFIX || 'api';
 
-  await app.listen(port);
+    await app.listen(port);
 
-  logger.log(`Application is running on: http://localhost:${port}/${apiPrefix}`);
+    logger.log(`Application is running on: http://localhost:${port}/${apiPrefix}`);
     if (process.env.NODE_ENV !== 'production') {
       const swaggerPath = process.env.SWAGGER_PATH || 'api/docs';
       logger.log(`Swagger documentation: http://localhost:${port}/${swaggerPath}`);
