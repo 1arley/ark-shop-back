@@ -1,8 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CouponsService } from '../coupons.service';
 import { CouponsRepository } from '../coupons.repository';
-import { CouponType } from '@prisma/client';
 import { NotFoundException } from '@nestjs/common';
+
+// Use string literals instead of CouponType enum to avoid Prisma client issues in tests
+type CouponType = 'PERCENTAGE' | 'FIXED';
+const PERCENTAGE: CouponType = 'PERCENTAGE';
+const FIXED: CouponType = 'FIXED';
 
 describe('CouponsService', () => {
   let service: CouponsService;
@@ -36,7 +40,7 @@ describe('CouponsService', () => {
     it('deve criar cupom com sucesso', async () => {
       const createDto = {
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
         isActive: true,
       };
@@ -44,7 +48,7 @@ describe('CouponsService', () => {
       const createdCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
         minPurchase: null,
         maxUses: null,
@@ -70,7 +74,7 @@ describe('CouponsService', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
         isActive: true,
         usedCount: 0,
@@ -100,7 +104,7 @@ describe('CouponsService', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
         isActive: true,
       };
@@ -126,8 +130,8 @@ describe('CouponsService', () => {
     it('deve listar cupons com paginação', async () => {
       const paginatedResult = {
         data: [
-          { id: '1', code: 'PROMO10', type: CouponType.PERCENTAGE, value: 10 },
-          { id: '2', code: 'FIXED20', type: CouponType.FIXED, value: 20 },
+          { id: '1', code: 'PROMO10', type: PERCENTAGE, value: 10 },
+          { id: '2', code: 'FIXED20', type: FIXED, value: 20 },
         ],
         meta: { total: 2, page: 1, limit: 10, totalPages: 1 },
       };
@@ -147,7 +151,7 @@ describe('CouponsService', () => {
       const updatedCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 15,
         isActive: true,
         updatedAt: new Date(),
@@ -167,7 +171,7 @@ describe('CouponsService', () => {
       const deletedCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: 10,
       };
 
@@ -185,7 +189,7 @@ describe('CouponsService', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: CouponType.PERCENTAGE,
+        type: PERCENTAGE,
         value: { toNumber: () => 10 },
         isActive: true,
         usedCount: 0,
@@ -208,7 +212,7 @@ describe('CouponsService', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'FIXED20',
-        type: CouponType.FIXED,
+        type: FIXED,
         value: { toNumber: () => 20 },
         isActive: true,
         usedCount: 0,
@@ -230,7 +234,7 @@ describe('CouponsService', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'FIXED200',
-        type: CouponType.FIXED,
+        type: FIXED,
         value: { toNumber: () => 200 },
         isActive: true,
         usedCount: 0,
