@@ -1,3 +1,17 @@
+## [1.20.5](https://github.com/1arley/ark-shop-back/compare/v1.20.4...v1.20.5) (2026-05-19)
+
+### Bug Fixes
+
+- **ci:** bust Docker cache and show all CRITICAL/HIGH vulns ([6ce9b8a](https://github.com/1arley/ark-shop-back/commit/6ce9b8a05dc7934c46b273de9a2c1e199e8c1e63))
+- **ci:** resolve PR review blockers for skills audit ([d25a78c](https://github.com/1arley/ark-shop-back/commit/d25a78c9865f7f19cc4e0b2a25152c797d76eb4f))
+- **ci:** resolve Trivy CRITICAL/HIGH vulnerabilities ([901c150](https://github.com/1arley/ark-shop-back/commit/901c150ad4aec6737629caf7fadb2e45ba173a2a))
+- **ci:** switch to Debian Slim base image and add Trivy table output ([0ffb857](https://github.com/1arley/ark-shop-back/commit/0ffb857968f72428d3a059a0d43deb3a2be6c3ef))
+- correct SARIF severity filter and add .trivyignore for unfixed OS vulns ([b329437](https://github.com/1arley/ark-shop-back/commit/b329437263248f3706285ae8f143a47ac3b8a9d3))
+- remove API versioning and apply audit fixes ([#5](https://github.com/1arley/ark-shop-back/issues/5)) ([f851206](https://github.com/1arley/ark-shop-back/commit/f8512065828ec5bc06fef30bcadda6a6babcb9a9))
+- resolve Trivy false positive and patch remaining vulnerabilities ([72683d1](https://github.com/1arley/ark-shop-back/commit/72683d1445600f80b63cc906d0cc8fd3dca07d4e))
+- **security:** apply backend skills audit best practices ([6eeeb4d](https://github.com/1arley/ark-shop-back/commit/6eeeb4d2ca1e70eed355740012967c139a4f520a))
+- **test:** align auth controller tests with EXPOSE_AUTH_TOKENS_IN_RESPONSE env var ([7086bc9](https://github.com/1arley/ark-shop-back/commit/7086bc92d83132506844a639feee11de00a50535))
+
 ## [1.20.4](https://github.com/1arley/ark-shop-back/compare/v1.20.3...v1.20.4) (2026-05-18)
 
 ### Bug Fixes
