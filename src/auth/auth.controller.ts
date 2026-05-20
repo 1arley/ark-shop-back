@@ -38,7 +38,7 @@ function getCookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
     secure: IS_PRODUCTION,
-    sameSite: 'lax' as const,
+    sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
     path: '/',
     maxAge: maxAgeSeconds,
   };
@@ -139,12 +139,12 @@ export class AuthController {
     res.clearCookie(ACCESS_TOKEN_COOKIE, {
       path: '/',
       secure: IS_PRODUCTION,
-      sameSite: 'lax' as const,
+      sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
     });
     res.clearCookie(REFRESH_TOKEN_COOKIE, {
       path: '/',
       secure: IS_PRODUCTION,
-      sameSite: 'lax' as const,
+      sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
     });
 
     return { message: 'Logout realizado com sucesso.' };
