@@ -1,3 +1,9 @@
+## [1.20.8](https://github.com/1arley/ark-shop-back/compare/v1.20.7...v1.20.8) (2026-05-20)
+
+### Bug Fixes
+
+- add httpOnly to clearCookie and strip quotes from CORS_ORIGIN ([818f2cf](https://github.com/1arley/ark-shop-back/commit/818f2cf1755ad0451a74d7ff59bfbb31be7a2331))
+
 ## [1.20.7](https://github.com/1arley/ark-shop-back/compare/v1.20.6...v1.20.7) (2026-05-20)
 
 ### Bug Fixes
