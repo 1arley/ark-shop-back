@@ -219,7 +219,7 @@ describe('ProductsRepository', () => {
         take: 10,
         where: {},
         include: { category: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ stock: 'desc' }, { createdAt: 'desc' }],
       });
       expect(prisma.product.count).toHaveBeenCalledWith({ where: {} });
     });
@@ -235,7 +235,7 @@ describe('ProductsRepository', () => {
         take: 10,
         where: { isActive: true },
         include: { category: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ stock: 'desc' }, { createdAt: 'desc' }],
       });
     });
 
@@ -250,7 +250,7 @@ describe('ProductsRepository', () => {
         take: 10,
         where: { categoryId: 'cat-1' },
         include: { category: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ stock: 'desc' }, { createdAt: 'desc' }],
       });
     });
 
@@ -270,7 +270,7 @@ describe('ProductsRepository', () => {
           ],
         },
         include: { category: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ stock: 'desc' }, { createdAt: 'desc' }],
       });
     });
 
@@ -296,7 +296,7 @@ describe('ProductsRepository', () => {
           ],
         },
         include: { category: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ stock: 'desc' }, { createdAt: 'desc' }],
       });
     });
 

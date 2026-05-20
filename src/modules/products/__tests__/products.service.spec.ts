@@ -339,7 +339,7 @@ describe('ProductsService', () => {
         name: 'Game (XBOX)',
         description: expect.stringContaining('Platform: XBOX'),
         price: 100,
-        stock: 1,
+        stock: 0,
         isActive: true,
         categoryId: undefined,
       });
@@ -364,7 +364,7 @@ describe('ProductsService', () => {
         name: 'Game (STEAM/PC)',
         description: expect.stringContaining('Platform: STEAM/PC'),
         price: 50,
-        stock: 1,
+        stock: 0,
         isActive: false,
         categoryId: 'cat-1',
       });
