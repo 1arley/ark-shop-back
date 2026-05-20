@@ -1,3 +1,9 @@
+## [1.20.7](https://github.com/1arley/ark-shop-back/compare/v1.20.6...v1.20.7) (2026-05-20)
+
+### Bug Fixes
+
+- **auth:** set SameSite=none in production for cross-origin cookie persistence ([ef58b57](https://github.com/1arley/ark-shop-back/commit/ef58b578b1e1c7413e4cc56ab52de295035ea6d5))
+
 ## [1.20.6](https://github.com/1arley/ark-shop-back/compare/v1.20.5...v1.20.6) (2026-05-20)
 
 ### Bug Fixes
