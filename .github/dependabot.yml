@@ -1,0 +1,46 @@
+# .github/dependabot.yml
+# Dependabot configuration – automatically checks for updates to
+# - npm packages (package-lock.json)
+# - Docker base images (Dockerfile)
+# - GitHub Actions used in the CI pipelines
+#
+# All updates are submitted as pull‑requests to the default branch.
+# Review and merge them after CI passes.
+
+version: 2
+updates:
+  # ---------- NPM (Node.js) ----------
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # ---------- Docker ----------
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "04:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # ---------- GitHub Actions ----------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "05:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
