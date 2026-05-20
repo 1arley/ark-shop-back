@@ -54,7 +54,12 @@ export class CartService {
     // Enriquece os itens com dados do produto
     const itemsWithProducts = cart.items.map(item => ({
       ...item,
-      product: productMap.get(item.productId) ?? null,
+      product: productMap.get(item.productId)
+        ? {
+            ...productMap.get(item.productId)!,
+            price: productMap.get(item.productId)!.price.toNumber(),
+          }
+        : null,
     }));
 
     const total = itemsWithProducts.reduce((sum, item) => {

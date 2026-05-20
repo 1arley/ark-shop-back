@@ -7,7 +7,7 @@ export class SellersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: CreateSellerDto) {
-    return this.prisma.seller.create({
+    const seller = await this.prisma.seller.create({
       data: {
         userId: data.userId,
         companyName: data.companyName,
@@ -21,6 +21,11 @@ export class SellersRepository {
         },
       },
     });
+
+    return {
+      ...seller,
+      commission: seller.commission.toNumber(),
+    };
   }
 
   /**
@@ -28,9 +33,7 @@ export class SellersRepository {
    * (chamado após criar a subconta no Asaas)
    */
   async updateAsaasData(id: string, data: { asaasAccountId: string; asaasWalletId: string }) {
-    await this.findById(id);
-
-    return this.prisma.seller.update({
+    const seller = await this.prisma.seller.update({
       where: { id },
       data: {
         asaasAccountId: data.asaasAccountId,
@@ -42,6 +45,11 @@ export class SellersRepository {
         },
       },
     });
+
+    return {
+      ...seller,
+      commission: seller.commission.toNumber(),
+    };
   }
 
   async findAll(page: number, limit: number) {
@@ -62,7 +70,10 @@ export class SellersRepository {
     ]);
 
     return {
-      data,
+      data: data.map(s => ({
+        ...s,
+        commission: s.commission.toNumber(),
+      })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
@@ -81,13 +92,14 @@ export class SellersRepository {
       throw new NotFoundException('Seller não encontrado.');
     }
 
-    return seller;
+    return {
+      ...seller,
+      commission: seller.commission.toNumber(),
+    };
   }
 
   async update(id: string, data: UpdateSellerDto) {
-    await this.findById(id);
-
-    return this.prisma.seller.update({
+    const seller = await this.prisma.seller.update({
       where: { id },
       data: {
         companyName: data.companyName,
@@ -101,11 +113,14 @@ export class SellersRepository {
         },
       },
     });
+
+    return {
+      ...seller,
+      commission: seller.commission.toNumber(),
+    };
   }
 
   async delete(id: string) {
-    await this.findById(id);
-
     return this.prisma.seller.delete({ where: { id } });
   }
 }

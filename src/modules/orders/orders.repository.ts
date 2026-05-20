@@ -75,7 +75,22 @@ export class OrdersRepository {
       },
     });
 
-    return order;
+    // Serialize Decimal fields for JSON response
+    const serializedOrder = {
+      ...order,
+      total: order.total.toNumber(),
+      subtotal: order.subtotal.toNumber(),
+      discountAmount: order.discountAmount.toNumber(),
+      items: order.items.map(item => ({
+        ...item,
+        price: item.price.toNumber(),
+        product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+      })),
+      payment: order.payment ? { ...order.payment, amount: order.payment.amount.toNumber() } : null,
+      coupon: order.coupon ? { ...order.coupon, value: order.coupon.value.toNumber() } : null,
+    };
+
+    return serializedOrder;
   }
 
   async findById(id: string) {
@@ -106,7 +121,22 @@ export class OrdersRepository {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
 
-    return order;
+    // Serialize Decimal fields
+    const serialized = {
+      ...order,
+      total: order.total.toNumber(),
+      subtotal: order.subtotal.toNumber(),
+      discountAmount: order.discountAmount.toNumber(),
+      items: order.items.map(item => ({
+        ...item,
+        price: item.price.toNumber(),
+        product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+        key: item.key ?? null,
+      })),
+      payment: order.payment ? { ...order.payment, amount: order.payment.amount.toNumber() } : null,
+    };
+
+    return serialized;
   }
 
   async findByUser(userId: string, page: number = 1, limit: number = 10) {
@@ -141,7 +171,21 @@ export class OrdersRepository {
     ]);
 
     return {
-      data: orders,
+      data: orders.map(order => ({
+        ...order,
+        total: order.total.toNumber(),
+        subtotal: order.subtotal.toNumber(),
+        discountAmount: order.discountAmount.toNumber(),
+        items: order.items.map(item => ({
+          ...item,
+          price: item.price.toNumber(),
+          product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+          key: item.key ?? null,
+        })),
+        payment: order.payment
+          ? { ...order.payment, amount: order.payment.amount.toNumber() }
+          : null,
+      })),
       meta: {
         total,
         page,
@@ -196,14 +240,28 @@ export class OrdersRepository {
       }
     }
 
-    return this.prisma.order.update({
-      where: { id },
-      data: { status },
-      include: {
-        items: true,
-        payment: true,
-      },
-    });
+    return this.prisma.order
+      .update({
+        where: { id },
+        data: { status },
+        include: {
+          items: true,
+          payment: true,
+        },
+      })
+      .then(order => ({
+        ...order,
+        total: order.total.toNumber(),
+        subtotal: order.subtotal.toNumber(),
+        discountAmount: order.discountAmount.toNumber(),
+        items: order.items.map(item => ({
+          ...item,
+          price: item.price.toNumber(),
+        })),
+        payment: order.payment
+          ? { ...order.payment, amount: order.payment.amount.toNumber() }
+          : null,
+      }));
   }
 
   async cancel(id: string) {
@@ -217,7 +275,7 @@ export class OrdersRepository {
   }
 
   async getRecentOrders(limit: number = 10) {
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       take: limit,
       include: {
         user: { select: userPublicSelect },
@@ -236,6 +294,19 @@ export class OrdersRepository {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return orders.map(order => ({
+      ...order,
+      total: order.total.toNumber(),
+      subtotal: order.subtotal.toNumber(),
+      discountAmount: order.discountAmount.toNumber(),
+      items: order.items.map(item => ({
+        ...item,
+        price: item.price.toNumber(),
+        product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+        key: item.key ?? null,
+      })),
+    }));
   }
 
   /**
@@ -342,7 +413,7 @@ export class OrdersRepository {
       }
 
       // Update order status to delivered
-      return tx.order.update({
+      const delivered = await tx.order.update({
         where: { id: orderId },
         data: { status: OrderStatus.DELIVERED },
         include: {
@@ -350,6 +421,20 @@ export class OrdersRepository {
           payment: true,
         },
       });
+
+      return {
+        ...delivered,
+        total: delivered.total.toNumber(),
+        subtotal: delivered.subtotal.toNumber(),
+        discountAmount: delivered.discountAmount.toNumber(),
+        items: delivered.items.map(item => ({
+          ...item,
+          price: item.price.toNumber(),
+        })),
+        payment: delivered.payment
+          ? { ...delivered.payment, amount: delivered.payment.amount.toNumber() }
+          : null,
+      };
     });
   }
 }

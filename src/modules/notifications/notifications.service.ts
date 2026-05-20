@@ -21,8 +21,11 @@ export class NotificationsService {
   }
 
   async markAsRead(id: string, userId: string) {
-    await this.findOne(id, userId);
-    return this.repository.markAsRead(id, userId);
+    const result = await this.repository.markAsRead(id, userId);
+    if (!result) {
+      throw new NotFoundException('Notificação não encontrada ou não pertence ao usuário.');
+    }
+    return result;
   }
 
   async markAllAsRead(userId: string) {

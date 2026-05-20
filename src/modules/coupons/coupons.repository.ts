@@ -8,7 +8,7 @@ export class CouponsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: CreateCouponDto) {
-    return this.prisma.coupon.create({
+    const coupon = await this.prisma.coupon.create({
       data: {
         code: data.code.toUpperCase(),
         type: data.type,
@@ -20,6 +20,12 @@ export class CouponsRepository {
         isActive: data.isActive ?? true,
       },
     });
+
+    return {
+      ...coupon,
+      value: coupon.value.toNumber(),
+      minPurchase: coupon.minPurchase?.toNumber() ?? null,
+    };
   }
 
   async findById(id: string) {
@@ -31,7 +37,11 @@ export class CouponsRepository {
       throw new NotFoundException(`Coupon with ID ${id} not found`);
     }
 
-    return coupon;
+    return {
+      ...coupon,
+      value: coupon.value.toNumber(),
+      minPurchase: coupon.minPurchase?.toNumber() ?? null,
+    };
   }
 
   async findByCode(code: string) {
@@ -53,7 +63,11 @@ export class CouponsRepository {
     ]);
 
     return {
-      data: coupons,
+      data: coupons.map(c => ({
+        ...c,
+        value: c.value.toNumber(),
+        minPurchase: c.minPurchase?.toNumber() ?? null,
+      })),
       meta: {
         total,
         page,
@@ -64,9 +78,7 @@ export class CouponsRepository {
   }
 
   async update(id: string, data: UpdateCouponDto) {
-    await this.findById(id);
-
-    return this.prisma.coupon.update({
+    const coupon = await this.prisma.coupon.update({
       where: { id },
       data: {
         ...(data.code && { code: data.code.toUpperCase() }),
@@ -83,11 +95,15 @@ export class CouponsRepository {
         ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
     });
+
+    return {
+      ...coupon,
+      value: coupon.value.toNumber(),
+      minPurchase: coupon.minPurchase?.toNumber() ?? null,
+    };
   }
 
   async delete(id: string) {
-    await this.findById(id);
-
     return this.prisma.coupon.delete({
       where: { id },
     });

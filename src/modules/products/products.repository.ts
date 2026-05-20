@@ -9,7 +9,7 @@ export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: CreateProductDto) {
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: {
         name: data.name,
         description: data.description,
@@ -20,6 +20,8 @@ export class ProductsRepository {
         imageUrl: data.imageUrl,
       },
     });
+
+    return { ...product, price: product.price.toNumber() };
   }
 
   async findById(id: string) {
@@ -37,7 +39,10 @@ export class ProductsRepository {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
-    return product;
+    return {
+      ...product,
+      price: product.price.toNumber(),
+    };
   }
 
   async findAll(
@@ -77,7 +82,7 @@ export class ProductsRepository {
     ]);
 
     return {
-      data: products,
+      data: products.map(p => ({ ...p, price: p.price.toNumber() })),
       meta: {
         total,
         page,
@@ -88,15 +93,7 @@ export class ProductsRepository {
   }
 
   async update(id: string, data: UpdateProductDto) {
-    const product = await this.prisma.product.findUnique({
-      where: { id },
-    });
-
-    if (!product) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
-    }
-
-    return this.prisma.product.update({
+    const product = await this.prisma.product.update({
       where: { id },
       data: {
         name: data.name,
@@ -108,17 +105,11 @@ export class ProductsRepository {
         imageUrl: data.imageUrl,
       },
     });
+
+    return { ...product, price: product.price.toNumber() };
   }
 
   async delete(id: string) {
-    const product = await this.prisma.product.findUnique({
-      where: { id },
-    });
-
-    if (!product) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
-    }
-
     return this.prisma.product.delete({
       where: { id },
     });
@@ -143,7 +134,7 @@ export class ProductsRepository {
     ]);
 
     return {
-      data: products,
+      data: products.map(p => ({ ...p, price: p.price.toNumber() })),
       meta: {
         total,
         page,

@@ -28,7 +28,10 @@ export class PaymentsRepository {
       },
     });
 
-    return payment;
+    return {
+      ...payment,
+      amount: payment.amount.toNumber(),
+    };
   }
 
   async createPixPayment(
@@ -43,7 +46,7 @@ export class PaymentsRepository {
       expiresAt?: Date;
     },
   ) {
-    return this.prisma.payment.create({
+    const payment = await this.prisma.payment.create({
       data: {
         orderId,
         userId,
@@ -60,6 +63,11 @@ export class PaymentsRepository {
         order: true,
       },
     });
+
+    return {
+      ...payment,
+      amount: payment.amount.toNumber(),
+    };
   }
 
   async findById(id: string) {
@@ -83,17 +91,42 @@ export class PaymentsRepository {
       throw new NotFoundException(`Payment with ID ${id} not found`);
     }
 
-    return payment;
+    return {
+      ...payment,
+      amount: payment.amount.toNumber(),
+      order: payment.order
+        ? {
+            ...payment.order,
+            total: payment.order.total.toNumber(),
+            subtotal: payment.order.subtotal.toNumber(),
+            discountAmount: payment.order.discountAmount.toNumber(),
+            items: payment.order.items.map(item => ({
+              ...item,
+              price: item.price.toNumber(),
+              product: item.product
+                ? { ...item.product, price: item.product.price.toNumber() }
+                : null,
+            })),
+          }
+        : null,
+    };
   }
 
   async findByOrderId(orderId: string) {
-    return this.prisma.payment.findUnique({
+    const payment = await this.prisma.payment.findUnique({
       where: { orderId },
       include: {
         order: true,
         user: { select: userPublicSelect },
       },
     });
+
+    if (!payment) return null;
+
+    return {
+      ...payment,
+      amount: payment.amount.toNumber(),
+    };
   }
 
   async updatePaymentStatus(
@@ -102,17 +135,22 @@ export class PaymentsRepository {
     providerTxId?: string,
     webhookData?: any,
   ) {
-    return this.prisma.payment.update({
-      where: { id },
-      data: {
-        status,
-        ...(providerTxId && { providerTxId }),
-        ...(webhookData && { webhookData }),
-      },
-      include: {
-        order: true,
-      },
-    });
+    return this.prisma.payment
+      .update({
+        where: { id },
+        data: {
+          status,
+          ...(providerTxId && { providerTxId }),
+          ...(webhookData && { webhookData }),
+        },
+        include: {
+          order: true,
+        },
+      })
+      .then(payment => ({
+        ...payment,
+        amount: payment.amount.toNumber(),
+      }));
   }
 
   async approvePayment(id: string, providerTxId: string, webhookData?: any) {
@@ -149,7 +187,10 @@ export class PaymentsRepository {
         data: { status: OrderStatus.PAID },
       });
 
-      return updatedPayment;
+      return {
+        ...updatedPayment,
+        amount: updatedPayment.amount.toNumber(),
+      };
     });
   }
 
@@ -204,7 +245,25 @@ export class PaymentsRepository {
     ]);
 
     return {
-      data: payments,
+      data: payments.map(p => ({
+        ...p,
+        amount: p.amount.toNumber(),
+        order: p.order
+          ? {
+              ...p.order,
+              total: p.order.total.toNumber(),
+              subtotal: p.order.subtotal.toNumber(),
+              discountAmount: p.order.discountAmount.toNumber(),
+              items: p.order.items.map(item => ({
+                ...item,
+                price: item.price.toNumber(),
+                product: item.product
+                  ? { ...item.product, price: item.product.price.toNumber() }
+                  : null,
+              })),
+            }
+          : null,
+      })),
       meta: {
         total,
         page,
@@ -215,12 +274,19 @@ export class PaymentsRepository {
   }
 
   async findByProviderTxId(providerTxId: string) {
-    return this.prisma.payment.findFirst({
+    const payment = await this.prisma.payment.findFirst({
       where: { providerTxId },
       include: {
         order: true,
         user: { select: userPublicSelect },
       },
     });
+
+    if (!payment) return null;
+
+    return {
+      ...payment,
+      amount: payment.amount.toNumber(),
+    };
   }
 }

@@ -148,24 +148,26 @@ export class KeysRepository {
   }
 
   async reserveKey(keyId: string, orderItemId: string) {
-    const key = await this.prisma.key.findUnique({
-      where: { id: keyId },
-    });
-
-    if (!key) {
-      throw new NotFoundException(`Key with ID ${keyId} not found`);
-    }
-
-    if (key.status !== KeyStatus.AVAILABLE) {
-      throw new BadRequestException(`Key is not available (current status: ${key.status})`);
-    }
-
-    return this.prisma.key.update({
-      where: { id: keyId },
+    // Atomic update: only succeeds if key is still AVAILABLE
+    const result = await this.prisma.key.updateMany({
+      where: { id: keyId, status: KeyStatus.AVAILABLE },
       data: {
         status: KeyStatus.RESERVED,
         orderItemId,
       },
+    });
+
+    if (result.count === 0) {
+      const key = await this.prisma.key.findUnique({ where: { id: keyId } });
+      if (!key) {
+        throw new NotFoundException(`Key with ID ${keyId} not found`);
+      }
+      throw new BadRequestException(`Key is not available (current status: ${key.status})`);
+    }
+
+    return this.prisma.key.findUnique({
+      where: { id: keyId },
+      include: { product: true },
     });
   }
 
@@ -234,14 +236,6 @@ export class KeysRepository {
   }
 
   async update(id: string, data: { keyData?: string; status?: KeyStatus }) {
-    const key = await this.prisma.key.findUnique({
-      where: { id },
-    });
-
-    if (!key) {
-      throw new NotFoundException(`Key with ID ${id} not found`);
-    }
-
     const updateData: any = {};
     if (data.status) {
       updateData.status = data.status;
@@ -250,11 +244,13 @@ export class KeysRepository {
       updateData.keyData = this.encryptionProvider.encrypt(data.keyData);
     }
 
-    return this.prisma.key.update({
+    const key = await this.prisma.key.update({
       where: { id },
       data: updateData,
       include: { product: true },
     });
+
+    return key;
   }
 
   async delete(id: string) {

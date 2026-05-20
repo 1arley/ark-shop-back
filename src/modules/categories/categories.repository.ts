@@ -35,11 +35,19 @@ export class CategoriesRepository {
       },
     });
 
-    return category;
+    if (!category) return null;
+
+    return {
+      ...category,
+      products: category.products.map(p => ({
+        ...p,
+        price: p.price.toNumber(),
+      })),
+    };
   }
 
   async findAll() {
-    return this.prisma.category.findMany({
+    const categories = await this.prisma.category.findMany({
       include: {
         parent: true,
         children: true,
@@ -53,6 +61,8 @@ export class CategoriesRepository {
         name: 'asc',
       },
     });
+
+    return categories;
   }
 
   async update(id: string, data: UpdateCategoryDto) {
