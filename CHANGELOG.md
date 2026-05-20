@@ -1,3 +1,10 @@
+## [1.20.10](https://github.com/1arley/ark-shop-back/compare/v1.20.9...v1.20.10) (2026-05-20)
+
+### Bug Fixes
+
+- serialize Prisma Decimal fields, remove redundant queries, fix TOCTOU race conditions ([0930479](https://github.com/1arley/ark-shop-back/commit/09304795b494a4ae2c48e3b8ddd3a725b9b19270))
+- use safe toNumber() utility for Prisma Decimal serialization ([16044e4](https://github.com/1arley/ark-shop-back/commit/16044e4461c5c49ec4dcebdfe25f8edfdc6badad))
+
 ## [1.20.9](https://github.com/1arley/ark-shop-back/compare/v1.20.8...v1.20.9) (2026-05-20)
 
 ### Bug Fixes
