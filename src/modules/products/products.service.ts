@@ -112,7 +112,7 @@ export class ProductsService {
               name: productName,
               description: `Product imported from CSV - Platform: ${product.platform}${product.region ? ` - Region: ${product.region}` : ''}`,
               price: product.price,
-              stock: 1,
+              stock: 0, // Stock starts at 0 - keys will be imported separately
               isActive: options?.isActive ?? true,
               categoryId: options?.categoryId,
             };

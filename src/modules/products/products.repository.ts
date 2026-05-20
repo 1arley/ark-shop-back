@@ -77,7 +77,12 @@ export class ProductsRepository {
         include: {
           category: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          // First sort by stock availability (in stock first)
+          { stock: 'desc' },
+          // Then by creation date
+          { createdAt: 'desc' },
+        ],
       }),
       this.prisma.product.count({ where }),
     ]);
