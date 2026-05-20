@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class ProductsRepository {
@@ -21,7 +22,7 @@ export class ProductsRepository {
       },
     });
 
-    return { ...product, price: product.price.toNumber() };
+    return { ...product, price: toNumber(product.price) };
   }
 
   async findById(id: string) {
@@ -41,7 +42,7 @@ export class ProductsRepository {
 
     return {
       ...product,
-      price: product.price.toNumber(),
+      price: toNumber(product.price),
     };
   }
 
@@ -82,7 +83,7 @@ export class ProductsRepository {
     ]);
 
     return {
-      data: products.map(p => ({ ...p, price: p.price.toNumber() })),
+      data: products.map(p => ({ ...p, price: toNumber(p.price) })),
       meta: {
         total,
         page,
@@ -106,7 +107,7 @@ export class ProductsRepository {
       },
     });
 
-    return { ...product, price: product.price.toNumber() };
+    return { ...product, price: toNumber(product.price) };
   }
 
   async delete(id: string) {
@@ -134,7 +135,7 @@ export class ProductsRepository {
     ]);
 
     return {
-      data: products.map(p => ({ ...p, price: p.price.toNumber() })),
+      data: products.map(p => ({ ...p, price: toNumber(p.price) })),
       meta: {
         total,
         page,

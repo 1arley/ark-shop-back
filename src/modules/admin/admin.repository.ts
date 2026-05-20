@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { PaymentStatus } from '@prisma/client';
+import { toNumber } from '@/common/decimal';
 
 export interface DashboardStats {
   revenue: {
@@ -186,21 +187,21 @@ export class AdminRepository {
       },
       recentOrders: recentOrders.map(order => ({
         ...order,
-        total: order.total.toNumber(),
-        subtotal: order.subtotal.toNumber(),
-        discountAmount: order.discountAmount.toNumber(),
+        total: toNumber(order.total),
+        subtotal: toNumber(order.subtotal),
+        discountAmount: toNumber(order.discountAmount),
         items: order.items.map(item => ({
           ...item,
-          price: item.price.toNumber(),
-          product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+          price: toNumber(item.price),
+          product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
         })),
         payment: order.payment
-          ? { ...order.payment, amount: order.payment.amount.toNumber() }
+          ? { ...order.payment, amount: toNumber(order.payment.amount) }
           : null,
       })),
       topProducts: topProducts.map(product => ({
         ...product,
-        price: product.price.toNumber(),
+        price: toNumber(product.price),
       })),
     };
   }
@@ -308,7 +309,7 @@ export class AdminRepository {
     return {
       data: products.map(product => ({
         ...product,
-        price: product.price.toNumber(),
+        price: toNumber(product.price),
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
@@ -344,17 +345,17 @@ export class AdminRepository {
     return {
       data: orders.map(order => ({
         ...order,
-        total: order.total.toNumber(),
-        subtotal: order.subtotal.toNumber(),
-        discountAmount: order.discountAmount.toNumber(),
+        total: toNumber(order.total),
+        subtotal: toNumber(order.subtotal),
+        discountAmount: toNumber(order.discountAmount),
         user: order.user,
         items: order.items.map(item => ({
           ...item,
-          price: item.price.toNumber(),
-          product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+          price: toNumber(item.price),
+          product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
         })),
         payment: order.payment
-          ? { ...order.payment, amount: order.payment.amount.toNumber() }
+          ? { ...order.payment, amount: toNumber(order.payment.amount) }
           : null,
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },

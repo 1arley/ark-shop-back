@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class CouponsRepository {
@@ -23,8 +24,8 @@ export class CouponsRepository {
 
     return {
       ...coupon,
-      value: coupon.value.toNumber(),
-      minPurchase: coupon.minPurchase?.toNumber() ?? null,
+      value: toNumber(coupon.value),
+      minPurchase: toNumber(coupon.minPurchase),
     };
   }
 
@@ -39,8 +40,8 @@ export class CouponsRepository {
 
     return {
       ...coupon,
-      value: coupon.value.toNumber(),
-      minPurchase: coupon.minPurchase?.toNumber() ?? null,
+      value: toNumber(coupon.value),
+      minPurchase: toNumber(coupon.minPurchase),
     };
   }
 
@@ -65,8 +66,8 @@ export class CouponsRepository {
     return {
       data: coupons.map(c => ({
         ...c,
-        value: c.value.toNumber(),
-        minPurchase: c.minPurchase?.toNumber() ?? null,
+        value: toNumber(c.value),
+        minPurchase: toNumber(c.minPurchase),
       })),
       meta: {
         total,
@@ -98,8 +99,8 @@ export class CouponsRepository {
 
     return {
       ...coupon,
-      value: coupon.value.toNumber(),
-      minPurchase: coupon.minPurchase?.toNumber() ?? null,
+      value: toNumber(coupon.value),
+      minPurchase: toNumber(coupon.minPurchase),
     };
   }
 
@@ -139,9 +140,9 @@ export class CouponsRepository {
       throw new BadRequestException('Invalid or expired coupon code');
     }
 
-    if (coupon.minPurchase !== null && subtotal < coupon.minPurchase.toNumber()) {
+    if (coupon.minPurchase !== null && subtotal < toNumber(coupon.minPurchase)!) {
       throw new BadRequestException(
-        `Minimum purchase of R$ ${coupon.minPurchase.toNumber().toFixed(2)} required`,
+        `Minimum purchase of R$ ${toNumber(coupon.minPurchase)!.toFixed(2)} required`,
       );
     }
 

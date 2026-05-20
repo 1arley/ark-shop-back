@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AddToCartDto } from './dto/cart.dto';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class CartService {
@@ -57,13 +58,13 @@ export class CartService {
       product: productMap.get(item.productId)
         ? {
             ...productMap.get(item.productId)!,
-            price: productMap.get(item.productId)!.price.toNumber(),
+            price: toNumber(productMap.get(item.productId)!.price),
           }
         : null,
     }));
 
     const total = itemsWithProducts.reduce((sum, item) => {
-      const price = item.product?.price?.toNumber() ?? 0;
+      const price = item.product?.price ?? 0;
       return sum + price * item.quantity;
     }, 0);
 

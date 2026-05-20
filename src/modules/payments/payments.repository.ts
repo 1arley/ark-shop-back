@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { userPublicSelect } from '@/common/prisma/user-public.select';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class PaymentsRepository {
@@ -30,7 +31,7 @@ export class PaymentsRepository {
 
     return {
       ...payment,
-      amount: payment.amount.toNumber(),
+      amount: toNumber(payment.amount),
     };
   }
 
@@ -66,7 +67,7 @@ export class PaymentsRepository {
 
     return {
       ...payment,
-      amount: payment.amount.toNumber(),
+      amount: toNumber(payment.amount),
     };
   }
 
@@ -93,18 +94,18 @@ export class PaymentsRepository {
 
     return {
       ...payment,
-      amount: payment.amount.toNumber(),
+      amount: toNumber(payment.amount),
       order: payment.order
         ? {
             ...payment.order,
-            total: payment.order.total.toNumber(),
-            subtotal: payment.order.subtotal.toNumber(),
-            discountAmount: payment.order.discountAmount.toNumber(),
+            total: toNumber(payment.order.total),
+            subtotal: toNumber(payment.order.subtotal),
+            discountAmount: toNumber(payment.order.discountAmount),
             items: payment.order.items.map(item => ({
               ...item,
-              price: item.price.toNumber(),
+              price: toNumber(item.price),
               product: item.product
-                ? { ...item.product, price: item.product.price.toNumber() }
+                ? { ...item.product, price: toNumber(item.product.price) }
                 : null,
             })),
           }
@@ -125,7 +126,7 @@ export class PaymentsRepository {
 
     return {
       ...payment,
-      amount: payment.amount.toNumber(),
+      amount: toNumber(payment.amount),
     };
   }
 
@@ -149,7 +150,7 @@ export class PaymentsRepository {
       })
       .then(payment => ({
         ...payment,
-        amount: payment.amount.toNumber(),
+        amount: toNumber(payment.amount),
       }));
   }
 
@@ -189,7 +190,7 @@ export class PaymentsRepository {
 
       return {
         ...updatedPayment,
-        amount: updatedPayment.amount.toNumber(),
+        amount: toNumber(updatedPayment.amount),
       };
     });
   }
@@ -247,18 +248,18 @@ export class PaymentsRepository {
     return {
       data: payments.map(p => ({
         ...p,
-        amount: p.amount.toNumber(),
+        amount: toNumber(p.amount),
         order: p.order
           ? {
               ...p.order,
-              total: p.order.total.toNumber(),
-              subtotal: p.order.subtotal.toNumber(),
-              discountAmount: p.order.discountAmount.toNumber(),
+              total: toNumber(p.order.total),
+              subtotal: toNumber(p.order.subtotal),
+              discountAmount: toNumber(p.order.discountAmount),
               items: p.order.items.map(item => ({
                 ...item,
-                price: item.price.toNumber(),
+                price: toNumber(item.price),
                 product: item.product
-                  ? { ...item.product, price: item.product.price.toNumber() }
+                  ? { ...item.product, price: toNumber(item.product.price) }
                   : null,
               })),
             }
@@ -286,7 +287,7 @@ export class PaymentsRepository {
 
     return {
       ...payment,
-      amount: payment.amount.toNumber(),
+      amount: toNumber(payment.amount),
     };
   }
 }

@@ -4,6 +4,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, KeyStatus } from '@prisma/client';
 import { KeysService } from '@/modules/keys/keys.service';
 import { CouponsService } from '@/modules/coupons/coupons.service';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class OrdersService {
@@ -86,7 +87,7 @@ export class OrdersService {
       if (!product.isActive) {
         throw new BadRequestException(`Product ${product.name} is not active`);
       }
-      subtotal += product.price.toNumber() * item.quantity;
+      subtotal += toNumber(product.price)! * item.quantity;
     }
 
     return subtotal;
@@ -160,7 +161,7 @@ export class OrdersService {
           const decryptedKey = await this.keysService.getDecryptedKey(item.key!.id);
 
           return {
-            productName: item.product.name,
+            productName: item.product?.name ?? 'Unknown',
             keyId: item.key!.id,
             deliveredAt: item.key!.deliveredAt,
             decryptedKey,

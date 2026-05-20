@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateSellerDto, UpdateSellerDto } from './dto/create-seller.dto';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class SellersRepository {
@@ -24,7 +25,7 @@ export class SellersRepository {
 
     return {
       ...seller,
-      commission: seller.commission.toNumber(),
+      commission: toNumber(seller.commission),
     };
   }
 
@@ -48,7 +49,7 @@ export class SellersRepository {
 
     return {
       ...seller,
-      commission: seller.commission.toNumber(),
+      commission: toNumber(seller.commission),
     };
   }
 
@@ -72,7 +73,7 @@ export class SellersRepository {
     return {
       data: data.map(s => ({
         ...s,
-        commission: s.commission.toNumber(),
+        commission: toNumber(s.commission),
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
@@ -94,7 +95,7 @@ export class SellersRepository {
 
     return {
       ...seller,
-      commission: seller.commission.toNumber(),
+      commission: toNumber(seller.commission),
     };
   }
 
@@ -116,7 +117,7 @@ export class SellersRepository {
 
     return {
       ...seller,
-      commission: seller.commission.toNumber(),
+      commission: toNumber(seller.commission),
     };
   }
 

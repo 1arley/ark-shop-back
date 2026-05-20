@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/create-category.dto';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class CategoriesRepository {
@@ -41,7 +42,7 @@ export class CategoriesRepository {
       ...category,
       products: category.products.map(p => ({
         ...p,
-        price: p.price.toNumber(),
+        price: toNumber(p.price),
       })),
     };
   }

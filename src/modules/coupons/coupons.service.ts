@@ -3,6 +3,7 @@ import { CouponsRepository } from './coupons.repository';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { ApplyCouponDto } from './dto/apply-coupon.dto';
+import { toNumber } from '@/common/decimal';
 
 // Coupon type as string literal to avoid Prisma client dependency issues
 type CouponType = 'PERCENTAGE' | 'FIXED';
@@ -63,9 +64,9 @@ export class CouponsService {
     let discountAmount: number;
 
     if (coupon.type === 'PERCENTAGE') {
-      discountAmount = dto.subtotal * (coupon.value.toNumber() / 100);
+      discountAmount = dto.subtotal * (toNumber(coupon.value)! / 100);
     } else {
-      discountAmount = coupon.value.toNumber();
+      discountAmount = toNumber(coupon.value)!;
     }
 
     // Discount cannot exceed subtotal
@@ -81,7 +82,7 @@ export class CouponsService {
         id: coupon.id,
         code: coupon.code,
         type: coupon.type,
-        value: coupon.value.toNumber(),
+        value: toNumber(coupon.value)!,
         maxUses: coupon.maxUses,
       },
       discountAmount,

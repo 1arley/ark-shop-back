@@ -4,6 +4,7 @@ import { OrderStatus, KeyStatus } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
 import { userPublicSelect } from '@/common/prisma/user-public.select';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class OrdersRepository {
@@ -40,7 +41,7 @@ export class OrdersRepository {
         throw new BadRequestException(`Product ${product.name} is not active`);
       }
 
-      subtotal += product.price.toNumber() * item.quantity;
+      subtotal += toNumber(product.price)! * item.quantity;
     }
 
     const discountAmount = couponData?.discountAmount ?? 0;
@@ -78,13 +79,13 @@ export class OrdersRepository {
     // Serialize Decimal fields for JSON response
     const serializedOrder = {
       ...order,
-      total: order.total.toNumber(),
-      subtotal: order.subtotal.toNumber(),
-      discountAmount: order.discountAmount.toNumber(),
+      total: toNumber(order.total),
+      subtotal: toNumber(order.subtotal),
+      discountAmount: toNumber(order.discountAmount),
       items: order.items.map(item => ({
         ...item,
-        price: item.price.toNumber(),
-        product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+        price: toNumber(item.price),
+        product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
       })),
       payment: order.payment ? { ...order.payment, amount: order.payment.amount.toNumber() } : null,
       coupon: order.coupon ? { ...order.coupon, value: order.coupon.value.toNumber() } : null,
@@ -124,16 +125,16 @@ export class OrdersRepository {
     // Serialize Decimal fields
     const serialized = {
       ...order,
-      total: order.total.toNumber(),
-      subtotal: order.subtotal.toNumber(),
-      discountAmount: order.discountAmount.toNumber(),
+      total: toNumber(order.total),
+      subtotal: toNumber(order.subtotal),
+      discountAmount: toNumber(order.discountAmount),
       items: order.items.map(item => ({
         ...item,
-        price: item.price.toNumber(),
-        product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+        price: toNumber(item.price),
+        product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
         key: item.key ?? null,
       })),
-      payment: order.payment ? { ...order.payment, amount: order.payment.amount.toNumber() } : null,
+      payment: order.payment ? { ...order.payment, amount: toNumber(order.payment.amount) } : null,
     };
 
     return serialized;
@@ -173,17 +174,17 @@ export class OrdersRepository {
     return {
       data: orders.map(order => ({
         ...order,
-        total: order.total.toNumber(),
-        subtotal: order.subtotal.toNumber(),
-        discountAmount: order.discountAmount.toNumber(),
+        total: toNumber(order.total),
+        subtotal: toNumber(order.subtotal),
+        discountAmount: toNumber(order.discountAmount),
         items: order.items.map(item => ({
           ...item,
-          price: item.price.toNumber(),
-          product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+          price: toNumber(item.price),
+          product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
           key: item.key ?? null,
         })),
         payment: order.payment
-          ? { ...order.payment, amount: order.payment.amount.toNumber() }
+          ? { ...order.payment, amount: toNumber(order.payment.amount) }
           : null,
       })),
       meta: {
@@ -251,15 +252,15 @@ export class OrdersRepository {
       })
       .then(order => ({
         ...order,
-        total: order.total.toNumber(),
-        subtotal: order.subtotal.toNumber(),
-        discountAmount: order.discountAmount.toNumber(),
+        total: toNumber(order.total),
+        subtotal: toNumber(order.subtotal),
+        discountAmount: toNumber(order.discountAmount),
         items: order.items.map(item => ({
           ...item,
-          price: item.price.toNumber(),
+          price: toNumber(item.price),
         })),
         payment: order.payment
-          ? { ...order.payment, amount: order.payment.amount.toNumber() }
+          ? { ...order.payment, amount: toNumber(order.payment.amount) }
           : null,
       }));
   }
@@ -297,13 +298,13 @@ export class OrdersRepository {
 
     return orders.map(order => ({
       ...order,
-      total: order.total.toNumber(),
-      subtotal: order.subtotal.toNumber(),
-      discountAmount: order.discountAmount.toNumber(),
+      total: toNumber(order.total),
+      subtotal: toNumber(order.subtotal),
+      discountAmount: toNumber(order.discountAmount),
       items: order.items.map(item => ({
         ...item,
-        price: item.price.toNumber(),
-        product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+        price: toNumber(item.price),
+        product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
         key: item.key ?? null,
       })),
     }));
@@ -378,7 +379,7 @@ export class OrdersRepository {
    */
   async deliverOrderAtomic(
     orderId: string,
-    items: Array<{ id: string; productId: string; key: any; product: { name: string } }>,
+    items: Array<{ id: string; productId: string; key: any; product: { name: string } | null }>,
   ) {
     return this.prisma.$transaction(async tx => {
       // Re-verify order status inside transaction to prevent concurrent delivery
@@ -398,7 +399,9 @@ export class OrdersRepository {
           });
 
           if (!availableKey) {
-            throw new BadRequestException(`No available keys for product: ${item.product.name}`);
+            throw new BadRequestException(
+              `No available keys for product: ${item.product?.name ?? item.productId}`,
+            );
           }
 
           // Atomically update that specific key only
@@ -424,15 +427,15 @@ export class OrdersRepository {
 
       return {
         ...delivered,
-        total: delivered.total.toNumber(),
-        subtotal: delivered.subtotal.toNumber(),
-        discountAmount: delivered.discountAmount.toNumber(),
+        total: toNumber(delivered.total),
+        subtotal: toNumber(delivered.subtotal),
+        discountAmount: toNumber(delivered.discountAmount),
         items: delivered.items.map(item => ({
           ...item,
-          price: item.price.toNumber(),
+          price: toNumber(item.price),
         })),
         payment: delivered.payment
-          ? { ...delivered.payment, amount: delivered.payment.amount.toNumber() }
+          ? { ...delivered.payment, amount: toNumber(delivered.payment.amount) }
           : null,
       };
     });
