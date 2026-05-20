@@ -92,33 +92,38 @@ jobs:
       - name: Pull Docker image
         run: docker pull ${{ env.DOCKER_IMAGE }}:${{ needs.determine-env.outputs.image-tag }}
 
-      - name: Deploy via Railway
+      - name: Deploy via Render
         if: ${{ needs.determine-env.outputs.environment == 'production' }}
         env:
-          RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          if [ -n "$RAILWAY_DEPLOY_HOOK" ]; then
-            curl -X POST "$RAILWAY_DEPLOY_HOOK" \
-              -H "Content-Type: application/json" \
-              -d '{"imageTag": "${{ needs.determine-env.outputs.image-tag }}"}'
-            echo "✅ Deployed to production"
+          if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$RENDER_DEPLOY_HOOK_URL")
+            if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
+              echo "✅ Deploy triggered on Render (HTTP $HTTP_CODE)"
+            else
+              echo "❌ Render deploy hook returned HTTP $HTTP_CODE"
+              exit 1
+            fi
           else
-            echo "⚠️  RAILWAY_DEPLOY_HOOK not set"
+            echo "⚠️  RENDER_DEPLOY_HOOK_URL not set"
             exit 1
           fi
 
-      - name: Deploy to Staging (Railway)
+      - name: Deploy to Staging (Render)
         if: ${{ needs.determine-env.outputs.environment == 'staging' }}
         env:
-          RAILWAY_STAGING_DEPLOY_HOOK: ${{ secrets.RAILWAY_STAGING_DEPLOY_HOOK }}
+          RENDER_STAGING_DEPLOY_HOOK_URL: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK_URL }}
         run: |
-          if [ -n "$RAILWAY_STAGING_DEPLOY_HOOK" ]; then
-            curl -X POST "$RAILWAY_STAGING_DEPLOY_HOOK" \
-              -H "Content-Type: application/json" \
-              -d '{"imageTag": "dev"}'
-            echo "✅ Deployed to staging"
+          if [ -n "$RENDER_STAGING_DEPLOY_HOOK_URL" ]; then
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$RENDER_STAGING_DEPLOY_HOOK_URL")
+            if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
+              echo "✅ Staging deploy triggered on Render (HTTP $HTTP_CODE)"
+            else
+              echo "⚠️  Render staging deploy hook returned HTTP $HTTP_CODE"
+            fi
           else
-            echo "⚠️  RAILWAY_STAGING_DEPLOY_HOOK not set — skipping"
+            echo "⚠️  RENDER_STAGING_DEPLOY_HOOK_URL not set — skipping"
           fi
 
       - name: Health check after deploy
