@@ -29,6 +29,12 @@ describe('UserService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    order: {
+      count: jest.fn(),
+    },
+    payment: {
+      count: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -469,6 +475,74 @@ describe('UserService', () => {
         service.adminUpdateUser('user-999', { name: 'New Name' }, 'superadmin-1', 'SUPERADMIN'),
       ).rejects.toThrow(NotFoundException);
       expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('selfDelete', () => {
+    it('deve deletar o próprio usuário com sucesso', async () => {
+      const targetUser = {
+        id: 'user-1',
+        name: 'Test',
+        email: 'test@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // mock transaction to return target, 0 orders, 0 payments
+      mockPrismaService.$transaction.mockResolvedValue([targetUser, 0, 0]);
+
+      mockPrismaService.user.delete.mockResolvedValue(targetUser);
+
+      const result = await service.selfDelete('user-1', Role.USER);
+
+      expect(result).toEqual({ message: 'Usuário removido com sucesso.' });
+      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+    });
+
+    it('deve lançar ForbiddenException se ADMIN tentar deletar SUPERADMIN', async () => {
+      const targetUser = {
+        id: 'superadmin-1',
+        name: 'Super Admin',
+        email: 'super@example.com',
+        password: 'hashed',
+        role: Role.SUPERADMIN,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.$transaction.mockResolvedValue([targetUser, 0, 0]);
+
+      await expect(service.selfDelete('superadmin-1', Role.ADMIN)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.user.delete).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar ConflictException se usuário possuir orders ou payments', async () => {
+      const targetUser = {
+        id: 'user-2',
+        name: 'User With Orders',
+        email: 'user2@example.com',
+        password: 'hashed',
+        role: Role.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // simulate 1 order, 2 payments
+      mockPrismaService.$transaction.mockResolvedValue([targetUser, 1, 2]);
+
+      await expect(service.selfDelete('user-2', Role.USER)).rejects.toThrow(ConflictException);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar NotFoundException se usuário não existir', async () => {
+      mockPrismaService.$transaction.mockResolvedValue([null, 0, 0]);
+
+      await expect(service.selfDelete('nonexistent', Role.USER)).rejects.toThrow(NotFoundException);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
     });
   });
 

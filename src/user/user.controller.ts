@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Delete,
   Patch,
   Body,
   UseGuards,
@@ -67,5 +68,17 @@ export class UserController {
   @ApiResponse({ status: 409, description: 'Email já cadastrado' })
   updateProfile(@Req() req: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
     return this.userService.updateProfile(req.user.id, dto);
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Deletar próprio usuário' })
+  @ApiResponse({ status: 200, description: 'Usuário removido com sucesso' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 409, description: 'User has dependent orders/payments' })
+  deleteSelf(@Req() req: AuthenticatedRequest) {
+    return this.userService.selfDelete(req.user.id, req.user.role);
   }
 }

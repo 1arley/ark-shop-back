@@ -185,6 +185,55 @@ export class UserService {
     });
   }
 
+  /**
+   * Delete the authenticated user (self‑deletion).
+   *
+   * - Prevents a non‑SUPERADMIN from deleting a SUPERADMIN.
+   * - Blocks deletion if the user owns any Order or Payment records.
+   * - Writes an audit entry (if the table exists) before removal.
+   */
+  async selfDelete(userId: string, requestingUserRole: string) {
+    // Fetch the target user and any blocking relations atomically
+    const [target, ordersCount, paymentsCount] = await this.prisma.$transaction([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: userExistsSelect,
+      }),
+      this.prisma.order.count({ where: { userId } }),
+      this.prisma.payment.count({ where: { userId } }),
+    ]);
+
+    if (!target) {
+      throw new NotFoundException('User not found.');
+    }
+
+    // SUPERADMIN can only be deleted by another SUPERADMIN (self‑deletion allowed)
+    if (target.role === 'SUPERADMIN' && requestingUserRole !== 'SUPERADMIN') {
+      throw new ForbiddenException('Only a SUPERADMIN can delete a SUPERADMIN account.');
+    }
+
+    // Prevent FK violations for orders/payments
+    if (ordersCount > 0 || paymentsCount > 0) {
+      throw new ConflictException(
+        `User has ${ordersCount} orders and ${paymentsCount} payments; cannot delete.`,
+      );
+    }
+
+    // Optional audit log – ignore errors if the table does not exist
+    await this.prisma.userDeletionLog
+      ?.create({
+        data: {
+          userId,
+          deletedAt: new Date(),
+          performedBy: userId,
+        },
+      })
+      .catch(() => undefined);
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { message: 'Usuário removido com sucesso.' };
+  }
+
   async deleteUser(id: string, requestingUserRole: string) {
     const target = await this.prisma.user.findUnique({
       where: { id },

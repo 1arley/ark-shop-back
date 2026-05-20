@@ -17,6 +17,7 @@ describe('UserController', () => {
     updateProfile: jest.fn(),
     adminUpdateUser: jest.fn(),
     deleteUser: jest.fn(),
+    selfDelete: jest.fn(),
   };
 
   const mockAuthenticatedRequest = {
@@ -179,36 +180,29 @@ describe('UserController', () => {
   });
 
   describe('updateProfile', () => {
-    it('deve atualizar o próprio perfil do usuário autenticado', async () => {
-      const updateDto = { name: 'Novo Nome', email: 'novo@example.com' };
-      const updatedUser = {
-        id: 'user-1',
-        name: 'Novo Nome',
-        email: 'novo@example.com',
-        role: Role.USER,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockUserService.updateProfile.mockResolvedValue(updatedUser);
-
-      const result = await controller.updateProfile(mockAuthenticatedRequest as any, updateDto);
-
-      expect(userService.updateProfile).toHaveBeenCalledWith('user-1', updateDto);
-      expect(result).toEqual(updatedUser);
-    });
-
-    it('deve lançar ConflictException se email já estiver em uso', async () => {
-      mockUserService.updateProfile.mockRejectedValue(
-        new ConflictException('Email já cadastrado.'),
-      );
-
-      await expect(
-        controller.updateProfile(mockAuthenticatedRequest as any, { email: 'taken@example.com' }),
-      ).rejects.toThrow(ConflictException);
-    });
+    // existing tests remain
   });
 
+  describe('deleteSelf', () => {
+    it('deve deletar o próprio usuário autenticado', async () => {
+      const deleteResult = { message: 'Usuário removido com sucesso.' };
+      mockUserService.selfDelete = jest.fn().mockResolvedValue(deleteResult);
+
+      const result = await controller.deleteSelf(mockAuthenticatedRequest as any);
+
+      expect(mockUserService.selfDelete).toHaveBeenCalledWith('user-1', Role.ADMIN);
+      expect(result).toEqual(deleteResult);
+    });
+
+    it('deve propagar ForbiddenException quando não autorizado', async () => {
+      mockUserService.selfDelete = jest.fn().mockRejectedValue(new ForbiddenException('Forbidden'));
+
+      await expect(controller.deleteSelf(mockAuthenticatedRequest as any)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+  });
+  // adminUpdateUser tests
   describe('adminUpdateUser', () => {
     it('deve atualizar usuário como admin', async () => {
       const updateDto = { name: 'Admin Updated', role: Role.ADMIN };
@@ -235,6 +229,7 @@ describe('UserController', () => {
     });
   });
 
+  // deleteUser tests
   describe('deleteUser', () => {
     it('deve deletar usuário como admin', async () => {
       mockUserService.deleteUser.mockResolvedValue({ message: 'Usuário removido com sucesso.' });
@@ -254,5 +249,32 @@ describe('UserController', () => {
         ForbiddenException,
       );
     });
+  });
+
+  it('deve atualizar o próprio perfil do usuário autenticado', async () => {
+    const updateDto = { name: 'Novo Nome', email: 'novo@example.com' };
+    const updatedUser = {
+      id: 'user-1',
+      name: 'Novo Nome',
+      email: 'novo@example.com',
+      role: Role.USER,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    mockUserService.updateProfile.mockResolvedValue(updatedUser);
+
+    const result = await controller.updateProfile(mockAuthenticatedRequest as any, updateDto);
+
+    expect(userService.updateProfile).toHaveBeenCalledWith('user-1', updateDto);
+    expect(result).toEqual(updatedUser);
+  });
+
+  it('deve lançar ConflictException se email já estiver em uso', async () => {
+    mockUserService.updateProfile.mockRejectedValue(new ConflictException('Email já cadastrado.'));
+
+    await expect(
+      controller.updateProfile(mockAuthenticatedRequest as any, { email: 'taken@example.com' }),
+    ).rejects.toThrow(ConflictException);
   });
 });
