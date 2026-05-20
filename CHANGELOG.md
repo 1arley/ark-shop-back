@@ -1,3 +1,9 @@
+## [1.20.12](https://github.com/1arley/ark-shop-back/compare/v1.20.11...v1.20.12) (2026-05-20)
+
+### Bug Fixes
+
+- corrigir estoque CSV, adicionar migration de cupons e melhorias ([1f18309](https://github.com/1arley/ark-shop-back/commit/1f18309b825efdda13fc31d3131afee4df34c01a))
+
 ## [1.20.11](https://github.com/1arley/ark-shop-back/compare/v1.20.10...v1.20.11) (2026-05-20)
 
 ### Bug Fixes
