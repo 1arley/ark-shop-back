@@ -288,7 +288,7 @@ export class AuthService {
     });
 
     if (!storedToken) {
-      throw new NotFoundException('Refresh token not found.');
+      throw new NotFoundException('Refresh token não encontrado.');
     }
 
     await this.prisma.refreshToken.delete({
@@ -302,7 +302,7 @@ export class AuthService {
     });
 
     if (!user) {
-      return { message: 'If the email exists, a reset link will be sent.' };
+      return { message: 'Se o email existir, um link de redefinicao sera enviado.' };
     }
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -330,7 +330,7 @@ export class AuthService {
       );
     });
 
-    return { message: 'If the email exists, a reset link will be sent.' };
+    return { message: 'Se o email existir, um link de redefinicao sera enviado.' };
   }
 
   /**
@@ -343,7 +343,7 @@ export class AuthService {
     });
 
     if (!user) {
-      return { message: 'If the email exists, a reset code will be sent.' };
+      return { message: 'Se o email existir, um codigo de redefinicao sera enviado.' };
     }
 
     const resetCode = this.generateNumericCode(PASSWORD_RESET_CODE_LENGTH);
@@ -373,7 +373,7 @@ export class AuthService {
       );
     });
 
-    return { message: 'If the email exists, a reset code will be sent.' };
+    return { message: 'Se o email existir, um codigo de redefinicao sera enviado.' };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -381,7 +381,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw new BadRequestException('Invalid or expired token.');
+      throw new BadRequestException('Token invalido ou expirado.');
     }
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -396,7 +396,7 @@ export class AuthService {
     });
 
     if (!resetToken) {
-      throw new BadRequestException('Invalid or expired token.');
+      throw new BadRequestException('Token invalido ou expirado.');
     }
 
     const saltRounds = parseInt(
@@ -418,7 +418,7 @@ export class AuthService {
     // Revoga todos os refresh tokens apos redefinicao de senha
     await this.revokeAllUserRefreshTokens(user.id);
 
-    return { message: 'Password reset successfully.' };
+    return { message: 'Senha redefinida com sucesso.' };
   }
 
   /**
@@ -429,7 +429,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw new BadRequestException('Invalid or expired code.');
+      throw new BadRequestException('Codigo invalido ou expirado.');
     }
 
     const codeHash = crypto.createHash('sha256').update(code).digest('hex');
@@ -444,7 +444,7 @@ export class AuthService {
     });
 
     if (!resetToken) {
-      throw new BadRequestException('Invalid or expired code.');
+      throw new BadRequestException('Codigo invalido ou expirado.');
     }
 
     const saltRounds = parseInt(
@@ -466,7 +466,7 @@ export class AuthService {
     // Revoga todos os refresh tokens apos redefinicao de senha
     await this.revokeAllUserRefreshTokens(user.id);
 
-    return { message: 'Password reset successfully.' };
+    return { message: 'Senha redefinida com sucesso.' };
   }
 
   /**
@@ -477,7 +477,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw new BadRequestException('Invalid verification code.');
+      throw new BadRequestException('Codigo de verificacao invalido.');
     }
 
     if (user.emailVerified) {
@@ -496,7 +496,7 @@ export class AuthService {
     });
 
     if (!verificationToken) {
-      throw new BadRequestException('Invalid or expired verification code.');
+      throw new BadRequestException('Codigo de verificacao invalido ou expirado.');
     }
 
     await this.prisma.$transaction([
@@ -510,7 +510,7 @@ export class AuthService {
       }),
     ]);
 
-    return { message: 'Email verified successfully.', emailVerified: true };
+    return { message: 'Email verificado com sucesso.', emailVerified: true };
   }
 
   /**
@@ -519,11 +519,11 @@ export class AuthService {
   async resendVerificationEmail(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return { message: 'If the email exists, a new code will be sent.' };
+      return { message: 'Se o email existir, um novo codigo sera enviado.' };
     }
 
     if (user.emailVerified) {
-      return { message: 'Email is already verified.', emailVerified: true };
+      return { message: 'Email ja esta verificado.', emailVerified: true };
     }
 
     // Invalida codigos anteriores nao usados
@@ -553,7 +553,7 @@ export class AuthService {
       );
     });
 
-    return { message: 'If the email exists, a new code will be sent.' };
+    return { message: 'Se o email existir, um novo codigo sera enviado.' };
   }
 
   /**

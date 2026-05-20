@@ -149,7 +149,7 @@ export class AuthController {
       sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
     });
 
-    return { message: 'Logout successful.' };
+    return { message: 'Logout realizado com sucesso.' };
   }
 
   @Post('forgot-password')

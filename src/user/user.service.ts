@@ -200,6 +200,6 @@ export class UserService {
     }
 
     await this.prisma.user.delete({ where: { id } });
-    return { message: 'User removed successfully.' };
+    return { message: 'Usuário removido com sucesso.' };
   }
 }
