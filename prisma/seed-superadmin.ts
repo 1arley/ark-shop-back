@@ -19,14 +19,30 @@ async function main() {
 
   const user = await prisma.user.upsert({
     where: { email: 'superadmin@darkgames.com' },
-    update: {},
+    update: {
+      emailVerified: true,
+    },
     create: {
       email: 'superadmin@darkgames.com',
       password,
       name: 'Super Admin',
       role: 'SUPERADMIN',
+      emailVerified: true,
     },
   });
+
+  // Garantir que todos os ADMIN/SUPERADMIN existentes estejam verificados
+  const updated = await prisma.user.updateMany({
+    where: {
+      role: { in: ['ADMIN', 'SUPERADMIN'] },
+      emailVerified: false,
+    },
+    data: { emailVerified: true },
+  });
+
+  if (updated.count > 0) {
+    console.log(`✅ ${updated.count} admin(s) marcado(s) como verificado(s)`);
+  }
 
   console.log('✅ SUPERADMIN created:');
   console.log(`   Email: ${user.email}`);

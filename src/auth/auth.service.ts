@@ -223,8 +223,8 @@ export class AuthService {
    */
   private buildSignOptions(expiresIn: string, kind: 'access' | 'refresh') {
     const secretKey = kind === 'access' ? 'JWT_ACCESS_SECRET' : 'JWT_REFRESH_SECRET';
-    const issuer = this.configService.get<string>('JWT_ISSUER');
-    const audience = this.configService.get<string>('JWT_AUDIENCE');
+    const issuer = this.configService.get<string>('JWT_ISSUER')?.trim() || undefined;
+    const audience = this.configService.get<string>('JWT_AUDIENCE')?.trim() || undefined;
 
     return {
       secret: this.configService.getOrThrow<string>(secretKey),

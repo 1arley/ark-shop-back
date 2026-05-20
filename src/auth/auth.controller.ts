@@ -1,4 +1,14 @@
-import { Controller, Post, Body, UseGuards, Req, Res, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Req,
+  Res,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
@@ -195,7 +205,7 @@ export class AuthController {
   }
 
   @Post('resend-verification')
-  @Throttle({ default: { limit: 2, ttl: 60000 } }) // 2 solicitacoes/minuto
+  @Throttle({ default: { limit: 2, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reenviar email de verificacao' })
   @ApiResponse({
@@ -204,5 +214,15 @@ export class AuthController {
   })
   async resendVerification(@Body() dto: ForgotPasswordDto) {
     return this.authService.resendVerificationEmail(dto.email);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'Current user profile' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getMe(@Req() req: AuthenticatedRequest) {
+    return this.authService.validateUser(req.user.id);
   }
 }

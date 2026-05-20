@@ -77,6 +77,7 @@ async function main() {
         name: 'Admin User',
         password: hashedPassword,
         role: Role.ADMIN,
+        emailVerified: true,
       },
     }),
     prisma.user.create({
@@ -85,6 +86,7 @@ async function main() {
         name: 'Super Admin',
         password: hashedPassword,
         role: Role.SUPERADMIN,
+        emailVerified: true,
       },
     }),
     prisma.user.create({

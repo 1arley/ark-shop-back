@@ -9,7 +9,6 @@ export class EmailVerifiedGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // Skip if route is public (no authentication required)
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -19,7 +18,6 @@ export class EmailVerifiedGuard implements CanActivate {
       return true;
     }
 
-    // Skip if explicitly marked to bypass email verification
     const skipVerification = this.reflector.getAllAndOverride<boolean>(
       SKIP_EMAIL_VERIFICATION_KEY,
       [context.getHandler(), context.getClass()],
@@ -29,12 +27,14 @@ export class EmailVerifiedGuard implements CanActivate {
       return true;
     }
 
-    // Check if user's email is verified
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request.user;
 
     if (!user) {
-      // No user on request — let JwtAuthGuard handle authentication first
+      return true;
+    }
+
+    if (user.role === 'ADMIN' || user.role === 'SUPERADMIN') {
       return true;
     }
 
