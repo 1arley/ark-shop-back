@@ -56,7 +56,9 @@ export async function createApp(): Promise<INestApplication> {
 
   // ─── CORS ─────────────────────────────────────────────────────────
   const corsOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
+    ? process.env.CORS_ORIGIN.split(',')
+        .map(s => s.trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean)
     : undefined;
 
   // In production, CORS_ORIGIN must be explicitly configured — no fallback to allow-all

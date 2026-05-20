@@ -40,7 +40,7 @@ function getCookieOptions(maxAgeSeconds: number) {
     secure: IS_PRODUCTION,
     sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
     path: '/',
-    maxAge: maxAgeSeconds,
+    maxAge: maxAgeSeconds * 1000, // Express expects milliseconds, not seconds
   };
 }
 
@@ -137,11 +137,13 @@ export class AuthController {
     }
 
     res.clearCookie(ACCESS_TOKEN_COOKIE, {
+      httpOnly: true,
       path: '/',
       secure: IS_PRODUCTION,
       sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
     });
     res.clearCookie(REFRESH_TOKEN_COOKIE, {
+      httpOnly: true,
       path: '/',
       secure: IS_PRODUCTION,
       sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
