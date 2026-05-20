@@ -184,8 +184,24 @@ export class AdminRepository {
         rejected: paymentStats.find(p => p.status === 'REJECTED')?._count || 0,
         refunded: paymentStats.find(p => p.status === 'REFUNDED')?._count || 0,
       },
-      recentOrders: recentOrders,
-      topProducts: topProducts,
+      recentOrders: recentOrders.map(order => ({
+        ...order,
+        total: order.total.toNumber(),
+        subtotal: order.subtotal.toNumber(),
+        discountAmount: order.discountAmount.toNumber(),
+        items: order.items.map(item => ({
+          ...item,
+          price: item.price.toNumber(),
+          product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+        })),
+        payment: order.payment
+          ? { ...order.payment, amount: order.payment.amount.toNumber() }
+          : null,
+      })),
+      topProducts: topProducts.map(product => ({
+        ...product,
+        price: product.price.toNumber(),
+      })),
     };
   }
 
@@ -290,7 +306,10 @@ export class AdminRepository {
     ]);
 
     return {
-      data: products,
+      data: products.map(product => ({
+        ...product,
+        price: product.price.toNumber(),
+      })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
@@ -323,7 +342,21 @@ export class AdminRepository {
     ]);
 
     return {
-      data: orders,
+      data: orders.map(order => ({
+        ...order,
+        total: order.total.toNumber(),
+        subtotal: order.subtotal.toNumber(),
+        discountAmount: order.discountAmount.toNumber(),
+        user: order.user,
+        items: order.items.map(item => ({
+          ...item,
+          price: item.price.toNumber(),
+          product: item.product ? { ...item.product, price: item.product.price.toNumber() } : null,
+        })),
+        payment: order.payment
+          ? { ...order.payment, amount: order.payment.amount.toNumber() }
+          : null,
+      })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
