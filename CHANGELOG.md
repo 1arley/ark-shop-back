@@ -1,3 +1,10 @@
+## [1.20.11](https://github.com/1arley/ark-shop-back/compare/v1.20.10...v1.20.11) (2026-05-20)
+
+### Bug Fixes
+
+- production readiness — auth, migration, env validation, and cleanup ([a823c76](https://github.com/1arley/ark-shop-back/commit/a823c7689e76a6cabdd15e6f5fff44b9412c0151))
+- test files expect portuguese responses ([05d2d6b](https://github.com/1arley/ark-shop-back/commit/05d2d6be6ebfbf9865535f4450e89dc835d8983d))
+
 ## [1.20.10](https://github.com/1arley/ark-shop-back/compare/v1.20.9...v1.20.10) (2026-05-20)
 
 ### Bug Fixes
