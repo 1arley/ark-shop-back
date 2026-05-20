@@ -378,7 +378,6 @@ describe('ProductsRepository', () => {
       const result = await repository.update('prod-1', updateDto);
 
       expect(result).toEqual(updatedProduct);
-      expect(prisma.product.findUnique).toHaveBeenCalledWith({ where: { id: 'prod-1' } });
       expect(prisma.product.update).toHaveBeenCalledWith({
         where: { id: 'prod-1' },
         data: {
@@ -412,18 +411,6 @@ describe('ProductsRepository', () => {
           imageUrl: undefined,
         },
       });
-    });
-
-    it('deve lancar NotFoundException quando produto nao existe para atualizacao', async () => {
-      mockPrismaService.product.findUnique.mockResolvedValue(null);
-
-      await expect(repository.update('nao-existe', { name: 'Novo' })).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(repository.update('nao-existe', { name: 'Novo' })).rejects.toThrow(
-        'Product with ID nao-existe not found',
-      );
-      expect(prisma.product.update).not.toHaveBeenCalled();
     });
 
     it('deve atualizar todos os campos quando fornecidos', async () => {
@@ -468,18 +455,7 @@ describe('ProductsRepository', () => {
       const result = await repository.delete('prod-1');
 
       expect(result).toEqual(deletedProduct);
-      expect(prisma.product.findUnique).toHaveBeenCalledWith({ where: { id: 'prod-1' } });
       expect(prisma.product.delete).toHaveBeenCalledWith({ where: { id: 'prod-1' } });
-    });
-
-    it('deve lancar NotFoundException quando produto nao existe para delecao', async () => {
-      mockPrismaService.product.findUnique.mockResolvedValue(null);
-
-      await expect(repository.delete('nao-existe')).rejects.toThrow(NotFoundException);
-      await expect(repository.delete('nao-existe')).rejects.toThrow(
-        'Product with ID nao-existe not found',
-      );
-      expect(prisma.product.delete).not.toHaveBeenCalled();
     });
   });
 

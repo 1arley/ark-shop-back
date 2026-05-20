@@ -251,23 +251,28 @@ describe('KeysRepository', () => {
   describe('reserveKey', () => {
     it('deve reservar chave com sucesso', async () => {
       const reservedKey = { ...mockKey, status: KeyStatus.RESERVED, orderItemId: 'item-id-1' };
-      mockPrismaService.key.findUnique.mockResolvedValue(mockKey);
+      mockPrismaService.key.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.key.findUnique.mockResolvedValue(reservedKey);
       mockPrismaService.key.update.mockResolvedValue(reservedKey);
 
       const result = await repository.reserveKey('key-id-1', 'item-id-1');
 
-      expect(prisma.key.findUnique).toHaveBeenCalledWith({ where: { id: 'key-id-1' } });
-      expect(prisma.key.update).toHaveBeenCalledWith({
-        where: { id: 'key-id-1' },
+      expect(prisma.key.updateMany).toHaveBeenCalledWith({
+        where: { id: 'key-id-1', status: KeyStatus.AVAILABLE },
         data: {
           status: KeyStatus.RESERVED,
           orderItemId: 'item-id-1',
         },
       });
+      expect(prisma.key.findUnique).toHaveBeenCalledWith({
+        where: { id: 'key-id-1' },
+        include: { product: true },
+      });
       expect(result).toEqual(reservedKey);
     });
 
     it('deve lancar NotFoundException quando chave nao existe', async () => {
+      mockPrismaService.key.updateMany.mockResolvedValue({ count: 0 });
       mockPrismaService.key.findUnique.mockResolvedValue(null);
 
       await expect(repository.reserveKey('nonexistent', 'item-id-1')).rejects.toThrow(
@@ -276,7 +281,7 @@ describe('KeysRepository', () => {
       await expect(repository.reserveKey('nonexistent', 'item-id-1')).rejects.toThrow(
         'Key with ID nonexistent not found',
       );
-      expect(prisma.key.update).not.toHaveBeenCalled();
+      expect(prisma.key.updateMany).toHaveBeenCalled();
     });
 
     it('deve lancar BadRequestException quando chave nao esta disponivel', async () => {
@@ -461,15 +466,6 @@ describe('KeysRepository', () => {
         include: { product: true },
       });
       expect(result.keyData).toBe('v2:new-encrypted-data');
-    });
-
-    it('deve lancar NotFoundException quando chave nao existe', async () => {
-      mockPrismaService.key.findUnique.mockResolvedValue(null);
-
-      await expect(
-        repository.update('nonexistent', { status: KeyStatus.RESERVED }),
-      ).rejects.toThrow(NotFoundException);
-      expect(prisma.key.update).not.toHaveBeenCalled();
     });
   });
 

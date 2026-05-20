@@ -124,6 +124,7 @@ describe('SellersRepository', () => {
         ...existingSeller,
         asaasAccountId: 'asaas-123',
         asaasWalletId: 'wallet-456',
+        commission: 10,
       };
 
       mockPrismaService.seller.findUnique.mockResolvedValue(existingSeller);
@@ -147,16 +148,15 @@ describe('SellersRepository', () => {
       });
     });
 
-    it('deve lançar NotFoundException se seller não existir', async () => {
-      mockPrismaService.seller.findUnique.mockResolvedValue(null);
+    it('deve propagar erro se seller não existir', async () => {
+      mockPrismaService.seller.update.mockRejectedValue(new Error('Record not found'));
 
       await expect(
         repository.updateAsaasData('seller-999', {
           asaasAccountId: 'asaas-123',
           asaasWalletId: 'wallet-456',
         }),
-      ).rejects.toThrow(NotFoundException);
-      expect(prisma.seller.update).not.toHaveBeenCalled();
+      ).rejects.toThrow('Record not found');
     });
   });
 
@@ -192,6 +192,7 @@ describe('SellersRepository', () => {
       const seller = {
         id: 'seller-1',
         companyName: 'Test Company',
+        commission: 10,
         user: { id: 'user-1', name: 'Test User', email: 'test@example.com', role: 'USER' },
       };
 
@@ -199,7 +200,7 @@ describe('SellersRepository', () => {
 
       const result = await repository.findById('seller-1');
 
-      expect(result).toEqual(seller);
+      expect(result).toEqual({ ...seller, commission: 10 });
       expect(prisma.seller.findUnique).toHaveBeenCalledWith({
         where: { id: 'seller-1' },
         include: {
@@ -220,6 +221,7 @@ describe('SellersRepository', () => {
       const existingSeller = {
         id: 'seller-1',
         companyName: 'Old Company',
+        commission: 10,
         user: { id: 'user-1', name: 'Test User', email: 'test@example.com' },
       };
 
@@ -233,17 +235,16 @@ describe('SellersRepository', () => {
 
       const result = await repository.update('seller-1', { companyName: 'New Company' });
 
-      expect(result).toEqual(updatedSeller);
+      expect(result).toEqual({ ...updatedSeller, commission: 10 });
       expect(prisma.seller.update).toHaveBeenCalled();
     });
 
-    it('deve lançar NotFoundException se seller não existir', async () => {
-      mockPrismaService.seller.findUnique.mockResolvedValue(null);
+    it('deve propagar erro do Prisma se seller não existir', async () => {
+      mockPrismaService.seller.update.mockRejectedValue(new Error('Record to update not found'));
 
       await expect(repository.update('seller-999', { companyName: 'New' })).rejects.toThrow(
-        NotFoundException,
+        'Record to update not found',
       );
-      expect(prisma.seller.update).not.toHaveBeenCalled();
     });
   });
 
@@ -264,11 +265,11 @@ describe('SellersRepository', () => {
       expect(prisma.seller.delete).toHaveBeenCalledWith({ where: { id: 'seller-1' } });
     });
 
-    it('deve lançar NotFoundException se seller não existir', async () => {
+    it('deve propagar erro do Prisma se seller não existir', async () => {
       mockPrismaService.seller.findUnique.mockResolvedValue(null);
+      mockPrismaService.seller.delete.mockRejectedValue(new Error('Record to delete not found'));
 
-      await expect(repository.delete('seller-999')).rejects.toThrow(NotFoundException);
-      expect(prisma.seller.delete).not.toHaveBeenCalled();
+      await expect(repository.delete('seller-999')).rejects.toThrow('Record to delete not found');
     });
   });
 });

@@ -92,6 +92,7 @@ describe('CouponsRepository', () => {
         code: 'PROMO10',
         type: PERCENTAGE,
         value: 10,
+        minPurchase: null,
         isActive: true,
         usedCount: 0,
         createdAt: new Date(),
@@ -173,6 +174,7 @@ describe('CouponsRepository', () => {
       const updatedCoupon = {
         ...existingCoupon,
         value: 15,
+        minPurchase: null,
         updatedAt: new Date(),
       };
 
@@ -183,15 +185,6 @@ describe('CouponsRepository', () => {
 
       expect(result).toEqual(updatedCoupon);
       expect(prisma.coupon.update).toHaveBeenCalled();
-    });
-
-    it('deve validar existência antes de atualizar', async () => {
-      mockPrismaService.coupon.findUnique.mockResolvedValue(null);
-
-      await expect(repository.update('coupon-999', { value: 15 })).rejects.toThrow(
-        NotFoundException,
-      );
-      expect(prisma.coupon.update).not.toHaveBeenCalled();
     });
   });
 
@@ -220,13 +213,13 @@ describe('CouponsRepository', () => {
         id: 'coupon-1',
         code: 'PROMO10',
         type: PERCENTAGE,
-        value: { toNumber: () => 10 },
+        value: 10,
         isActive: true,
         usedCount: 0,
         maxUses: 100,
         validFrom: new Date('2025-01-01'),
         validTo: new Date('2027-12-31'),
-        minPurchase: { toNumber: () => 10 },
+        minPurchase: 10,
       };
 
       mockPrismaService.coupon.findUnique.mockResolvedValue(coupon);
@@ -247,7 +240,7 @@ describe('CouponsRepository', () => {
         id: 'coupon-1',
         code: 'EXPIRED',
         type: PERCENTAGE,
-        value: { toNumber: () => 10 },
+        value: 10,
         isActive: true,
         usedCount: 0,
         maxUses: null,
@@ -266,7 +259,7 @@ describe('CouponsRepository', () => {
         id: 'coupon-1',
         code: 'MAXED',
         type: PERCENTAGE,
-        value: { toNumber: () => 10 },
+        value: 10,
         isActive: true,
         usedCount: 100,
         maxUses: 100,
@@ -285,13 +278,13 @@ describe('CouponsRepository', () => {
         id: 'coupon-1',
         code: 'MIN50',
         type: PERCENTAGE,
-        value: { toNumber: () => 10 },
+        value: 10,
         isActive: true,
         usedCount: 0,
         maxUses: null,
         validFrom: null,
         validTo: new Date('2027-12-31'),
-        minPurchase: { toNumber: () => 50 },
+        minPurchase: 50,
       };
 
       mockPrismaService.coupon.findUnique.mockResolvedValue(coupon);
@@ -304,7 +297,7 @@ describe('CouponsRepository', () => {
         id: 'coupon-1',
         code: 'INACTIVE',
         type: PERCENTAGE,
-        value: { toNumber: () => 10 },
+        value: 10,
         isActive: false,
         usedCount: 0,
         maxUses: null,

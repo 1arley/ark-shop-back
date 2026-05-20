@@ -127,7 +127,7 @@ describe('OrdersService', () => {
       };
 
       mockOrdersRepository.getProductsByIds.mockResolvedValue([
-        { id: 'product-id-1', name: 'Game', price: { toNumber: () => 100 }, isActive: true },
+        { id: 'product-id-1', name: 'Game', price: 100, isActive: true },
       ]);
       mockCouponsService.validateAndCalculate.mockResolvedValue(validationResult);
       mockOrdersRepository.create.mockResolvedValue({
@@ -156,7 +156,7 @@ describe('OrdersService', () => {
 
     it('should throw if coupon is invalid', async () => {
       mockOrdersRepository.getProductsByIds.mockResolvedValue([
-        { id: 'product-id-1', name: 'Game', price: { toNumber: () => 100 }, isActive: true },
+        { id: 'product-id-1', name: 'Game', price: 100, isActive: true },
       ]);
       mockCouponsService.validateAndCalculate.mockResolvedValue({
         valid: false,

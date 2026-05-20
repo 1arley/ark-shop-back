@@ -46,7 +46,7 @@ describe('CartService', () => {
   const mockProduct = {
     id: 'product-id-1',
     name: 'Game Key',
-    price: { toNumber: () => 100 },
+    price: 100,
     isActive: true,
     stock: 10,
     description: 'A game key',
@@ -129,10 +129,10 @@ describe('CartService', () => {
     });
 
     it('deve calcular total corretamente com multiplos itens', async () => {
-      const product1 = { ...mockProduct, id: 'prod-1', price: { toNumber: () => 100 } };
+      const product1 = { ...mockProduct, id: 'prod-1', price: 100 };
       const item1 = { ...mockCartItem, id: 'item-1', productId: 'prod-1', quantity: 2 };
       const item2 = { ...mockCartItem, id: 'item-2', productId: 'prod-2', quantity: 3 };
-      const product2 = { ...mockProduct, id: 'prod-2', price: { toNumber: () => 50 } };
+      const product2 = { ...mockProduct, id: 'prod-2', price: 50 };
 
       mockPrismaService.cart.findUnique.mockResolvedValue({
         ...mockCart,

@@ -56,6 +56,8 @@ describe('PaymentsRepository', () => {
       userId: 'user-id-1',
       status: OrderStatus.PENDING,
       total: 100,
+      subtotal: 100,
+      discountAmount: null,
       items: [],
     },
     user: { id: 'user-id-1', email: 'test@test.com', name: 'Test User' },

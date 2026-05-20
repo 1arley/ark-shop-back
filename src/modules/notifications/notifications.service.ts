@@ -21,11 +21,15 @@ export class NotificationsService {
   }
 
   async markAsRead(id: string, userId: string) {
-    const result = await this.repository.markAsRead(id, userId);
-    if (!result) {
-      throw new NotFoundException('Notificação não encontrada ou não pertence ao usuário.');
+    // Validate ownership first
+    const notification = await this.repository.findById(id);
+    if (!notification) {
+      throw new NotFoundException('Notificação não encontrada.');
     }
-    return result;
+    if (notification.userId !== userId) {
+      throw new ForbiddenException('Você não tem permissão para acessar esta notificação.');
+    }
+    return this.repository.markAsRead(id, userId);
   }
 
   async markAllAsRead(userId: string) {

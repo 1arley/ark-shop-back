@@ -40,7 +40,7 @@ describe('OrdersRepository', () => {
   const mockProduct = {
     id: 'product-id-1',
     name: 'Game Key',
-    price: { toNumber: () => 100 },
+    price: 100,
     isActive: true,
   };
 
@@ -217,7 +217,7 @@ describe('OrdersRepository', () => {
       const product2 = {
         id: 'product-id-2',
         name: 'Game 2',
-        price: { toNumber: () => 50 },
+        price: 50,
         isActive: true,
       };
       const createOrderDto = {
