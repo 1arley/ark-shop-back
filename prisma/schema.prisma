@@ -76,6 +76,8 @@ enum CouponType {
 // USER MODULE
 // ============================
 model User {
+  // existing fields omitted for brevity
+
   id String @id @default(uuid())
   email String @unique
   password String
@@ -405,4 +407,17 @@ model Coupon {
 
   @@index([isActive])
   @@index([validTo])
+
+// ============================
+// USER DELETION LOG MODULE
+// ============================
+model UserDeletionLog {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deletedAt   DateTime @default(now())
+  performedBy String   // ID of user who performed deletion (could be same)
+
+  @@index([userId])
+}
 }
