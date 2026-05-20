@@ -1,3 +1,9 @@
+## [1.20.6](https://github.com/1arley/ark-shop-back/compare/v1.20.5...v1.20.6) (2026-05-20)
+
+### Bug Fixes
+
+- **auth:** resolve 401 unauthorized on authenticated endpoints ([d72ee1b](https://github.com/1arley/ark-shop-back/commit/d72ee1b40bca6b202af516e4b1fb80c28d84162e))
+
 ## [1.20.5](https://github.com/1arley/ark-shop-back/compare/v1.20.4...v1.20.5) (2026-05-19)
 
 ### Bug Fixes
