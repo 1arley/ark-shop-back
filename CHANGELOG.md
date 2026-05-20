@@ -1,3 +1,9 @@
+## [1.20.9](https://github.com/1arley/ark-shop-back/compare/v1.20.8...v1.20.9) (2026-05-20)
+
+### Bug Fixes
+
+- serialize Prisma Decimal fields to number in admin endpoints ([b34785d](https://github.com/1arley/ark-shop-back/commit/b34785da0cf0d15c2ade847a7ffe5d658f73ecc1))
+
 ## [1.20.8](https://github.com/1arley/ark-shop-back/compare/v1.20.7...v1.20.8) (2026-05-20)
 
 ### Bug Fixes
