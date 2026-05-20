@@ -40,7 +40,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     });
 
     if (!storedToken) {
-      throw new UnauthorizedException('Refresh token inválido ou expirado.');
+      throw new UnauthorizedException('Invalid or expired refresh token.');
     }
 
     const user = await this.prisma.user.findUnique({
@@ -49,7 +49,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     });
 
     if (!user) {
-      throw new UnauthorizedException('Usuário não encontrado.');
+      throw new UnauthorizedException('User not found.');
     }
 
     return {

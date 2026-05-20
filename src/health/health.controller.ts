@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Public } from '@/auth/decorators/public.decorator';
 import axios from 'axios';
 
 @ApiTags('health')
@@ -20,6 +21,7 @@ export class HealthController {
   ) {}
 
   @Get()
+  @Public()
   @HealthCheck()
   check() {
     return this.health.check([
@@ -74,6 +76,7 @@ export class HealthController {
    * it fails if the database is unreachable.
    */
   @Get('ready')
+  @Public()
   @HealthCheck()
   ready() {
     return this.health.check([

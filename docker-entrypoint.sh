@@ -33,26 +33,18 @@ if echo "$MIGRATE_OUTPUT" | grep -q "P3009\|P3018"; then
     exec "$@"
   fi
 
-  # Fallback: db push
-  echo "⚠️  migrate deploy failed again. Trying prisma db push..."
-  npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss 2>&1 || {
-    echo "❌ Database sync failed. Run manually:"
-    echo "   npx prisma migrate resolve --applied <migration_name>"
-    exit 1
-  }
-  echo "✓ Database synced via db push."
-  exec "$@"
+  # FAIL instead of --accept-data-loss: production data loss is unacceptable
+  echo "❌ Migration failed after resolution attempt."
+  echo "   Manual intervention required. Run:"
+  echo "   npx prisma migrate resolve --applied <migration_name>"
+  echo "   npx prisma migrate deploy"
+  exit 1
 fi
 
 # ─── Case 3: Unexpected error ────────────────────────────────
 echo "⚠️  Unexpected migration output: $MIGRATE_OUTPUT"
-echo "→ Attempting prisma db push as fallback..."
-npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss 2>&1 || {
-  echo "❌ Database sync failed. Manual intervention required."
-  exit 1
-}
-echo "✓ Database synced via db push."
-exec "$@"
+echo "❌ Database migration failed. Manual intervention required."
+exit 1
 
 # ─── Safety fallthrough ───────────────────────────────────────
 echo "✓ Starting application..."

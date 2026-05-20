@@ -30,7 +30,7 @@ export class UserService {
     });
 
     if (existingUser) {
-      throw new ConflictException('Email já cadastrado.');
+      throw new ConflictException('Email already registered.');
     }
 
     const hashedPassword = await bcrypt.hash(password, DEFAULT_BCRYPT_SALT_ROUNDS);
@@ -53,7 +53,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException('Usuário não encontrado.');
+      throw new NotFoundException('User not found.');
     }
 
     return user;
@@ -94,7 +94,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException('Usuário não encontrado.');
+      throw new NotFoundException('User not found.');
     }
 
     return user;
@@ -106,7 +106,7 @@ export class UserService {
       select: userExistsSelect,
     });
     if (!user) {
-      throw new NotFoundException('Usuário não encontrado.');
+      throw new NotFoundException('User not found.');
     }
 
     if (dto.email && dto.email !== user.email) {
@@ -115,7 +115,7 @@ export class UserService {
         select: userExistsSelect,
       });
       if (existing) {
-        throw new ConflictException('Email já cadastrado.');
+        throw new ConflictException('Email already registered.');
       }
     }
 
@@ -141,7 +141,7 @@ export class UserService {
       select: userExistsSelect,
     });
     if (!target) {
-      throw new NotFoundException('Usuário não encontrado.');
+      throw new NotFoundException('User not found.');
     }
 
     if (dto.email && dto.email !== target.email) {
@@ -150,7 +150,7 @@ export class UserService {
         select: userExistsSelect,
       });
       if (existing) {
-        throw new ConflictException('Email já cadastrado.');
+        throw new ConflictException('Email already registered.');
       }
     }
 
@@ -191,7 +191,7 @@ export class UserService {
       select: userExistsSelect,
     });
     if (!target) {
-      throw new NotFoundException('Usuário não encontrado.');
+      throw new NotFoundException('User not found.');
     }
 
     // ADMIN não pode excluir SUPERADMIN
@@ -200,6 +200,6 @@ export class UserService {
     }
 
     await this.prisma.user.delete({ where: { id } });
-    return { message: 'Usuário removido com sucesso.' };
+    return { message: 'User removed successfully.' };
   }
 }

@@ -12,6 +12,7 @@ import { LoggerModule } from '@/logger/logger.module';
 import { MetricsModule } from '@/metrics/metrics.module';
 import { HealthModule } from '@/health/health.module';
 import { EmailVerifiedGuard } from '@/auth/email-verified.guard';
+import { validateEnv } from '@/config/env.validation';
 
 // D'Ark Games Store Modules
 import { ProductsModule } from '@/modules/products/products.module';
@@ -54,6 +55,7 @@ if (process.env.SENTRY_DSN) {
         ...(process.env.NODE_ENV === 'test' ? ['.env.test'] : []),
       ],
       isGlobal: true,
+      validate: validateEnv,
     }),
 
     // ─── Schedule (cron jobs) ─────────────────────────────────────

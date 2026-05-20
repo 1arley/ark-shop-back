@@ -132,7 +132,7 @@ export class AuthController {
 
     if (refreshToken) {
       await this.authService.revokeRefreshToken(refreshToken).catch(() => {
-        // token invalido ou ja revogado — apenas limpa o cookie
+        // token invalid or already revoked — just clear the cookie
       });
     }
 
@@ -149,7 +149,7 @@ export class AuthController {
       sameSite: IS_PRODUCTION ? ('none' as const) : ('lax' as const),
     });
 
-    return { message: 'Logout realizado com sucesso.' };
+    return { message: 'Logout successful.' };
   }
 
   @Post('forgot-password')
@@ -168,8 +168,8 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redefinir senha com token' })
-  @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Token invalido ou expirado.' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token.' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
@@ -177,10 +177,10 @@ export class AuthController {
   @Post('forgot-password-code')
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 solicitacoes/minuto
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Solicitar redefinicao de senha via codigo OTP' })
+  @ApiOperation({ summary: 'Request password reset via OTP code' })
   @ApiResponse({
     status: 200,
-    description: 'Se o email existir, um codigo de redefinicao sera enviado.',
+    description: 'If the email exists, a reset code will be sent.',
   })
   async forgotPasswordWithCode(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPasswordWithCode(dto.email);
@@ -190,8 +190,8 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redefinir senha com codigo OTP' })
-  @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Codigo invalido ou expirado.' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired code.' })
   async resetPasswordWithCode(@Body() dto: ResetPasswordWithCodeDto) {
     return this.authService.resetPasswordWithCode(dto);
   }
@@ -200,8 +200,8 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verificar email com codigo recebido' })
-  @ApiResponse({ status: 200, description: 'Email verificado com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Codigo de verificacao invalido ou expirado.' })
+  @ApiResponse({ status: 200, description: 'Email verified successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired verification code.' })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto);
   }
@@ -209,7 +209,7 @@ export class AuthController {
   @Post('resend-verification')
   @Throttle({ default: { limit: 2, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reenviar email de verificacao' })
+  @ApiOperation({ summary: 'Resend verification email' })
   @ApiResponse({
     status: 200,
     description: 'Se o email existir, um novo codigo sera enviado.',
