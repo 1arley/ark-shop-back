@@ -1,3 +1,15 @@
+# [1.22.0](https://github.com/1arley/ark-shop-back/compare/v1.21.0...v1.22.0) (2026-05-21)
+
+
+### Bug Fixes
+
+* **auth:** move @SkipEmailVerification from class to individual methods ([e743f1b](https://github.com/1arley/ark-shop-back/commit/e743f1bf80f1e84645c25407a1909d6b9d04110e))
+
+
+### Features
+
+* **auth:** add GET /auth/verification-status endpoint ([a413621](https://github.com/1arley/ark-shop-back/commit/a413621072451348741030e7ee7dbbaacfd2a058))
+
 # [1.21.0](https://github.com/1arley/ark-shop-back/compare/v1.20.12...v1.21.0) (2026-05-21)
 
 
