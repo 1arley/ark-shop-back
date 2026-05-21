@@ -28,6 +28,7 @@ import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
 import { SkipEmailVerification } from '@/auth/decorators/skip-email-verification.decorator';
+import { Public } from '@/auth/decorators/public.decorator';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -45,12 +46,13 @@ function getCookieOptions(maxAgeSeconds: number) {
 }
 
 @ApiTags('auth')
-@SkipEmailVerification()
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @Public()
+  @SkipEmailVerification()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiRegisterUser()
   async register(@Body() registerDto: RegisterDto) {
@@ -64,6 +66,8 @@ export class AuthController {
   }
 
   @Post('login')
+  @Public()
+  @SkipEmailVerification()
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 tentativas/minuto
   @ApiLoginUser()
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
@@ -153,6 +157,8 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Public()
+  @SkipEmailVerification()
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 solicitações/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Solicitar redefinição de senha' })
@@ -165,6 +171,8 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @Public()
+  @SkipEmailVerification()
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redefinir senha com token' })
@@ -175,6 +183,8 @@ export class AuthController {
   }
 
   @Post('forgot-password-code')
+  @Public()
+  @SkipEmailVerification()
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 solicitacoes/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset via OTP code' })
@@ -187,6 +197,8 @@ export class AuthController {
   }
 
   @Post('reset-password-code')
+  @Public()
+  @SkipEmailVerification()
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redefinir senha com codigo OTP' })
@@ -197,6 +209,8 @@ export class AuthController {
   }
 
   @Post('verify-email')
+  @Public()
+  @SkipEmailVerification()
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verificar email com codigo recebido' })
@@ -207,6 +221,8 @@ export class AuthController {
   }
 
   @Post('resend-verification')
+  @Public()
+  @SkipEmailVerification()
   @Throttle({ default: { limit: 2, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend verification email' })
