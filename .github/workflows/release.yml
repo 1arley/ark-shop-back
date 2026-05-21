@@ -113,6 +113,7 @@ jobs:
             @semantic-release/github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUSKY: 0
 
       # Fallback: extract version from git tag if action didn't produce output
       - name: Extract version from git tag
