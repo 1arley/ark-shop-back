@@ -146,6 +146,31 @@ export class AuthService {
   }
 
   /**
+   * Returns email verification status for the authenticated user.
+   * This endpoint is accessible even for unverified users so the
+   * frontend can check status and prompt verification if needed.
+   */
+  async getVerificationStatus(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        emailVerified: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    return {
+      email: user.email,
+      emailVerified: user.emailVerified,
+    };
+  }
+
+  /**
    * Rotaciona o refresh token: revoga o token antigo e cria um novo.
    * Preserva a configuração rememberMe do token original.
    * Apenas o token usado é revogado — outras sessões permanecem ativas.

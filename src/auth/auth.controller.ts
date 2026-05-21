@@ -243,4 +243,18 @@ export class AuthController {
   async getMe(@Req() req: AuthenticatedRequest) {
     return this.authService.validateUser(req.user.id);
   }
+
+  @Get('verification-status')
+  @UseGuards(JwtAuthGuard)
+  @SkipEmailVerification()
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Check email verification status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns email verification status for the authenticated user',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getVerificationStatus(@Req() req: AuthenticatedRequest) {
+    return this.authService.getVerificationStatus(req.user.id);
+  }
 }
