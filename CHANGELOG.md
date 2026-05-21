@@ -1,3 +1,17 @@
+# [1.21.0](https://github.com/1arley/ark-shop-back/compare/v1.20.12...v1.21.0) (2026-05-21)
+
+
+### Bug Fixes
+
+* **admin:** make isCsv optional in keys import endpoint ([81bcf23](https://github.com/1arley/ark-shop-back/commit/81bcf234fe6f3bc4ae7fddd85e6b761b0cd8136a))
+* format Prisma schema and apply CI migration step ([ebe40e9](https://github.com/1arley/ark-shop-back/commit/ebe40e920270f997c7dda4102d50dcc8c297515c))
+
+
+### Features
+
+* **user:** add audit table UserDeletionLog and migration ([8edd9b7](https://github.com/1arley/ark-shop-back/commit/8edd9b7a0890a83b48f95893cd063136918023e6))
+* **user:** add self‑delete endpoint with safeguards and tests ([1cf2f01](https://github.com/1arley/ark-shop-back/commit/1cf2f01fca9302d312bdcf09bce94b3c69ea7682))
+
 ## [1.20.12](https://github.com/1arley/ark-shop-back/compare/v1.20.11...v1.20.12) (2026-05-20)
 
 ### Bug Fixes
