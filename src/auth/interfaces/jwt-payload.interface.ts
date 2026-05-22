@@ -1,3 +1,5 @@
+import { Role } from '@prisma/client';
+
 /**
  * JWT payload — data embedded in every access & refresh token.
  *
@@ -13,7 +15,7 @@ export interface JwtPayload {
   sub: string;
 
   /** User role — one of USER, ADMIN, SUPERADMIN. */
-  role: string;
+  role: Role;
 
   /** JWT unique identifier (used for refresh token rotation). */
   jti: string;

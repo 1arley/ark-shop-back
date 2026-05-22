@@ -32,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       id: payload.sub,
       email: payload.email,
-      role: payload.role as AuthenticatedUser['role'],
+      role: payload.role,
       name: payload.name,
       emailVerified: payload.emailVerified,
     };

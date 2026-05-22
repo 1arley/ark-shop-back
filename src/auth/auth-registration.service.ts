@@ -12,6 +12,11 @@ import {
   EMAIL_VERIFICATION_EXPIRY_HOURS,
   HOUR_IN_MS,
 } from '@/common/constants';
+import type {
+  RegisterResult,
+  EmailVerificationResult,
+  MessageResult,
+} from '@/auth/interfaces/auth-results.interface';
 
 /**
  * AuthRegistrationService
@@ -29,7 +34,7 @@ export class AuthRegistrationService {
     private readonly emailService: EmailService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto): Promise<RegisterResult> {
     const { name, email, password } = registerDto;
 
     const userExists = await this.prisma.user.findUnique({
@@ -83,7 +88,7 @@ export class AuthRegistrationService {
     };
   }
 
-  async verifyEmail(dto: VerifyEmailDto) {
+  async verifyEmail(dto: VerifyEmailDto): Promise<EmailVerificationResult> {
     const { email, code } = dto;
 
     const user = await this.prisma.user.findUnique({ where: { email } });
@@ -124,7 +129,7 @@ export class AuthRegistrationService {
     return { message: 'Email verificado com sucesso.', emailVerified: true };
   }
 
-  async resendVerificationEmail(email: string) {
+  async resendVerificationEmail(email: string): Promise<MessageResult | EmailVerificationResult> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       return { message: 'Se o email existir, um novo codigo sera enviado.' };

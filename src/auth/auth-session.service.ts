@@ -5,6 +5,12 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { AuthTokenService } from '@/auth/auth-token.service';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { userPublicSelect } from '@/common/prisma/user-public.select';
+import type {
+  LoginResult,
+  TokenPairResult,
+  VerificationStatusResult,
+} from '@/auth/interfaces/auth-results.interface';
+import type { UserPublic } from '@/common/prisma/user-public.select';
 
 /**
  * AuthSessionService
@@ -19,7 +25,7 @@ export class AuthSessionService {
     private readonly authTokenService: AuthTokenService,
   ) {}
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto): Promise<LoginResult> {
     const { email, password, rememberMe } = loginDto;
 
     const user = await this.prisma.user.findUnique({
@@ -65,7 +71,7 @@ export class AuthSessionService {
    * Preserves the rememberMe setting from the original token.
    * Uses atomic delete to prevent race conditions on concurrent refresh.
    */
-  async refreshTokens(userId: string, oldRefreshToken: string) {
+  async refreshTokens(userId: string, oldRefreshToken: string): Promise<TokenPairResult> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, role: true, emailVerified: true, name: true },
@@ -113,7 +119,7 @@ export class AuthSessionService {
     return tokens;
   }
 
-  async validateUser(userId: string) {
+  async validateUser(userId: string): Promise<UserPublic> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: userPublicSelect,
@@ -126,7 +132,7 @@ export class AuthSessionService {
     return user;
   }
 
-  async getVerificationStatus(userId: string) {
+  async getVerificationStatus(userId: string): Promise<VerificationStatusResult> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {

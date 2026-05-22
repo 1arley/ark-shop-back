@@ -5,6 +5,14 @@ import * as crypto from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import type { StringValue } from 'ms';
 import type { JwtPayload } from '@/auth/interfaces/jwt-payload.interface';
+import type { TokenOptions } from '@/auth/interfaces/token-options.interface';
+import type { TokenPairResult } from '@/auth/interfaces/auth-results.interface';
+import type { UserProfile } from '@/common/interfaces/user-profile.interface';
+
+/**
+ * A duration string parsable by the `ms` library, e.g. "15m", "7d", "30d".
+ */
+type DurationString = `${number}${'s' | 'm' | 'h' | 'd'}`;
 
 /**
  * AuthTokenService
@@ -28,10 +36,7 @@ export class AuthTokenService {
    * payload so that guards and controllers can authorize requests without
    * hitting the database on every request (N+1 fix).
    */
-  async generateTokenPair(
-    user: { id: string; email: string; role: string; emailVerified: boolean; name: string | null },
-    options?: { rememberMe?: boolean },
-  ) {
+  async generateTokenPair(user: UserProfile, options?: TokenOptions): Promise<TokenPairResult> {
     const payload: JwtPayload = {
       sub: user.id,
       role: user.role,
@@ -41,10 +46,11 @@ export class AuthTokenService {
       jti: crypto.randomUUID(),
     };
 
-    const accessExpiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
-    const refreshExpiresIn = options?.rememberMe
+    const accessExpiresIn: DurationString =
+      (this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') as DurationString) || '15m';
+    const refreshExpiresIn: DurationString = options?.rememberMe
       ? '30d'
-      : this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+      : (this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') as DurationString) || '7d';
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, this.buildSignOptions(accessExpiresIn, 'access')),
@@ -61,14 +67,10 @@ export class AuthTokenService {
   }
 
   /** Persist a hashed refresh token in the database. */
-  async createRefreshToken(
-    userId: string,
-    token: string,
-    options?: { rememberMe?: boolean },
-  ): Promise<void> {
-    const expiresIn = options?.rememberMe
+  async createRefreshToken(userId: string, token: string, options?: TokenOptions): Promise<void> {
+    const expiresIn: DurationString = options?.rememberMe
       ? '30d'
-      : this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+      : (this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') as DurationString) || '7d';
     const expiresAt = new Date(Date.now() + this.parseExpiresInToMs(expiresIn));
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
@@ -108,7 +110,7 @@ export class AuthTokenService {
 
   // ─── Private helpers ─────────────────────────────────────────────
 
-  private buildSignOptions(expiresIn: string, kind: 'access' | 'refresh') {
+  private buildSignOptions(expiresIn: DurationString, kind: 'access' | 'refresh') {
     const secretKey = kind === 'access' ? 'JWT_ACCESS_SECRET' : 'JWT_REFRESH_SECRET';
     const issuer = this.configService.get<string>('JWT_ISSUER')?.trim() || undefined;
     const audience = this.configService.get<string>('JWT_AUDIENCE')?.trim() || undefined;
@@ -121,7 +123,7 @@ export class AuthTokenService {
     };
   }
 
-  private parseExpiresInToMs(expiresIn: string): number {
+  private parseExpiresInToMs(expiresIn: DurationString): number {
     const match = expiresIn.match(/^(\d+)([smhd])$/);
     if (!match) return 7 * 24 * 60 * 60 * 1000;
 
@@ -133,10 +135,10 @@ export class AuthTokenService {
       h: 60 * 60 * 1000,
       d: 24 * 60 * 60 * 1000,
     };
-    return value * (multipliers[unit] || 7 * 24 * 60 * 60 * 1000);
+    return value * (multipliers[unit] ?? 7 * 24 * 60 * 60 * 1000);
   }
 
-  private parseExpiresInToSeconds(expiresIn: string): number {
+  private parseExpiresInToSeconds(expiresIn: DurationString): number {
     return Math.floor(this.parseExpiresInToMs(expiresIn) / 1000);
   }
 }

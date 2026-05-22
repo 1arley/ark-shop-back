@@ -15,6 +15,7 @@ import {
   PASSWORD_RESET_CODE_EXPIRY_MINUTES,
   MINUTE_IN_MS,
 } from '@/common/constants';
+import type { MessageResult } from '@/auth/interfaces/auth-results.interface';
 
 /**
  * AuthPasswordService
@@ -33,7 +34,7 @@ export class AuthPasswordService {
     private readonly authTokenService: AuthTokenService,
   ) {}
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string): Promise<MessageResult> {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -70,7 +71,7 @@ export class AuthPasswordService {
     return { message: 'Se o email existir, um link de redefinicao sera enviado.' };
   }
 
-  async forgotPasswordWithCode(email: string) {
+  async forgotPasswordWithCode(email: string): Promise<MessageResult> {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -109,7 +110,7 @@ export class AuthPasswordService {
     return { message: 'Se o email existir, um codigo de redefinicao sera enviado.' };
   }
 
-  async resetPassword(dto: ResetPasswordDto) {
+  async resetPassword(dto: ResetPasswordDto): Promise<MessageResult> {
     const { token, email, password } = dto;
 
     const user = await this.prisma.user.findUnique({ where: { email } });
@@ -154,7 +155,7 @@ export class AuthPasswordService {
     return { message: 'Senha redefinida com sucesso.' };
   }
 
-  async resetPasswordWithCode(dto: ResetPasswordWithCodeDto) {
+  async resetPasswordWithCode(dto: ResetPasswordWithCodeDto): Promise<MessageResult> {
     const { code, email, password } = dto;
 
     const user = await this.prisma.user.findUnique({ where: { email } });

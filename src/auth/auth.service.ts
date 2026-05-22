@@ -8,6 +8,15 @@ import { LoginDto } from '@/auth/dto/login.dto';
 import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
+import type {
+  RegisterResult,
+  LoginResult,
+  TokenPairResult,
+  EmailVerificationResult,
+  MessageResult,
+  VerificationStatusResult,
+} from '@/auth/interfaces/auth-results.interface';
+import type { UserPublic } from '@/common/prisma/user-public.select';
 
 /**
  * AuthService — thin facade over focused sub-services.
@@ -31,54 +40,54 @@ export class AuthService {
   ) {}
 
   // ─── Registration & Email Verification ──────────────────────────
-  register(registerDto: RegisterDto) {
+  register(registerDto: RegisterDto): Promise<RegisterResult> {
     return this.registration.register(registerDto);
   }
 
-  verifyEmail(dto: VerifyEmailDto) {
+  verifyEmail(dto: VerifyEmailDto): Promise<EmailVerificationResult> {
     return this.registration.verifyEmail(dto);
   }
 
-  resendVerificationEmail(email: string) {
+  resendVerificationEmail(email: string): Promise<MessageResult | EmailVerificationResult> {
     return this.registration.resendVerificationEmail(email);
   }
 
   // ─── Session ────────────────────────────────────────────────────
-  login(loginDto: LoginDto) {
+  login(loginDto: LoginDto): Promise<LoginResult> {
     return this.session.login(loginDto);
   }
 
-  refreshTokens(userId: string, oldRefreshToken: string) {
+  refreshTokens(userId: string, oldRefreshToken: string): Promise<TokenPairResult> {
     return this.session.refreshTokens(userId, oldRefreshToken);
   }
 
-  validateUser(userId: string) {
+  validateUser(userId: string): Promise<UserPublic> {
     return this.session.validateUser(userId);
   }
 
-  getVerificationStatus(userId: string) {
+  getVerificationStatus(userId: string): Promise<VerificationStatusResult> {
     return this.session.getVerificationStatus(userId);
   }
 
   // ─── Password ───────────────────────────────────────────────────
-  forgotPassword(email: string) {
+  forgotPassword(email: string): Promise<MessageResult> {
     return this.password.forgotPassword(email);
   }
 
-  forgotPasswordWithCode(email: string) {
+  forgotPasswordWithCode(email: string): Promise<MessageResult> {
     return this.password.forgotPasswordWithCode(email);
   }
 
-  resetPassword(dto: ResetPasswordDto) {
+  resetPassword(dto: ResetPasswordDto): Promise<MessageResult> {
     return this.password.resetPassword(dto);
   }
 
-  resetPasswordWithCode(dto: ResetPasswordWithCodeDto) {
+  resetPasswordWithCode(dto: ResetPasswordWithCodeDto): Promise<MessageResult> {
     return this.password.resetPasswordWithCode(dto);
   }
 
   // ─── Token Management ──────────────────────────────────────────
-  revokeRefreshToken(token: string) {
+  revokeRefreshToken(token: string): Promise<void> {
     return this.tokens.revokeRefreshToken(token);
   }
 }

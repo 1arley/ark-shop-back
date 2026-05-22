@@ -1,5 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Role } from '@prisma/client';
 import { SKIP_EMAIL_VERIFICATION_KEY } from '@/auth/decorators/skip-email-verification.decorator';
 import { IS_PUBLIC_KEY } from '@/auth/decorators/public.decorator';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
@@ -39,7 +40,7 @@ export class EmailVerifiedGuard implements CanActivate {
       return true;
     }
 
-    if (user.role === 'ADMIN' || user.role === 'SUPERADMIN') {
+    if (user.role === Role.ADMIN || user.role === Role.SUPERADMIN) {
       return true;
     }
 
