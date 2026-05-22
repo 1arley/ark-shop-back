@@ -12,7 +12,6 @@ import {
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
-import { AuthService } from '@/auth/auth.service';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { RegisterDto } from '@/auth/dto/register.dto';
 import { ApiRegisterUser } from '@/auth/swagger/auth.post.register.swagger';
@@ -29,6 +28,10 @@ import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
 import { SkipEmailVerification } from '@/auth/decorators/skip-email-verification.decorator';
 import { Public } from '@/auth/decorators/public.decorator';
+import { AuthRegistrationService } from '@/auth/auth-registration.service';
+import { AuthSessionService } from '@/auth/auth-session.service';
+import { AuthPasswordService } from '@/auth/auth-password.service';
+import { AuthTokenService } from '@/auth/auth-token.service';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -48,7 +51,12 @@ function getCookieOptions(maxAgeSeconds: number) {
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly registrationService: AuthRegistrationService,
+    private readonly sessionService: AuthSessionService,
+    private readonly passwordService: AuthPasswordService,
+    private readonly tokenService: AuthTokenService,
+  ) {}
 
   /**
    * Public endpoint - no auth or email verification required.
@@ -60,7 +68,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiRegisterUser()
   async register(@Body() registerDto: RegisterDto) {
-    const result = await this.authService.register(registerDto);
+    const result = await this.registrationService.register(registerDto);
 
     return {
       message: result.message,
@@ -79,7 +87,7 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 tentativas/minuto
   @ApiLoginUser()
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.login(loginDto);
+    const result = await this.sessionService.login(loginDto);
 
     res.cookie(
       ACCESS_TOKEN_COOKIE,
@@ -114,7 +122,7 @@ export class AuthController {
   @ApiRefreshTokens()
   @UseGuards(JwtRefreshAuthGuard)
   async refreshTokens(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.refreshTokens(req.user.id, req.user.refreshToken!);
+    const result = await this.sessionService.refreshTokens(req.user.id, req.user.refreshToken!);
 
     res.cookie(
       ACCESS_TOKEN_COOKIE,
@@ -151,7 +159,7 @@ export class AuthController {
     const refreshToken = extractRefreshToken(req);
 
     if (refreshToken) {
-      await this.authService.revokeRefreshToken(refreshToken).catch(() => {
+      await this.tokenService.revokeRefreshToken(refreshToken).catch(() => {
         // token invalid or already revoked — just clear the cookie
       });
     }
@@ -187,7 +195,7 @@ export class AuthController {
     description: 'Se o email existir, um link de redefinição será enviado.',
   })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto.email);
+    return this.passwordService.forgotPassword(dto.email);
   }
 
   /**
@@ -203,7 +211,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password reset successfully.' })
   @ApiResponse({ status: 400, description: 'Invalid or expired token.' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto);
+    return this.passwordService.resetPassword(dto);
   }
 
   /**
@@ -221,7 +229,7 @@ export class AuthController {
     description: 'If the email exists, a reset code will be sent.',
   })
   async forgotPasswordWithCode(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPasswordWithCode(dto.email);
+    return this.passwordService.forgotPasswordWithCode(dto.email);
   }
 
   /**
@@ -237,7 +245,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password reset successfully.' })
   @ApiResponse({ status: 400, description: 'Invalid or expired code.' })
   async resetPasswordWithCode(@Body() dto: ResetPasswordWithCodeDto) {
-    return this.authService.resetPasswordWithCode(dto);
+    return this.passwordService.resetPasswordWithCode(dto);
   }
 
   /**
@@ -253,7 +261,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Email verified successfully.' })
   @ApiResponse({ status: 400, description: 'Invalid or expired verification code.' })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
-    return this.authService.verifyEmail(dto);
+    return this.registrationService.verifyEmail(dto);
   }
 
   /**
@@ -271,7 +279,7 @@ export class AuthController {
     description: 'Se o email existir, um novo codigo sera enviado.',
   })
   async resendVerification(@Body() dto: ForgotPasswordDto) {
-    return this.authService.resendVerificationEmail(dto.email);
+    return this.registrationService.resendVerificationEmail(dto.email);
   }
 
   /**
@@ -286,7 +294,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Current user profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMe(@Req() req: AuthenticatedRequest) {
-    return this.authService.validateUser(req.user.id);
+    return this.sessionService.validateUser(req.user.id);
   }
 
   /**
@@ -305,6 +313,6 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getVerificationStatus(@Req() req: AuthenticatedRequest) {
-    return this.authService.getVerificationStatus(req.user.id);
+    return this.sessionService.getVerificationStatus(req.user.id);
   }
 }

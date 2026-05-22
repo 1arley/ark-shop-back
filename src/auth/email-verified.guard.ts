@@ -30,6 +30,11 @@ export class EmailVerifiedGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request.user;
 
+    // If there's no user on the request, this guard is running before
+    // (or without) JwtAuthGuard. Since public endpoints are already
+    // handled above, returning true here is a safe fallback — the
+    // JwtAuthGuard (which runs first via @UseGuards order) will block
+    // unauthenticated requests with a 401.
     if (!user) {
       return true;
     }

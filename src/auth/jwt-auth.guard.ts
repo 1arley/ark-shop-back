@@ -1,7 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { Observable } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { IS_PUBLIC_KEY } from '@/auth/decorators/public.decorator';
 
 @Injectable()
@@ -26,7 +26,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleRequest(err: any, user: any, info: any, status: any, context?: ExecutionContext) {
+  handleRequest(err: any, user: any, info: any, status?: any) {
     if (err || !user) {
       if (info && process.env.NODE_ENV !== 'production') {
         const message = info instanceof Error ? info.message : String(info);
@@ -34,6 +34,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
       }
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return
-    return super.handleRequest(err, user, info, status, context);
+    return super.handleRequest(err, user, info, status);
   }
 }
