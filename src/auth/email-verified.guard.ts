@@ -64,12 +64,12 @@ export class EmailVerifiedGuard implements CanActivate {
     const clazz = context.getClass();
 
     // Priority 1: Check if route is public
-    if (this.isPublicRoute(handler, clazz)) {
+    if (this.isPublicRoute(handler as (...args: any[]) => any, clazz)) {
       return true;
     }
 
     // Priority 2: Check if email verification is explicitly skipped
-    if (this.shouldSkipEmailVerification(handler, clazz)) {
+    if (this.shouldSkipEmailVerification(handler as (...args: any[]) => any, clazz)) {
       return true;
     }
 
