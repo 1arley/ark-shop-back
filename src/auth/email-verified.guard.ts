@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   Logger,
+  Type,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SKIP_EMAIL_VERIFICATION_KEY } from '@/auth/decorators/skip-email-verification.decorator';
@@ -110,10 +111,7 @@ export class EmailVerifiedGuard implements CanActivate {
    * @param clazz - Controller class metadata
    * @returns `true` if route is public
    */
-  private isPublicRoute(
-    handler: ReturnType<typeof Reflect.getPrototypeOf>,
-    clazz: ReturnType<typeof Reflect.getPrototypeOf>,
-  ): boolean {
+  private isPublicRoute(handler: (...args: any[]) => any, clazz: Type<any>): boolean {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [handler, clazz]);
     return !!isPublic;
   }
@@ -125,10 +123,7 @@ export class EmailVerifiedGuard implements CanActivate {
    * @param clazz - Controller class metadata
    * @returns `true` if verification should be skipped
    */
-  private shouldSkipEmailVerification(
-    handler: ReturnType<typeof Reflect.getPrototypeOf>,
-    clazz: ReturnType<typeof Reflect.getPrototypeOf>,
-  ): boolean {
+  private shouldSkipEmailVerification(handler: (...args: any[]) => any, clazz: Type<any>): boolean {
     const skipVerification = this.reflector.getAllAndOverride<boolean>(
       SKIP_EMAIL_VERIFICATION_KEY,
       [handler, clazz],
