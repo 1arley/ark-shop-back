@@ -26,8 +26,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx dotenv-cli -e .env.test -- npx prisma generate
-        - name: Apply Prisma Migrations (CI)
-          run: npx dotenv-cli -e .env.test -- npx prisma migrate deploy
+
+      - name: Apply Prisma Migrations (CI)
+        run: npx dotenv-cli -e .env.test -- npx prisma migrate deploy
 
       - name: Run linter
         run: npm run lint
@@ -75,8 +76,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx dotenv-cli -e .env.test -- npx prisma generate
-        - name: Apply Prisma Migrations (CI)
-          run: npx dotenv-cli -e .env.test -- npx prisma migrate deploy
+
+      - name: Apply Prisma Migrations (CI)
+        run: npx dotenv-cli -e .env.test -- npx prisma migrate deploy
 
       - name: Push database schema
         run: npx dotenv-cli -e .env.test -- npx prisma db push --force-reset
@@ -126,7 +128,6 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
           scanners: 'vuln'
-          ignorefile: '.trivyignore'
 
       - name: Generate SARIF report
         uses: aquasecurity/trivy-action@master
@@ -137,7 +138,6 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
           scanners: 'vuln'
-          ignorefile: '.trivyignore'
 
       - name: Check for vulnerabilities
         run: |

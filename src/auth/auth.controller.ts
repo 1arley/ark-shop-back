@@ -28,6 +28,7 @@ import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
 import { SkipEmailVerification } from '@/auth/decorators/skip-email-verification.decorator';
 import { Public } from '@/auth/decorators/public.decorator';
+import { RequireVerifiedEmail } from '@/auth/decorators/require-verified-email.decorator';
 import { AuthRegistrationService } from '@/auth/auth-registration.service';
 import { AuthSessionService } from '@/auth/auth-session.service';
 import { AuthPasswordService } from '@/auth/auth-password.service';
@@ -121,6 +122,7 @@ export class AuthController {
   @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 refreshes/minuto
   @ApiRefreshTokens()
   @UseGuards(JwtRefreshAuthGuard)
+  @RequireVerifiedEmail()
   async refreshTokens(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     const result = await this.sessionService.refreshTokens(req.user.id, req.user.refreshToken!);
 
@@ -288,7 +290,7 @@ export class AuthController {
    * Returns 403 Forbidden if user's email is not verified.
    */
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @RequireVerifiedEmail()
   @SkipThrottle()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Current user profile' })

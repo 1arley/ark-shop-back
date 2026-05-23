@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -11,7 +11,6 @@ import { UserModule } from '@/user/user.module';
 import { LoggerModule } from '@/logger/logger.module';
 import { MetricsModule } from '@/metrics/metrics.module';
 import { HealthModule } from '@/health/health.module';
-import { EmailVerifiedGuard } from '@/auth/email-verified.guard';
 import { validateEnv } from '@/config/env.validation';
 
 // D'Ark Games Store Modules
@@ -119,10 +118,6 @@ if (process.env.SENTRY_DSN) {
           },
         ]
       : []),
-    {
-      provide: APP_GUARD,
-      useClass: EmailVerifiedGuard,
-    },
   ],
 })
 export class AppModule {}

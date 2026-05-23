@@ -1,4 +1,4 @@
-import { Controller, Get, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AntifraudService } from './antifraud.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
