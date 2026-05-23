@@ -109,7 +109,9 @@ export class UserService {
       throw new NotFoundException('User not found.');
     }
 
-    if (dto.email && dto.email !== user.email) {
+    const isEmailChanging = dto.email && dto.email !== user.email;
+
+    if (isEmailChanging) {
       const existing = await this.prisma.user.findUnique({
         where: { email: dto.email },
         select: userExistsSelect,
@@ -119,15 +121,30 @@ export class UserService {
       }
     }
 
-    return this.prisma.user.update({
+    // When email changes, reset emailVerified so the user must re-verify.
+    // This prevents identity takeover without confirmation (OWASP API #3).
+    const updatedUser = await this.prisma.user.update({
       where: { id },
       data: {
-        name: dto.name,
-        email: dto.email,
-        avatarUrl: dto.avatarUrl,
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.email !== undefined ? { email: dto.email } : {}),
+        ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
+        // Reset email verification if the email changed
+        ...(isEmailChanging ? { emailVerified: false } : {}),
       },
       select: userPublicSelect,
     });
+
+    // If email changed, invalidate existing refresh tokens so the user must log in again
+    // and revoke any pending email verification codes
+    if (isEmailChanging) {
+      await this.prisma.refreshToken.deleteMany({ where: { userId: id } });
+      await this.prisma.emailVerificationToken.deleteMany({
+        where: { userId: id, usedAt: null },
+      });
+    }
+
+    return updatedUser;
   }
 
   async adminUpdateUser(

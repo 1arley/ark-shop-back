@@ -1,5 +1,14 @@
 import { plainToClass } from 'class-transformer';
-import { IsNotEmpty, IsString, IsUrl, IsOptional, IsIn, validateSync } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsUrl,
+  IsOptional,
+  IsIn,
+  IsNumberString,
+  MinLength,
+  validateSync,
+} from 'class-validator';
 
 class EnvironmentVariables {
   @IsNotEmpty()
@@ -8,10 +17,12 @@ class EnvironmentVariables {
 
   @IsNotEmpty()
   @IsString()
+  @MinLength(32, { message: 'JWT_ACCESS_SECRET must be at least 32 characters long' })
   JWT_ACCESS_SECRET!: string;
 
   @IsNotEmpty()
   @IsString()
+  @MinLength(32, { message: 'JWT_REFRESH_SECRET must be at least 32 characters long' })
   JWT_REFRESH_SECRET!: string;
 
   @IsOptional()
@@ -21,6 +32,14 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   JWT_AUDIENCE?: string;
+
+  @IsOptional()
+  @IsString()
+  JWT_ACCESS_EXPIRES_IN?: string;
+
+  @IsOptional()
+  @IsString()
+  JWT_REFRESH_EXPIRES_IN?: string;
 
   @IsOptional()
   @IsIn(['development', 'production', 'test'])
@@ -40,6 +59,7 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  @MinLength(32, { message: 'KEYS_ENCRYPTION_KEY must be at least 32 characters long' })
   KEYS_ENCRYPTION_KEY?: string;
 
   @IsOptional()
@@ -61,6 +81,42 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   S3_SECRET_ACCESS_KEY?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  PORT?: string;
+
+  @IsOptional()
+  @IsString()
+  API_PREFIX?: string;
+
+  @IsOptional()
+  @IsString()
+  SWAGGER_PATH?: string;
+
+  @IsOptional()
+  @IsString()
+  REDIS_HOST?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  REDIS_PORT?: string;
+
+  @IsOptional()
+  @IsString()
+  REDIS_PASSWORD?: string;
+
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  FRONTEND_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  BCRYPT_SALT_ROUNDS?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  PASSWORD_RESET_EXPIRY_HOURS?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

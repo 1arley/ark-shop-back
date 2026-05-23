@@ -17,3 +17,13 @@ declare module '@aws-sdk/lib-storage' {
     done(): Promise<any>;
   }
 }
+
+// express-timeout-handler — lightweight middleware without built-in types
+declare module 'express-timeout-handler' {
+  import { RequestHandler } from 'express';
+  interface TimeoutOptions {
+    timeout: number;
+    onTimeout: (req: any, res: any) => void;
+  }
+  export function handler(options: TimeoutOptions): RequestHandler;
+}

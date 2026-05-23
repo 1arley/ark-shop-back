@@ -11,6 +11,7 @@ import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'express';
+import timeout from 'express-timeout-handler';
 
 // Logger declared BEFORE process handlers to avoid ReferenceError on startup crashes
 const logger = new Logger('Bootstrap');
@@ -39,8 +40,39 @@ export async function createApp(): Promise<INestApplication> {
   // ─── Security Headers (Helmet) ────────────────────────────────────
   app.use(
     helmet({
-      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+      contentSecurityPolicy:
+        process.env.NODE_ENV === 'production'
+          ? {
+              directives: {
+                defaultSrc: ["'self'"],
+                baseUri: ["'self'"],
+                fontSrc: ["'self'", 'https:', 'data:'],
+                formAction: ["'self'"],
+                frameAncestors: ["'none'"],
+                imgSrc: ["'self'", 'data:', 'https:'],
+                objectSrc: ["'none'"],
+                scriptSrc: ["'self'"],
+                scriptSrcAttr: ["'none'"],
+                styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
+                upgradeInsecureRequests: [],
+              },
+            }
+          : false,
       crossOriginEmbedderPolicy: false,
+      // Prevent MIME type sniffing
+      noSniff: true,
+      // Hide X-Powered-By header
+      hidePoweredBy: true,
+      // Prevent clickjacking
+      frameguard: { action: 'deny' },
+      // Enable HSTS
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+      // Disable DNS prefetching
+      dnsPrefetchControl: { allow: false },
     }),
   );
 
@@ -49,6 +81,16 @@ export async function createApp(): Promise<INestApplication> {
   // ─── Request Body Size Limit (DoS prevention) ───────────────────
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ limit: '1mb', extended: true }));
+
+  // ─── Request Timeout (slow loris / resource exhaustion prevention) ─
+  app.use(
+    timeout.handler({
+      timeout: 30_000, // 30s max per request
+      onTimeout: (_req: any, _res: any) => {
+        // Let Express default error handler respond with 503
+      },
+    }),
+  );
 
   // ─── API Prefix ───────────────────────────────────────────────────
   const apiPrefix = process.env.API_PREFIX || 'api';

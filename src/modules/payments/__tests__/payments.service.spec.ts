@@ -497,33 +497,65 @@ describe('PaymentsService', () => {
 
   // ─── getPayment ──────────────────────────────────────────────────
   describe('getPayment', () => {
-    it('should return payment by ID', async () => {
+    it('should return payment by ID (own payment)', async () => {
       mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
 
-      const result = await service.getPayment('payment-id-1');
+      const result = await service.getPayment('payment-id-1', 'user-id-1', 'USER');
 
       expect(result).toEqual(mockPayment);
       expect(mockPaymentsRepository.findById).toHaveBeenCalledWith('payment-id-1');
+    });
+
+    it('should allow admin to view any payment', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
+
+      const result = await service.getPayment('payment-id-1', 'admin-id', 'ADMIN');
+
+      expect(result).toEqual(mockPayment);
+    });
+
+    it('should throw ForbiddenException for non-owner, non-admin user', async () => {
+      mockPaymentsRepository.findById.mockResolvedValue(mockPayment);
+
+      await expect(service.getPayment('payment-id-1', 'other-user-id', 'USER')).rejects.toThrow(
+        'You can only view your own payments',
+      );
     });
   });
 
   // ─── getPaymentByOrderId ─────────────────────────────────────────
   describe('getPaymentByOrderId', () => {
-    it('should return payment by order ID', async () => {
+    it('should return payment by order ID (own payment)', async () => {
       mockPaymentsRepository.findByOrderId.mockResolvedValue(mockPayment);
 
-      const result = await service.getPaymentByOrderId('order-id-1');
+      const result = await service.getPaymentByOrderId('order-id-1', 'user-id-1', 'USER');
 
       expect(result).toEqual(mockPayment);
       expect(mockPaymentsRepository.findByOrderId).toHaveBeenCalledWith('order-id-1');
     });
 
-    it('should return null when no payment exists for order', async () => {
+    it('should throw ForbiddenException for non-owner', async () => {
+      mockPaymentsRepository.findByOrderId.mockResolvedValue(mockPayment);
+
+      await expect(
+        service.getPaymentByOrderId('order-id-1', 'other-user-id', 'USER'),
+      ).rejects.toThrow('You can only view your own payments');
+    });
+
+    it('should allow admin to view any order payment', async () => {
+      mockPaymentsRepository.findByOrderId.mockResolvedValue(mockPayment);
+
+      const result = await service.getPaymentByOrderId('order-id-1', 'admin-id', 'SUPERADMIN');
+
+      expect(result).toEqual(mockPayment);
+    });
+
+    it('should throw when no payment exists for order', async () => {
       mockPaymentsRepository.findByOrderId.mockResolvedValue(null);
 
-      const result = await service.getPaymentByOrderId('order-id-999');
-
-      expect(result).toBeNull();
+      await expect(
+        service.getPaymentByOrderId('order-id-999', 'user-id-1', 'USER'),
+      ).rejects.toThrow('Payment not found');
     });
   });
 

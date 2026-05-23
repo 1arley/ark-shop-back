@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PaymentsRepository } from './payments.repository';
 import { PaymentProviderFactory } from './payment-provider.factory';
 import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
@@ -119,12 +119,32 @@ export class PaymentsService {
     };
   }
 
-  async getPayment(paymentId: string) {
-    return this.paymentsRepository.findById(paymentId);
+  async getPayment(paymentId: string, userId: string, userRole: string) {
+    const payment = await this.paymentsRepository.findById(paymentId);
+    if (!payment) {
+      throw new BadRequestException('Payment not found');
+    }
+
+    // Users can only view their own payments; admins can view any
+    if (payment.userId !== userId && userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
+      throw new ForbiddenException('You can only view your own payments');
+    }
+
+    return payment;
   }
 
-  async getPaymentByOrderId(orderId: string) {
-    return this.paymentsRepository.findByOrderId(orderId);
+  async getPaymentByOrderId(orderId: string, userId: string, userRole: string) {
+    const payment = await this.paymentsRepository.findByOrderId(orderId);
+    if (!payment) {
+      throw new BadRequestException('Payment not found');
+    }
+
+    // Users can only view their own payments; admins can view any
+    if (payment.userId !== userId && userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
+      throw new ForbiddenException('You can only view your own payments');
+    }
+
+    return payment;
   }
 
   async getUserPayments(userId: string, page: number = 1, limit: number = 10) {
