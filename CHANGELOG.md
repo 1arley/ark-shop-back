@@ -1,3 +1,10 @@
+## [1.23.1](https://github.com/1arley/ark-shop-back/compare/v1.23.0...v1.23.1) (2026-05-23)
+
+
+### Bug Fixes
+
+* **docker:** restore missing docker-entrypoint.sh deleted in cleanup ([b20ef4c](https://github.com/1arley/ark-shop-back/commit/b20ef4c871a585dac73c8aaa17b8bad63b3c0fc7))
+
 # [1.23.0](https://github.com/1arley/ark-shop-back/compare/v1.22.0...v1.23.0) (2026-05-23)
 
 

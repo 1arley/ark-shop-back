@@ -1,6 +1,6 @@
 {
   "name": "nestjs-template",
-  "version": "1.23.0",
+  "version": "1.23.1",
   "description": "Template backend production-ready com autenticação JWT, Swagger, Prisma e Docker",
   "author": "SeedaBit Systems",
   "private": true,
