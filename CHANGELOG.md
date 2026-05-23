@@ -1,3 +1,18 @@
+# [1.23.0](https://github.com/1arley/ark-shop-back/compare/v1.22.0...v1.23.0) (2026-05-23)
+
+
+### Bug Fixes
+
+* **auth:** cast handler to resolve TS Function type incompatibility ([01bcf3e](https://github.com/1arley/ark-shop-back/commit/01bcf3e592ca147333aa05ce8b0cf112a0771d2d))
+* **auth:** correct EmailVerifiedGuard to delegate authentication properly ([83b2814](https://github.com/1arley/ark-shop-back/commit/83b28147c424dee38220cbc4fd09afd911d5ea70))
+* **auth:** migrate metadata keys to Reflector.createDecorator for NestJS v11 compat ([8cb94f2](https://github.com/1arley/ark-shop-back/commit/8cb94f2fb3c538ebf06ce32849b539e2ffd495ee))
+
+
+### Features
+
+* bootstrap application modules and implement base controllers for core business features ([76b0783](https://github.com/1arley/ark-shop-back/commit/76b07834d24c8c31ff21221384f98db67b9c74d0))
+* payments module with service, controller, and DTOs for user authentication and password management improvements ([4677495](https://github.com/1arley/ark-shop-back/commit/467749593efd76fab89afde7318bbce4b5262040))
+
 # [1.22.0](https://github.com/1arley/ark-shop-back/compare/v1.21.0...v1.22.0) (2026-05-21)
 
 
