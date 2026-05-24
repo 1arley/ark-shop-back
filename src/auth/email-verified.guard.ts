@@ -33,8 +33,10 @@ export class EmailVerifiedGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const handler = context.getHandler();
     const clazz = context.getClass();
+    const handlerName = typeof handler === 'function' ? handler.name : 'unknown';
+    const className = clazz?.name || 'UnknownClass';
 
-    this.logger.log(`EmailVerifiedGuard called for ${context.getClass()?.name}.${handler.name}`);
+    this.logger.log(`EmailVerifiedGuard called for ${className}.${handlerName}`);
 
     // Priority 1: Check if route is public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [handler, clazz]);
