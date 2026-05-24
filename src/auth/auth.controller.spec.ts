@@ -1,9 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from '@/auth/auth.controller';
-import { AuthRegistrationService } from '@/auth/auth-registration.service';
-import { AuthSessionService } from '@/auth/auth-session.service';
-import { AuthPasswordService } from '@/auth/auth-password.service';
-import { AuthTokenService } from '@/auth/auth-token.service';
+import { AuthService } from '@/auth/auth.service';
 import { RegisterDto } from '@/auth/dto/register.dto';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { ForgotPasswordDto } from '@/auth/dto/forgot-password.dto';
@@ -22,51 +19,29 @@ const mockRes = () =>
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let registrationService: jest.Mocked<AuthRegistrationService>;
-  let sessionService: jest.Mocked<AuthSessionService>;
-  let passwordService: jest.Mocked<AuthPasswordService>;
-  let tokenService: jest.Mocked<AuthTokenService>;
+  let authService: AuthService;
 
-  const mockRegistrationService = {
+  const mockAuthService = {
     register: jest.fn(),
-    verifyEmail: jest.fn(),
-    resendVerificationEmail: jest.fn(),
-  };
-
-  const mockSessionService = {
     login: jest.fn(),
     refreshTokens: jest.fn(),
-    validateUser: jest.fn(),
-    getVerificationStatus: jest.fn(),
-  };
-
-  const mockPasswordService = {
     forgotPassword: jest.fn(),
-    forgotPasswordWithCode: jest.fn(),
     resetPassword: jest.fn(),
+    forgotPasswordWithCode: jest.fn(),
     resetPasswordWithCode: jest.fn(),
-  };
-
-  const mockTokenService = {
+    verifyEmail: jest.fn(),
+    resendVerificationEmail: jest.fn(),
     revokeRefreshToken: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [
-        { provide: AuthRegistrationService, useValue: mockRegistrationService },
-        { provide: AuthSessionService, useValue: mockSessionService },
-        { provide: AuthPasswordService, useValue: mockPasswordService },
-        { provide: AuthTokenService, useValue: mockTokenService },
-      ],
+      providers: [{ provide: AuthService, useValue: mockAuthService }],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
-    registrationService = module.get(AuthRegistrationService);
-    sessionService = module.get(AuthSessionService);
-    passwordService = module.get(AuthPasswordService);
-    tokenService = module.get(AuthTokenService);
+    authService = module.get<AuthService>(AuthService);
   });
 
   afterEach(() => {
@@ -95,7 +70,7 @@ describe('AuthController', () => {
         emailVerificationRequired: true,
       };
 
-      mockRegistrationService.register.mockResolvedValue(mockResponse);
+      mockAuthService.register.mockResolvedValue(mockResponse);
 
       const result = await controller.register(registerDto);
 
@@ -104,23 +79,19 @@ describe('AuthController', () => {
       expect(result.user.email).toBe('test@example.com');
       expect(result).not.toHaveProperty('access_token');
       expect(result).not.toHaveProperty('refresh_token');
-      expect(registrationService.register).toHaveBeenCalledWith(registerDto);
+      expect(authService.register).toHaveBeenCalledWith(registerDto);
     });
 
     it('should propagate ConflictException when email already exists', async () => {
-      mockRegistrationService.register.mockRejectedValue(
-        new ConflictException('Email já cadastrado.'),
-      );
+      mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
       await expect(controller.register(registerDto)).rejects.toThrow(ConflictException);
-      expect(registrationService.register).toHaveBeenCalledWith(registerDto);
+      expect(authService.register).toHaveBeenCalledWith(registerDto);
     });
 
     it('should handle validation errors from service', async () => {
       const invalidDto = { ...registerDto, email: 'invalid-email' };
-      mockRegistrationService.register.mockRejectedValue(
-        new ConflictException('Email já cadastrado.'),
-      );
+      mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
       await expect(controller.register(invalidDto)).rejects.toThrow(ConflictException);
     });
@@ -150,7 +121,7 @@ describe('AuthController', () => {
         emailVerified: true,
       };
 
-      mockSessionService.login.mockResolvedValue(serviceResponse);
+      mockAuthService.login.mockResolvedValue(serviceResponse);
 
       const result = await controller.login(loginDto, mockRes());
 
@@ -160,23 +131,19 @@ describe('AuthController', () => {
       expect(result.refresh_token).toBe('fake-refresh-token');
       expect(result.user.email).toBe('test@example.com');
       expect(result.emailVerified).toBe(true);
-      expect(sessionService.login).toHaveBeenCalledWith(loginDto);
+      expect(authService.login).toHaveBeenCalledWith(loginDto);
     });
 
     it('should propagate UnauthorizedException when credentials are invalid', async () => {
-      mockSessionService.login.mockRejectedValue(
-        new UnauthorizedException('Credenciais inválidas.'),
-      );
+      mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
       await expect(controller.login(loginDto, mockRes())).rejects.toThrow(UnauthorizedException);
-      expect(sessionService.login).toHaveBeenCalledWith(loginDto);
+      expect(authService.login).toHaveBeenCalledWith(loginDto);
     });
 
     it('should handle empty email or password', async () => {
       const emptyDto: LoginDto = { email: '', password: '' };
-      mockSessionService.login.mockRejectedValue(
-        new UnauthorizedException('Credenciais inválidas.'),
-      );
+      mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
       await expect(controller.login(emptyDto, mockRes())).rejects.toThrow(UnauthorizedException);
     });
@@ -200,7 +167,7 @@ describe('AuthController', () => {
         refresh_expires_in: 604800,
       };
 
-      mockSessionService.refreshTokens.mockResolvedValue(serviceResponse);
+      mockAuthService.refreshTokens.mockResolvedValue(serviceResponse);
 
       const result = await controller.refreshTokens(
         mockRequest as unknown as AuthenticatedRequest,
@@ -211,7 +178,7 @@ describe('AuthController', () => {
       // (Production uses httpOnly cookies only)
       expect(result.access_token).toBe('new-access-token');
       expect(result.refresh_token).toBe('new-refresh-token');
-      expect(sessionService.refreshTokens).toHaveBeenCalledWith('1', 'old-refresh-token');
+      expect(authService.refreshTokens).toHaveBeenCalledWith('1', 'old-refresh-token');
     });
 
     it('should handle missing user data in request', async () => {
@@ -233,7 +200,7 @@ describe('AuthController', () => {
         },
       };
 
-      mockSessionService.refreshTokens.mockRejectedValue(
+      mockAuthService.refreshTokens.mockRejectedValue(
         new UnauthorizedException('Invalid refresh token'),
       );
 
@@ -252,12 +219,12 @@ describe('AuthController', () => {
       } as unknown as AuthenticatedRequest;
       const res = mockRes();
 
-      mockTokenService.revokeRefreshToken.mockResolvedValue(undefined);
+      mockAuthService.revokeRefreshToken.mockResolvedValue(undefined);
 
       const result = await controller.logout(mockRequest, res);
 
       expect(result).toEqual({ message: 'Logout realizado com sucesso.' });
-      expect(tokenService.revokeRefreshToken).toHaveBeenCalledWith('some-refresh-token');
+      expect(authService.revokeRefreshToken).toHaveBeenCalledWith('some-refresh-token');
       expect(res.clearCookie).toHaveBeenCalledTimes(2);
     });
 
@@ -272,7 +239,7 @@ describe('AuthController', () => {
       const result = await controller.logout(mockRequest, res);
 
       expect(result).toEqual({ message: 'Logout realizado com sucesso.' });
-      expect(tokenService.revokeRefreshToken).not.toHaveBeenCalled();
+      expect(authService.revokeRefreshToken).not.toHaveBeenCalled();
       expect(res.clearCookie).toHaveBeenCalledTimes(2);
     });
 
@@ -284,7 +251,7 @@ describe('AuthController', () => {
       } as unknown as AuthenticatedRequest;
       const res = mockRes();
 
-      mockTokenService.revokeRefreshToken.mockRejectedValue(
+      mockAuthService.revokeRefreshToken.mockRejectedValue(
         new UnauthorizedException('Token not found'),
       );
 
@@ -298,7 +265,7 @@ describe('AuthController', () => {
   describe('forgotPassword', () => {
     it('deve solicitar redefinicao de senha com sucesso', async () => {
       const dto: ForgotPasswordDto = { email: 'test@example.com' };
-      mockPasswordService.forgotPassword.mockResolvedValue({
+      mockAuthService.forgotPassword.mockResolvedValue({
         message: 'Se o email existir, um link de redefinicao sera enviado.',
       });
 
@@ -307,7 +274,7 @@ describe('AuthController', () => {
       expect(result).toEqual({
         message: 'Se o email existir, um link de redefinicao sera enviado.',
       });
-      expect(passwordService.forgotPassword).toHaveBeenCalledWith('test@example.com');
+      expect(authService.forgotPassword).toHaveBeenCalledWith('test@example.com');
     });
   });
 
@@ -318,14 +285,14 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'NewPassword123!',
       };
-      mockPasswordService.resetPassword.mockResolvedValue({
+      mockAuthService.resetPassword.mockResolvedValue({
         message: 'Senha redefinida com sucesso.',
       });
 
       const result = await controller.resetPassword(dto);
 
       expect(result).toEqual({ message: 'Senha redefinida com sucesso.' });
-      expect(passwordService.resetPassword).toHaveBeenCalledWith(dto);
+      expect(authService.resetPassword).toHaveBeenCalledWith(dto);
     });
 
     it('deve propagar BadRequestException para token invalido', async () => {
@@ -334,19 +301,19 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'NewPassword123!',
       };
-      mockPasswordService.resetPassword.mockRejectedValue(
+      mockAuthService.resetPassword.mockRejectedValue(
         new BadRequestException('Token invalido ou expirado.'),
       );
 
       await expect(controller.resetPassword(dto)).rejects.toThrow(BadRequestException);
-      expect(passwordService.resetPassword).toHaveBeenCalledWith(dto);
+      expect(authService.resetPassword).toHaveBeenCalledWith(dto);
     });
   });
 
   describe('forgotPasswordWithCode', () => {
     it('deve solicitar redefinicao de senha via codigo com sucesso', async () => {
       const dto: ForgotPasswordDto = { email: 'test@example.com' };
-      mockPasswordService.forgotPasswordWithCode.mockResolvedValue({
+      mockAuthService.forgotPasswordWithCode.mockResolvedValue({
         message: 'Se o email existir, um codigo de redefinicao sera enviado.',
       });
 
@@ -355,7 +322,7 @@ describe('AuthController', () => {
       expect(result).toEqual({
         message: 'Se o email existir, um codigo de redefinicao sera enviado.',
       });
-      expect(passwordService.forgotPasswordWithCode).toHaveBeenCalledWith('test@example.com');
+      expect(authService.forgotPasswordWithCode).toHaveBeenCalledWith('test@example.com');
     });
   });
 
@@ -366,14 +333,14 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'NewPassword123!',
       };
-      mockPasswordService.resetPasswordWithCode.mockResolvedValue({
+      mockAuthService.resetPasswordWithCode.mockResolvedValue({
         message: 'Senha redefinida com sucesso.',
       });
 
       const result = await controller.resetPasswordWithCode(dto);
 
       expect(result).toEqual({ message: 'Senha redefinida com sucesso.' });
-      expect(passwordService.resetPasswordWithCode).toHaveBeenCalledWith(dto);
+      expect(authService.resetPasswordWithCode).toHaveBeenCalledWith(dto);
     });
 
     it('deve propagar BadRequestException para codigo invalido', async () => {
@@ -382,19 +349,19 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'NewPassword123!',
       };
-      mockPasswordService.resetPasswordWithCode.mockRejectedValue(
+      mockAuthService.resetPasswordWithCode.mockRejectedValue(
         new BadRequestException('Codigo invalido ou expirado.'),
       );
 
       await expect(controller.resetPasswordWithCode(dto)).rejects.toThrow(BadRequestException);
-      expect(passwordService.resetPasswordWithCode).toHaveBeenCalledWith(dto);
+      expect(authService.resetPasswordWithCode).toHaveBeenCalledWith(dto);
     });
   });
 
   describe('verifyEmail', () => {
     it('deve verificar email com sucesso', async () => {
       const dto: VerifyEmailDto = { email: 'test@example.com', code: '123456' };
-      mockRegistrationService.verifyEmail.mockResolvedValue({
+      mockAuthService.verifyEmail.mockResolvedValue({
         message: 'Email verificado com sucesso.',
         emailVerified: true,
       });
@@ -402,31 +369,31 @@ describe('AuthController', () => {
       const result = await controller.verifyEmail(dto);
 
       expect(result).toEqual({ message: 'Email verificado com sucesso.', emailVerified: true });
-      expect(registrationService.verifyEmail).toHaveBeenCalledWith(dto);
+      expect(authService.verifyEmail).toHaveBeenCalledWith(dto);
     });
 
     it('deve propagar BadRequestException para codigo invalido', async () => {
       const dto: VerifyEmailDto = { email: 'test@example.com', code: 'invalid' };
-      mockRegistrationService.verifyEmail.mockRejectedValue(
+      mockAuthService.verifyEmail.mockRejectedValue(
         new BadRequestException('Codigo de verificacao invalido ou expirado.'),
       );
 
       await expect(controller.verifyEmail(dto)).rejects.toThrow(BadRequestException);
-      expect(registrationService.verifyEmail).toHaveBeenCalledWith(dto);
+      expect(authService.verifyEmail).toHaveBeenCalledWith(dto);
     });
   });
 
   describe('resendVerification', () => {
     it('deve reenviar email de verificacao com sucesso', async () => {
       const dto: ForgotPasswordDto = { email: 'test@example.com' };
-      mockRegistrationService.resendVerificationEmail.mockResolvedValue({
+      mockAuthService.resendVerificationEmail.mockResolvedValue({
         message: 'Se o email existir, um novo codigo sera enviado.',
       });
 
       const result = await controller.resendVerification(dto);
 
       expect(result).toEqual({ message: 'Se o email existir, um novo codigo sera enviado.' });
-      expect(registrationService.resendVerificationEmail).toHaveBeenCalledWith('test@example.com');
+      expect(authService.resendVerificationEmail).toHaveBeenCalledWith('test@example.com');
     });
   });
 
@@ -439,9 +406,7 @@ describe('AuthController', () => {
     };
 
     it('should not expose sensitive data in error messages', async () => {
-      mockRegistrationService.register.mockRejectedValue(
-        new ConflictException('Email já cadastrado.'),
-      );
+      mockAuthService.register.mockRejectedValue(new ConflictException('Email já cadastrado.'));
 
       try {
         await controller.register(registerDto);
@@ -460,14 +425,12 @@ describe('AuthController', () => {
         password: 'wrongpassword',
       };
 
-      mockSessionService.login.mockRejectedValue(
-        new UnauthorizedException('Credenciais inválidas.'),
-      );
+      mockAuthService.login.mockRejectedValue(new UnauthorizedException('Credenciais inválidas.'));
 
       await expect(controller.login(loginDto, mockRes())).rejects.toThrow(UnauthorizedException);
       // The error message should be generic, not specific about whether
       // email exists or password is wrong
-      expect(sessionService.login).toHaveBeenCalledWith(loginDto);
+      expect(authService.login).toHaveBeenCalledWith(loginDto);
     });
   });
 
@@ -494,12 +457,12 @@ describe('AuthController', () => {
         emailVerificationRequired: true,
       };
 
-      mockRegistrationService.register.mockResolvedValue(mockResponse);
+      mockAuthService.register.mockResolvedValue(mockResponse);
 
       const result = await controller.register(largeDto);
 
       expect(result.user.name).toBe(largeDto.name);
-      expect(registrationService.register).toHaveBeenCalledWith(largeDto);
+      expect(authService.register).toHaveBeenCalledWith(largeDto);
     });
 
     it('should handle concurrent requests', async () => {
@@ -524,7 +487,7 @@ describe('AuthController', () => {
         emailVerificationRequired: true,
       };
 
-      mockRegistrationService.register.mockResolvedValue(mockResponse);
+      mockAuthService.register.mockResolvedValue(mockResponse);
 
       // Simulate multiple calls
       const promises = [
@@ -537,7 +500,7 @@ describe('AuthController', () => {
 
       // First should succeed, others should fail due to conflict
       expect(results[0]?.status).toBe('fulfilled');
-      expect(registrationService.register).toHaveBeenCalledTimes(3);
+      expect(authService.register).toHaveBeenCalledTimes(3);
     });
   });
 });

@@ -43,7 +43,7 @@ describe('KeysService', () => {
     decrypt: jest.fn(),
     encryptBatch: jest.fn(),
     decryptBatch: jest.fn(),
-    generateSecureKey: jest.fn(),
+    generateDemoKey: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -271,13 +271,13 @@ describe('KeysService', () => {
   // ─── generateDemoKeys ─────────────────────────────────────────────
   describe('generateDemoKeys', () => {
     it('deve gerar chaves demo com quantidade padrao (10)', async () => {
-      mockEncryptionProvider.generateSecureKey.mockReturnValue('demo-key-generated');
+      mockEncryptionProvider.generateDemoKey.mockReturnValue('demo-key-generated');
       mockKeysRepository.createBatch.mockResolvedValue({ imported: 10, failed: 0, errors: [] });
 
       await service.generateDemoKeys('product-id-1');
 
-      expect(encryptionProvider.generateSecureKey).toHaveBeenCalledTimes(10);
-      expect(encryptionProvider.generateSecureKey).toHaveBeenCalledWith(24);
+      expect(encryptionProvider.generateDemoKey).toHaveBeenCalledTimes(10);
+      expect(encryptionProvider.generateDemoKey).toHaveBeenCalledWith(24);
       expect(keysRepository.createBatch).toHaveBeenCalledWith(
         'product-id-1',
         expect.arrayContaining([expect.any(String)]),
@@ -285,12 +285,12 @@ describe('KeysService', () => {
     });
 
     it('deve gerar chaves demo com quantidade customizada', async () => {
-      mockEncryptionProvider.generateSecureKey.mockReturnValue('demo-key');
+      mockEncryptionProvider.generateDemoKey.mockReturnValue('demo-key');
       mockKeysRepository.createBatch.mockResolvedValue({ imported: 5, failed: 0, errors: [] });
 
       await service.generateDemoKeys('product-id-1', 5);
 
-      expect(encryptionProvider.generateSecureKey).toHaveBeenCalledTimes(5);
+      expect(encryptionProvider.generateDemoKey).toHaveBeenCalledTimes(5);
       expect(keysRepository.createBatch).toHaveBeenCalledWith(
         'product-id-1',
         expect.arrayContaining([expect.any(String)]),

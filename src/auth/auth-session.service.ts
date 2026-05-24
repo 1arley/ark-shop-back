@@ -87,7 +87,7 @@ export class AuthSessionService {
     });
 
     if (!storedToken) {
-      throw new UnauthorizedException('Invalid or expired refresh token.');
+      throw new UnauthorizedException('Refresh token inválido ou expirado.');
     }
 
     const isRememberMe = storedToken.rememberMe;

@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '@/prisma/prisma.service';
 import { PaymentMethod, PaymentProvider } from '@prisma/client';
 import { AsaasProvider } from './providers/asaas.provider';
 
@@ -37,6 +38,7 @@ export class PaymentProviderFactory {
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
     private readonly asaasProvider: AsaasProvider,
   ) {
     // Register Asaas (primary provider for marketplace)
@@ -63,9 +65,18 @@ export class PaymentProviderFactory {
     // Busca seller wallet para split automático
     const sellerInfo = await this.asaasProvider.getSellerWalletForOrder(data.orderId);
 
-    // Cria/obtém o customer Asaas para o comprador
-    // Em produção, você deve armazenar o customerId no User após o primeiro pagamento
-    const customerId = await this.ensureCustomer(data);
+    // Busca o pedido para obter o userId do comprador
+    const order = await this.prisma.order.findUnique({
+      where: { id: data.orderId },
+      select: { userId: true },
+    });
+
+    if (!order) {
+      throw new BadRequestException(`Order not found: ${data.orderId}`);
+    }
+
+    // Cria/obtém o customer Asaas para o comprador (cacheado por usuário)
+    const customerId = await this.ensureCustomer(order.userId, data);
 
     const payment = await this.asaasProvider.createPayment({
       amount: data.amount,
@@ -98,19 +109,39 @@ export class PaymentProviderFactory {
 
   /**
    * Garante que o comprador tem um customer_id na Asaas
-   * TODO: cachear customerId por usuário para evitar criar toda vez
+   * Cacheia o customerId no usuário para evitar criar toda vez
    */
-  private async ensureCustomer(data: {
-    payerEmail?: string;
-    payerName?: string;
-    payerCpf?: string;
-  }): Promise<string> {
+  private async ensureCustomer(
+    userId: string,
+    data: {
+      payerEmail?: string;
+      payerName?: string;
+      payerCpf?: string;
+    },
+  ): Promise<string> {
+    // Busca o customerId já salvo no usuário
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { asaasCustomerId: true },
+    });
+
+    if (user?.asaasCustomerId) {
+      return user.asaasCustomerId;
+    }
+
     // Cria customer na Asaas com dados do comprador
     const customerId = await this.asaasProvider.createCustomer({
       name: data.payerName || 'Cliente',
       email: data.payerEmail || 'cliente@email.com',
       cpfCnpj: data.payerCpf,
     });
+
+    // Salva o customerId no usuário para reutilização futura
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { asaasCustomerId: customerId },
+    });
+
     return customerId;
   }
 

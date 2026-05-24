@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, Matches, MinLength, MaxLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ResetPasswordWithCodeDto {
@@ -7,30 +7,27 @@ export class ResetPasswordWithCodeDto {
   @IsNotEmpty({ message: 'O email nao pode estar vazio.' })
   email!: string;
 
-  @ApiProperty({ description: 'Codigo de redefinicao recebido por email' })
+  @ApiProperty({
+    description: 'Reset code received by email (6 digits)',
+    example: '123456',
+  })
   @IsString()
-  @IsNotEmpty({ message: 'O codigo nao pode estar vazio.' })
+  @IsNotEmpty({ message: 'The code cannot be empty.' })
+  @Matches(/^\d{6}$/, { message: 'Code must be exactly 6 digits.' })
   code!: string;
 
   @ApiProperty({
-    description: 'Nova senha',
+    description: 'New password with complexity requirements',
+    example: 'Str0ng!Pass',
     minLength: 8,
   })
   @IsString()
-  @IsNotEmpty({ message: 'A senha nao pode estar vazia.' })
-  @MinLength(8, { message: 'A senha deve ter pelo menos 8 caracteres.' })
-  @MaxLength(128, { message: 'A senha deve ter no maximo 128 caracteres.' })
-  @Matches(/[A-Z]/, {
-    message: 'A senha deve conter pelo menos uma letra maiuscula.',
-  })
-  @Matches(/[a-z]/, {
-    message: 'A senha deve conter pelo menos uma letra minuscula.',
-  })
-  @Matches(/[0-9]/, {
-    message: 'A senha deve conter pelo menos um numero.',
-  })
-  @Matches(/[^A-Za-z0-9]/, {
-    message: 'A senha deve conter pelo menos um caractere especial.',
-  })
+  @IsNotEmpty({ message: 'The password cannot be empty.' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MaxLength(128, { message: 'Password must not exceed 128 characters' })
+  @Matches(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+  @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+  @Matches(/[0-9]/, { message: 'Password must contain at least one number' })
+  @Matches(/[^A-Za-z0-9]/, { message: 'Password must contain at least one special character' })
   password!: string;
 }

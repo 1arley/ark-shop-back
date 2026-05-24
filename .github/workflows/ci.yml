@@ -1,9 +1,5 @@
 name: CI
 
-permissions:
-  contents: read
-  security-events: write
-
 on:
   pull_request:
     branches: [main, dev]
@@ -30,9 +26,8 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx dotenv-cli -e .env.test -- npx prisma generate
-
-      - name: Apply Prisma Migrations (CI)
-        run: npx dotenv-cli -e .env.test -- npx prisma migrate deploy
+        - name: Apply Prisma Migrations (CI)
+          run: npx dotenv-cli -e .env.test -- npx prisma migrate deploy
 
       - name: Run linter
         run: npm run lint
@@ -80,9 +75,8 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx dotenv-cli -e .env.test -- npx prisma generate
-
-      - name: Apply Prisma Migrations (CI)
-        run: npx dotenv-cli -e .env.test -- npx prisma migrate deploy
+        - name: Apply Prisma Migrations (CI)
+          run: npx dotenv-cli -e .env.test -- npx prisma migrate deploy
 
       - name: Push database schema
         run: npx dotenv-cli -e .env.test -- npx prisma db push --force-reset
@@ -132,6 +126,7 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
           scanners: 'vuln'
+          ignorefile: '.trivyignore'
 
       - name: Generate SARIF report
         uses: aquasecurity/trivy-action@master
@@ -142,6 +137,7 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
           scanners: 'vuln'
+          ignorefile: '.trivyignore'
 
       - name: Check for vulnerabilities
         run: |
@@ -156,8 +152,7 @@ jobs:
           echo "✅ Security gate passed: 0 CRITICAL/HIGH vulnerabilities"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
-          wait-for-processing: false

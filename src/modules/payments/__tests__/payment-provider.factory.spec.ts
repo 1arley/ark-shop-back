@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { PaymentProviderFactory } from '../payment-provider.factory';
 import { AsaasProvider } from '../providers/asaas.provider';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '@/prisma/prisma.service';
 import { PaymentProvider, PaymentMethod } from '@prisma/client';
 
 describe('PaymentProviderFactory', () => {
@@ -23,12 +24,23 @@ describe('PaymentProviderFactory', () => {
     getOrThrow: jest.fn(),
   };
 
+  const mockPrismaService = {
+    order: {
+      findUnique: jest.fn().mockResolvedValue({ userId: 'user-123' }),
+    },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ asaasCustomerId: null }),
+      update: jest.fn().mockResolvedValue({}),
+    },
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentProviderFactory,
         { provide: AsaasProvider, useValue: mockAsaasProvider },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 

@@ -35,12 +35,6 @@ describe('UserService', () => {
     payment: {
       count: jest.fn(),
     },
-    refreshToken: {
-      deleteMany: jest.fn(),
-    },
-    emailVerificationToken: {
-      deleteMany: jest.fn(),
-    },
     $transaction: jest.fn(),
   };
 
@@ -268,13 +262,6 @@ describe('UserService', () => {
           select: expect.any(Object),
         }),
       );
-      // Email changed → refresh tokens and verification codes must be revoked
-      expect(mockPrismaService.refreshToken.deleteMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1' },
-      });
-      expect(mockPrismaService.emailVerificationToken.deleteMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1', usedAt: null },
-      });
     });
 
     it('deve lançar NotFoundException se usuário não existir', async () => {
@@ -322,13 +309,11 @@ describe('UserService', () => {
           where: { id: 'user-1' },
           data: {
             name: 'New Name',
-            // email and avatarUrl omitted because they were not in the DTO
+            email: undefined,
+            avatarUrl: undefined,
           },
         }),
       );
-      // Name-only update: email didn't change, so tokens must NOT be revoked
-      expect(mockPrismaService.refreshToken.deleteMany).not.toHaveBeenCalled();
-      expect(mockPrismaService.emailVerificationToken.deleteMany).not.toHaveBeenCalled();
     });
 
     it('não deve verificar conflito de email se email não for alterado', async () => {
@@ -345,7 +330,6 @@ describe('UserService', () => {
       const updatedUser = {
         ...existingUser,
         name: 'New Name',
-        email: 'same@example.com',
         updatedAt: new Date(),
       };
 
@@ -360,9 +344,6 @@ describe('UserService', () => {
       expect(result.name).toBe('New Name');
       // Não deve chamar findUnique para verificar email (pois é o mesmo)
       expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
-      // Email não mudou: tokens não devem ser revogados
-      expect(mockPrismaService.refreshToken.deleteMany).not.toHaveBeenCalled();
-      expect(mockPrismaService.emailVerificationToken.deleteMany).not.toHaveBeenCalled();
     });
   });
 

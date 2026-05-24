@@ -48,13 +48,8 @@ export class AsaasWebhookHandler {
    * Asaas envia header x-webhook-signature com HMAC-SHA256 do body
    */
   verifySignature(rawBody: string | Buffer, signature: string): boolean {
-    if (!signature) {
-      this.logger.warn('Asaas webhook signature missing');
-      return false;
-    }
-
-    if (!this.webhookSecret) {
-      this.logger.error('ASAAS_WEBHOOK_SECRET is not set. All webhooks rejected.');
+    // Fail silently if no signature or secret to avoid leaking information
+    if (!signature || !this.webhookSecret) {
       return false;
     }
 
@@ -74,8 +69,8 @@ export class AsaasWebhookHandler {
       }
 
       return timingSafeEqual(signatureBuffer, expectedBuffer);
-    } catch (error) {
-      this.logger.error('Asaas webhook signature verification failed', error);
+    } catch {
+      // Fail silently on verification errors
       return false;
     }
   }

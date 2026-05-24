@@ -18,7 +18,6 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { ApiFindAllUsers } from '@/user/swagger/user.get.findAll.swagger';
-import { RequireVerifiedEmail } from '@/auth/decorators/require-verified-email.decorator';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, parsePageParam } from '@/common/constants';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
 
@@ -41,7 +40,6 @@ export class UserController {
   }
 
   @Get('me')
-  @RequireVerifiedEmail()
   @ApiGetUserMe()
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
@@ -63,7 +61,6 @@ export class UserController {
   }
 
   @Patch('me')
-  @RequireVerifiedEmail()
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Atualizar próprio perfil' })
@@ -74,7 +71,6 @@ export class UserController {
   }
 
   @Delete('me')
-  @RequireVerifiedEmail()
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Deletar próprio usuário' })
