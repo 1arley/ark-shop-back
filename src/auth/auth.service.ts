@@ -35,6 +35,8 @@ import {
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private emailFailureCount = 0;
+  private readonly EMAIL_FAILURE_THRESHOLD = 5;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -55,9 +57,7 @@ export class AuthService {
     }
 
     // Use configurable bcrypt salt rounds (default 12 for production security)
-    const saltRounds = parseInt(
-      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
-    );
+    const saltRounds = this.getSaltRounds();
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const user = await this.prisma.user.create({
@@ -84,11 +84,22 @@ export class AuthService {
 
     // Send verification email — non-blocking so registration always succeeds
     // (user can request resend if email fails)
-    this.emailService.sendEmailVerification(email, verificationCode, name).catch(err => {
-      this.logger.warn(
-        `Failed to send verification email: ${err instanceof Error ? err.message : err}`,
-      );
-    });
+    this.emailService
+      .sendEmailVerification(email, verificationCode, name)
+      .then(() => {
+        this.emailFailureCount = 0;
+      })
+      .catch(err => {
+        this.emailFailureCount++;
+        const errorMessage = err instanceof Error ? err.message : err;
+        if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
+          this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+        } else {
+          this.logger.warn(
+            `Failed to send verification email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
+          );
+        }
+      });
 
     const { password: _, ...userWithoutPassword } = user;
 
@@ -337,11 +348,22 @@ export class AuthService {
     });
 
     // Send password reset email (non-blocking — token already created)
-    this.emailService.sendPasswordReset(email, token, email).catch(err => {
-      this.logger.warn(
-        `Failed to send password reset email: ${err instanceof Error ? err.message : err}`,
-      );
-    });
+    this.emailService
+      .sendPasswordReset(email, token, email)
+      .then(() => {
+        this.emailFailureCount = 0;
+      })
+      .catch(err => {
+        this.emailFailureCount++;
+        const errorMessage = err instanceof Error ? err.message : err;
+        if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
+          this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+        } else {
+          this.logger.warn(
+            `Failed to send password reset email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
+          );
+        }
+      });
 
     return { message: 'Se o email existir, um link de redefinicao sera enviado.' };
   }
@@ -380,11 +402,22 @@ export class AuthService {
     });
 
     // Send password reset code email (non-blocking — code already created)
-    this.emailService.sendPasswordResetWithCode(email, resetCode, email).catch(err => {
-      this.logger.warn(
-        `Failed to send password reset code email: ${err instanceof Error ? err.message : err}`,
-      );
-    });
+    this.emailService
+      .sendPasswordResetWithCode(email, resetCode, email)
+      .then(() => {
+        this.emailFailureCount = 0;
+      })
+      .catch(err => {
+        this.emailFailureCount++;
+        const errorMessage = err instanceof Error ? err.message : err;
+        if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
+          this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+        } else {
+          this.logger.warn(
+            `Failed to send password reset code email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
+          );
+        }
+      });
 
     return { message: 'Se o email existir, um codigo de redefinicao sera enviado.' };
   }
@@ -560,11 +593,22 @@ export class AuthService {
     });
 
     // Send verification email (non-blocking — code already created)
-    this.emailService.sendEmailVerification(email, verificationCode, email).catch(err => {
-      this.logger.warn(
-        `Failed to send verification email: ${err instanceof Error ? err.message : err}`,
-      );
-    });
+    this.emailService
+      .sendEmailVerification(email, verificationCode, email)
+      .then(() => {
+        this.emailFailureCount = 0;
+      })
+      .catch(err => {
+        this.emailFailureCount++;
+        const errorMessage = err instanceof Error ? err.message : err;
+        if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
+          this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+        } else {
+          this.logger.warn(
+            `Failed to send verification email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
+          );
+        }
+      });
 
     return { message: 'Se o email existir, um novo codigo sera enviado.' };
   }
@@ -578,5 +622,19 @@ export class AuthService {
       code += crypto.randomInt(0, 10).toString();
     }
     return code;
+  }
+
+  private getSaltRounds(): number {
+    const config = parseInt(
+      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
+    );
+    const valid = !Number.isNaN(config) && config >= 4 && config <= 31;
+    const result = valid ? config : DEFAULT_BCRYPT_SALT_ROUNDS;
+
+    if (!valid) {
+      this.logger.warn(`Invalid BCRYPT_SALT_ROUNDS (${config}), using default ${result}`);
+    }
+
+    return result;
   }
 }
