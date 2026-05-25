@@ -21,6 +21,7 @@ permissions:
 
 env:
   DOCKER_IMAGE: arthuriarley/ark-shop-back
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   lint-and-test:
@@ -103,6 +104,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ark-shop_db?schema=public
+
       - name: Semantic Release
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
@@ -113,6 +119,7 @@ jobs:
             @semantic-release/github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUSKY: 0
 
       # Fallback: extract version from git tag if action didn't produce output
       - name: Extract version from git tag

@@ -270,9 +270,11 @@ export class OrdersRepository {
   }
 
   async countByUser(userId: string) {
-    return this.prisma.order.count({
+    const count = await this.prisma.order.count({
       where: { userId },
     });
+
+    return count;
   }
 
   async getRecentOrders(limit: number = 10) {
@@ -314,9 +316,11 @@ export class OrdersRepository {
    * Fetch products by IDs (used by OrdersService for subtotal calculation).
    */
   async getProductsByIds(ids: string[]) {
-    return this.prisma.product.findMany({
+    const products = await this.prisma.product.findMany({
       where: { id: { in: ids } },
     });
+
+    return products;
   }
 
   /**
@@ -392,7 +396,7 @@ export class OrdersRepository {
       product: { name: string } | null;
     }>,
   ) {
-    return this.prisma.$transaction(async tx => {
+    const deliveredOrder = await this.prisma.$transaction(async tx => {
       // Re-verify order status inside transaction to prevent concurrent delivery
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order || order.status !== OrderStatus.PAID) {
@@ -469,5 +473,7 @@ export class OrdersRepository {
           : null,
       };
     });
+
+    return deliveredOrder;
   }
 }

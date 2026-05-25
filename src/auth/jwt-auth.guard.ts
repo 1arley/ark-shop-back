@@ -4,6 +4,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
 import { IS_PUBLIC_KEY } from '@/auth/decorators/public.decorator';
 
+interface AuthenticatedUser {
+  id?: string;
+}
+
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
   private readonly logger = new Logger(JwtAuthGuard.name);
@@ -25,17 +29,39 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
     return super.canActivate(context);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleRequest(err: any, user: any, info: any, status: any, context?: ExecutionContext) {
+  handleRequest<TUser = AuthenticatedUser>(
+    err: Error | null,
+    user: TUser | false | null,
+    info: unknown,
+    status: unknown,
+    context?: ExecutionContext,
+  ): TUser {
     if (err || !user) {
       if (info && process.env.NODE_ENV !== 'production') {
-        const message = info instanceof Error ? info.message : String(info);
+        const message = this.formatAuthInfo(info);
         this.logger.warn(`JWT auth failed: ${message}`);
       }
-    } else {
-      this.logger.debug(`JWT auth succeeded for userId: ${user.id as string}`);
+    } else if (this.hasUserId(user)) {
+      this.logger.debug(`JWT auth succeeded for userId: ${user.id}`);
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return
-    return super.handleRequest(err, user, info, status, context);
+
+    const authenticatedUser = super.handleRequest(err, user, info, status, context);
+    return authenticatedUser;
+  }
+
+  private hasUserId(user: unknown): user is { id: string } {
+    return typeof user === 'object' && user !== null && 'id' in user && typeof user.id === 'string';
+  }
+
+  private formatAuthInfo(info: unknown): string {
+    if (info instanceof Error) {
+      return info.message;
+    }
+
+    if (typeof info === 'string') {
+      return info;
+    }
+
+    return JSON.stringify(info);
   }
 }

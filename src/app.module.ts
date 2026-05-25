@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SentryModule } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from '@/prisma/prisma.module';
@@ -31,23 +32,12 @@ import { UploadModule } from '@/modules/upload/upload.module';
 import { WalletModule } from '@/modules/wallet/wallet.module';
 import { CouponsModule } from '@/modules/coupons/coupons.module';
 
-// ─── Sentry (optional — 14-day trial) ────────────────────────────
-// Só ativa se SENTRY_DSN estiver configurado no ambiente
-// Usamos import dinâmico para não travar se o pacote não existir
-let sentryModule: any = undefined;
-if (process.env.SENTRY_DSN) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
-    const { SentryModule: SM } = require('@sentry/nestjs/setup');
-    sentryModule = SM.forRoot();
-  } catch {
-    // @sentry/nestjs não instalado — segue sem Sentry
-  }
-}
+// Sentry is enabled only when SENTRY_DSN is configured.
+const sentryModules = process.env.SENTRY_DSN ? [SentryModule.forRoot()] : [];
 
 @Module({
   imports: [
-    ...(sentryModule ? [sentryModule] : []),
+    ...sentryModules,
     ConfigModule.forRoot({
       envFilePath: [
         '.env',
