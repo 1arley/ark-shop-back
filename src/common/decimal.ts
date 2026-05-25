@@ -3,13 +3,14 @@
  * In production, Prisma returns Decimal objects with `.toNumber()`.
  * In tests, mocks often return plain `number` values.
  */
-export function toNumber(
-  value: { toNumber: () => number } | number | null | undefined,
-): number | null {
+export function toNumber(value: unknown): number | null {
   if (value == null) return null;
   if (typeof value === 'number') return value;
-  if (typeof value.toNumber === 'function') {
-    return value.toNumber();
+  // Check for Prisma Decimal-like object with toNumber method
+  if (typeof (value as any).toNumber === 'function') {
+    return (value as any).toNumber();
   }
-  return Number(value);
+  // Fallback: attempt numeric conversion
+  const num = Number(value as any);
+  return isNaN(num) ? null : num;
 }

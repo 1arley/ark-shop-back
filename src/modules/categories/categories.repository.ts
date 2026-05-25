@@ -7,8 +7,8 @@ import { toNumber } from '@/common/decimal';
 export class CategoriesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: CreateCategoryDto) {
-    return this.prisma.category.create({
+  async create(data: CreateCategoryDto) {
+    return await this.prisma.category.create({
       data: {
         name: data.name,
         slug: data.slug,
@@ -136,8 +136,8 @@ export class CategoriesRepository {
     });
   }
 
-  findRootCategories() {
-    return this.prisma.category.findMany({
+  async findRootCategories() {
+    return await this.prisma.category.findMany({
       where: { parentId: null },
       include: {
         children: true,

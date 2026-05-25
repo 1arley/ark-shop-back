@@ -7,7 +7,7 @@ export class AntifraudRepository {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  createFraudLog(data: {
+  async createFraudLog(data: {
     userId?: string;
     orderId?: string;
     riskScore: number;
@@ -17,8 +17,8 @@ export class AntifraudRepository {
     deviceFingerprint?: string;
     decision: string;
     reason?: string;
-  }): Promise<any> {
-    return this.prisma.fraudLog.create({
+  }) {
+    return await this.prisma.fraudLog.create({
       data: {
         userId: data.userId,
         orderId: data.orderId,
@@ -106,8 +106,8 @@ export class AntifraudRepository {
     return approved / total;
   }
 
-  getRecentFraudLogs(limit: number = 100) {
-    return this.prisma.fraudLog.findMany({
+  async getRecentFraudLogs(limit: number = 100) {
+    return await this.prisma.fraudLog.findMany({
       orderBy: {
         createdAt: 'desc',
       },
