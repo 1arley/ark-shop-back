@@ -7,7 +7,7 @@ import { toNumber } from '@/common/decimal';
 export class CategoriesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateCategoryDto) {
+  create(data: CreateCategoryDto) {
     return this.prisma.category.create({
       data: {
         name: data.name,
@@ -136,7 +136,7 @@ export class CategoriesRepository {
     });
   }
 
-  async findRootCategories() {
+  findRootCategories() {
     return this.prisma.category.findMany({
       where: { parentId: null },
       include: {

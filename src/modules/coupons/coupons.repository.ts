@@ -45,7 +45,7 @@ export class CouponsRepository {
     };
   }
 
-  async findByCode(code: string) {
+  findByCode(code: string) {
     return this.prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
     });
@@ -104,7 +104,7 @@ export class CouponsRepository {
     };
   }
 
-  async delete(id: string) {
+  delete(id: string) {
     return this.prisma.coupon.delete({
       where: { id },
     });
@@ -176,7 +176,7 @@ export class CouponsRepository {
   /**
    * Increment usedCount atomically (legacy — prefer incrementUsageIfAvailable).
    */
-  async incrementUsage(id: string) {
+  incrementUsage(id: string) {
     return this.prisma.coupon.update({
       where: { id },
       data: { usedCount: { increment: 1 } },
