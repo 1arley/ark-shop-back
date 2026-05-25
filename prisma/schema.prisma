@@ -76,8 +76,6 @@ enum CouponType {
 // USER MODULE
 // ============================
 model User {
-  // existing fields omitted for brevity
-
   id                      String                   @id @default(uuid())
   email                   String                   @unique
   password                String
@@ -103,6 +101,23 @@ model User {
   @@index([email])
   @@index([role])
   @@index([asaasCustomerId])
+}
+
+// Temporary storage for users who have not yet verified their email.
+// The actual User record is created only after email verification succeeds.
+model PendingRegistration {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  avatarUrl String?
+  code      String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([code])
+  @@index([expiresAt])
 }
 
 model RefreshToken {

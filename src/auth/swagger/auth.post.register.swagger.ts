@@ -3,38 +3,22 @@ import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 export function ApiRegisterUser() {
   return applyDecorators(
-    ApiOperation({ summary: 'Registrar novo usuário' }),
+    ApiOperation({ summary: 'Solicitar registro de novo usuário' }),
     HttpCode(HttpStatus.CREATED),
     ApiBearerAuth('JWT-auth'),
     ApiResponse({
       status: 201,
-      description: 'Usuário cadastrado com sucesso',
+      description: 'Registro solicitado com sucesso. Verifique o email para ativar a conta.',
       schema: {
         type: 'object',
         properties: {
           message: {
             type: 'string',
-            example: 'Usuário cadastrado com sucesso.',
+            example: 'Registration successful. Please check your email to verify your account.',
           },
-          user: {
-            type: 'object',
-            properties: {
-              id: {
-                type: 'string',
-                example: '123e4567-e89b-12d3-a456-426614174000',
-              },
-              name: { type: 'string', example: 'João Silva' },
-              email: { type: 'string', example: 'joao@seedabit.com' },
-              role: { type: 'string', example: 'USER' },
-              createdAt: {
-                type: 'string',
-                example: '2025-10-24T10:00:00.000Z',
-              },
-              updatedAt: {
-                type: 'string',
-                example: '2025-10-24T10:00:00.000Z',
-              },
-            },
+          emailVerificationRequired: {
+            type: 'boolean',
+            example: true,
           },
         },
       },

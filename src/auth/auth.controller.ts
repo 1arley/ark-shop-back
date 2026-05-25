@@ -60,7 +60,6 @@ export class AuthController {
 
     return {
       message: result.message,
-      user: result.user,
       emailVerificationRequired: result.emailVerificationRequired,
     };
   }

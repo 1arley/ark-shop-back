@@ -1,11 +1,11 @@
 import type { UserPublic } from '@/common/prisma/user-public.select';
 
 /**
- * Result returned on successful user registration.
+ * Result returned on successful registration request.
+ * The actual user is created only after email verification.
  */
 export interface RegisterResult {
   message: string;
-  user: UserPublic;
   emailVerificationRequired: boolean;
 }
 

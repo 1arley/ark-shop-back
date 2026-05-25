@@ -48,6 +48,7 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const { name, email, password } = registerDto;
 
+    // Check if email already registered as a verified user
     const userExists = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -56,45 +57,47 @@ export class AuthService {
       throw new ConflictException('Email already registered.');
     }
 
-    // Use configurable bcrypt salt rounds (default 12 for production security)
+    // Check if there's an unverified pending registration
+    const pendingExists = await this.prisma.pendingRegistration.findUnique({
+      where: { email },
+    });
+
+    if (pendingExists) {
+      throw new ConflictException(
+        'A verification is already pending for this email. Please check your email or request a new code.',
+      );
+    }
+
     const saltRounds = this.getSaltRounds();
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const user = await this.prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: 'USER',
-      },
-    });
-
-    // Generate email verification code
     const verificationCode = this.generateNumericCode(EMAIL_VERIFICATION_CODE_LENGTH);
     const codeHash = crypto.createHash('sha256').update(verificationCode).digest('hex');
     const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_HOURS * HOUR_IN_MS);
 
-    await this.prisma.emailVerificationToken.create({
+    // Store the registration data temporarily — User is created only after verification
+    await this.prisma.pendingRegistration.create({
       data: {
-        userId: user.id,
+        name,
+        email,
+        password: hashedPassword,
         code: codeHash,
         expiresAt,
       },
     });
 
     // Send verification email — non-blocking so registration always succeeds
-    // (user can request resend if email fails)
     this.emailService
       .sendEmailVerification(email, verificationCode, name)
       .then(() => {
-        this.emailFailureCount = 0; // Reset counter on success
+        this.emailFailureCount = 0;
       })
       .catch(err => {
         this.emailFailureCount++;
         const errorMessage = err instanceof Error ? err.message : err;
         if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
           this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
-          this.emailFailureCount = 0; // Reset after logging to prevent repeated errors
+          this.emailFailureCount = 0;
         } else {
           this.logger.warn(
             `Failed to send verification email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
@@ -102,11 +105,8 @@ export class AuthService {
         }
       });
 
-    const { password: _, ...userWithoutPassword } = user;
-
     return {
       message: 'Registration successful. Please check your email to verify your account.',
-      user: userWithoutPassword,
       emailVerificationRequired: true,
     };
   }
@@ -519,94 +519,98 @@ export class AuthService {
   }
 
   /**
-   * Verifica o email do usuario usando o codigo recebido.
+   * Verifica o email e cria a conta do usuario.
+   * O usuario so e criado no banco apos a verificacao do codigo.
    */
   async verifyEmail(dto: VerifyEmailDto) {
     const { email, code } = dto;
 
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      throw new BadRequestException('Codigo de verificacao invalido.');
-    }
+    const pending = await this.prisma.pendingRegistration.findUnique({
+      where: { email },
+    });
 
-    if (user.emailVerified) {
-      return { message: 'Email ja verificado.', emailVerified: true };
+    if (!pending) {
+      // Check if user was already created (already verified)
+      const user = await this.prisma.user.findUnique({ where: { email } });
+      if (user?.emailVerified) {
+        return { message: 'Email ja verificado.', emailVerified: true };
+      }
+      throw new BadRequestException('Codigo de verificacao invalido.');
     }
 
     const codeHash = crypto.createHash('sha256').update(code).digest('hex');
 
-    const verificationToken = await this.prisma.emailVerificationToken.findFirst({
-      where: {
-        code: codeHash,
-        userId: user.id,
-        usedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-    });
-
-    if (!verificationToken) {
+    if (pending.code !== codeHash) {
       throw new BadRequestException('Codigo de verificacao invalido ou expirado.');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.emailVerificationToken.update({
-        where: { id: verificationToken.id },
-        data: { usedAt: new Date() },
-      }),
-      this.prisma.user.update({
-        where: { id: user.id },
-        data: { emailVerified: true },
-      }),
-    ]);
+    if (pending.expiresAt < new Date()) {
+      throw new BadRequestException(
+        'Codigo de verificacao expirado. Solicite um novo codigo.',
+      );
+    }
+
+    // Atomic: delete pending registration and create user in a transaction
+    await this.prisma.$transaction(async tx => {
+      await tx.pendingRegistration.delete({
+        where: { id: pending.id },
+      });
+
+      await tx.user.create({
+        data: {
+          name: pending.name,
+          email: pending.email,
+          password: pending.password,
+          role: 'USER',
+          emailVerified: true,
+        },
+      });
+    });
 
     return { message: 'Email verificado com sucesso.', emailVerified: true };
   }
 
   /**
-   * Reenvia o email de verificacao para o usuario.
+   * Reenvia o email de verificacao para um registro pendente.
    */
   async resendVerificationEmail(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) {
+    const pending = await this.prisma.pendingRegistration.findUnique({
+      where: { email },
+    });
+
+    if (!pending) {
+      // Check if user already exists (already verified)
+      const user = await this.prisma.user.findUnique({ where: { email } });
+      if (user?.emailVerified) {
+        return { message: 'Email ja esta verificado.', emailVerified: true };
+      }
       return { message: 'Se o email existir, um novo codigo sera enviado.' };
     }
-
-    if (user.emailVerified) {
-      return { message: 'Email ja esta verificado.', emailVerified: true };
-    }
-
-    // Invalida codigos anteriores nao usados
-    await this.prisma.emailVerificationToken.deleteMany({
-      where: {
-        userId: user.id,
-        usedAt: null,
-      },
-    });
 
     const verificationCode = this.generateNumericCode(EMAIL_VERIFICATION_CODE_LENGTH);
     const codeHash = crypto.createHash('sha256').update(verificationCode).digest('hex');
     const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_HOURS * HOUR_IN_MS);
 
-    await this.prisma.emailVerificationToken.create({
+    await this.prisma.pendingRegistration.update({
+      where: { id: pending.id },
       data: {
-        userId: user.id,
         code: codeHash,
         expiresAt,
       },
     });
 
-    // Send verification email (non-blocking — code already created)
+    // Send verification email (non-blocking — code already updated)
     this.emailService
-      .sendEmailVerification(email, verificationCode, email)
+      .sendEmailVerification(email, verificationCode, pending.name || email)
       .then(() => {
-        this.emailFailureCount = 0; // Reset counter on success
+        this.emailFailureCount = 0;
       })
       .catch(err => {
         this.emailFailureCount++;
         const errorMessage = err instanceof Error ? err.message : err;
         if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
           this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
-          this.emailFailureCount = 0; // Reset after logging to prevent repeated errors
+          this.emailFailureCount = 0;
         } else {
           this.logger.warn(
             `Failed to send verification email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
