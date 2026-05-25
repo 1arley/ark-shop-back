@@ -415,14 +415,27 @@ export class OrdersRepository {
             );
           }
 
-          // Atomically update that specific key only
-          await tx.key.update({
-            where: { id: availableKey.id },
+          // Atomically reserve and mark key as delivered.
+          // The WHERE clause includes `status: AVAILABLE` to prevent TOCTOU race conditions:
+          // if another transaction already took this key, updateMany returns count=0
+          // and we avoid the unique constraint violation on orderItemId.
+          const keyResult = await tx.key.updateMany({
+            where: {
+              id: availableKey.id,
+              status: KeyStatus.AVAILABLE,
+            },
             data: {
-              status: KeyStatus.RESERVED,
+              status: KeyStatus.DELIVERED,
+              deliveredAt: new Date(),
               orderItemId: item.id,
             },
           });
+
+          if (keyResult.count === 0) {
+            throw new BadRequestException(
+              `No available keys for product: ${item.product?.name ?? item.productId}`,
+            );
+          }
 
           // Also set the OrderItem.keyId to establish the bidirectional relation
           await tx.orderItem.update({

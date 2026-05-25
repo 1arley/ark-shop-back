@@ -97,6 +97,34 @@ describe('PaymentsService', () => {
 
   // ─── createPayment ───────────────────────────────────────────────
   describe('createPayment', () => {
+    it('should reject payment when amount does not match order total', async () => {
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 200,
+        user: { id: 'user-id-1', email: 'test@test.com', name: 'Test User' },
+      });
+
+      await expect(
+        service.createPayment(
+          'order-id-1',
+          'user-id-1',
+          100,
+          PaymentProvider.ASAAS,
+          PaymentMethod.PIX,
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.createPayment(
+          'order-id-1',
+          'user-id-1',
+          100,
+          PaymentProvider.ASAAS,
+          PaymentMethod.PIX,
+        ),
+      ).rejects.toThrow('Payment amount does not match order total');
+    });
+
     it('should create PIX payment with QR code', async () => {
       const paymentIntent = {
         id: 'asaas-pix-1',
@@ -107,6 +135,8 @@ describe('PaymentsService', () => {
       };
 
       mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
         user: { id: 'user-id-1', email: 'test@test.com', name: 'Test User' },
       });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
@@ -139,6 +169,8 @@ describe('PaymentsService', () => {
       };
 
       mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 50,
         user: { id: 'user-id-1', email: 'user@email.com', name: 'João Silva' },
       });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
@@ -170,7 +202,11 @@ describe('PaymentsService', () => {
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
       };
 
-      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1' },
+      });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
       mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
 
@@ -196,7 +232,11 @@ describe('PaymentsService', () => {
         providerData: {},
       };
 
-      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1' },
+      });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
       mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
 
@@ -222,7 +262,11 @@ describe('PaymentsService', () => {
 
     it('should create standard payment for non-PIX method', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
-      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1' },
+      });
       mockPaymentsRepository.createPayment.mockResolvedValue(mockPayment);
 
       const result = await service.createPayment(
@@ -246,7 +290,11 @@ describe('PaymentsService', () => {
 
     it('should fallback to default provider if selected is not registered', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
-      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1' },
+      });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -266,7 +314,11 @@ describe('PaymentsService', () => {
 
     it('should use explicit provider when registered', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
-      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1' },
+      });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -286,7 +338,11 @@ describe('PaymentsService', () => {
 
     it('should use default provider when none specified', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([PaymentProvider.ASAAS]);
-      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1' },
+      });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -304,7 +360,11 @@ describe('PaymentsService', () => {
       jest.useFakeTimers();
       jest.setSystemTime(fixedDate);
 
-      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1' },
+      });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -335,7 +395,11 @@ describe('PaymentsService', () => {
     it('should fallback para default quando fallback provider também não está registrado', async () => {
       mockProviderFactory.getRegisteredProviders.mockReturnValue([]);
       mockProviderFactory.getDefaultProvider.mockReturnValue(PaymentProvider.ASAAS);
-      mockOrdersService.findById.mockResolvedValue({ user: { id: 'user-id-1' } });
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1' },
+      });
       mockPaymentProvider.createPaymentIntent.mockResolvedValue({
         id: 'pix-1',
         providerData: { pix_qr_code: 'qr', pix_copy_paste: 'code' },
@@ -720,6 +784,18 @@ describe('PaymentsService', () => {
       await expect(service.approvePaymentByProviderTxId('nonexistent', {})).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('should reject NaN paymentInfo.value (locale format protection)', async () => {
+      mockPaymentsRepository.findByProviderTxId.mockResolvedValue(mockPayment);
+
+      // Simulate Brazilian locale format "59,90" which Number() converts to NaN
+      // Without NaN protection, this bypasses the amount check silently
+      const paymentInfoWithNaN = { id: 'asaas-tx-1', value: '59,90' };
+
+      await expect(
+        service.approvePaymentByProviderTxId('asaas-tx-1', paymentInfoWithNaN),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

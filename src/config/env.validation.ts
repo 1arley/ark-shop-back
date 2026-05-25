@@ -50,6 +50,11 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  @MinLength(1, { message: 'ASAAS_WEBHOOK_SECRET is required when ASAAS_API_KEY is set' })
+  ASAAS_WEBHOOK_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
   @MinLength(32, { message: 'KEYS_ENCRYPTION_KEY must be at least 32 characters long if provided' })
   KEYS_ENCRYPTION_KEY?: string;
 

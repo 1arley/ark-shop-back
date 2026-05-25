@@ -29,7 +29,7 @@ export function ApiLoginUser() {
                 example: '123e4567-e89b-12d3-a456-426614174000',
               },
               name: { type: 'string', example: 'João Silva' },
-              email: { type: 'string', example: 'joao@seedabit.com' },
+              email: { type: 'string', example: 'joao@ark-shop.com' },
               role: { type: 'string', example: 'USER' },
               createdAt: {
                 type: 'string',

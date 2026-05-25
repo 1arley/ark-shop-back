@@ -8,7 +8,7 @@ import { AuthTokenService } from '@/auth/auth-token.service';
 import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
 import {
-  DEFAULT_BCRYPT_SALT_ROUNDS,
+  getSaltRounds,
   PASSWORD_RESET_EXPIRY_HOURS,
   HOUR_IN_MS,
   PASSWORD_RESET_CODE_LENGTH,
@@ -133,9 +133,7 @@ export class AuthPasswordService {
       throw new BadRequestException('Token invalido ou expirado.');
     }
 
-    const saltRounds = parseInt(
-      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
-    );
+    const saltRounds = getSaltRounds(this.configService);
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     await this.prisma.$transaction([
@@ -178,9 +176,7 @@ export class AuthPasswordService {
       throw new BadRequestException('Codigo invalido ou expirado.');
     }
 
-    const saltRounds = parseInt(
-      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
-    );
+    const saltRounds = getSaltRounds(this.configService);
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     await this.prisma.$transaction([

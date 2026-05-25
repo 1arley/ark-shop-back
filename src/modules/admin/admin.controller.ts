@@ -241,7 +241,7 @@ export class AdminController {
   async importKeys(
     @Body('productId') productId: string,
     @Body('keysText') keysText: string,
-    @Body('isCsv', ParseBoolPipe) isCsv: boolean = false,
+    @Body('isCsv', new DefaultValuePipe(false), ParseBoolPipe) isCsv: boolean,
   ) {
     return this.adminService.bulkImportKeys(productId, keysText, isCsv);
   }

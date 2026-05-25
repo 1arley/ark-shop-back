@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { CartService } from '../cart.service';
 import { PrismaService } from '@/prisma/prisma.service';
 
@@ -247,6 +247,7 @@ describe('CartService', () => {
     it('deve atualizar quantidade do item', async () => {
       mockPrismaService.cart.findUnique.mockResolvedValue(mockCart);
       mockPrismaService.cartItem.findFirst.mockResolvedValue(mockCartItem);
+      mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
       mockPrismaService.cartItem.update.mockResolvedValue({ ...mockCartItem, quantity: 5 });
       mockPrismaService.cart.findUnique
         .mockResolvedValueOnce(mockCart)
@@ -310,6 +311,18 @@ describe('CartService', () => {
       );
       await expect(service.updateItem('user-id-1', 'product-id-1', 5)).rejects.toThrow(
         'Cart not found',
+      );
+    });
+
+    it('deve lancar BadRequestException quando quantidade excede estoque', async () => {
+      const lowStockProduct = { ...mockProduct, stock: 2 };
+
+      mockPrismaService.cart.findUnique.mockResolvedValue(mockCart);
+      mockPrismaService.cartItem.findFirst.mockResolvedValue(mockCartItem);
+      mockPrismaService.product.findUnique.mockResolvedValue(lowStockProduct);
+
+      await expect(service.updateItem('user-id-1', 'product-id-1', 10)).rejects.toThrow(
+        BadRequestException,
       );
     });
   });

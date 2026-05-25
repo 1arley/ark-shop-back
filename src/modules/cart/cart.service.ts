@@ -151,6 +151,23 @@ export class CartService {
       return this.removeItem(userId, productId);
     }
 
+    // Validate stock availability before updating quantity
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Product ${productId} not found`);
+    }
+
+    if (!product.isActive) {
+      throw new BadRequestException('Product is not available');
+    }
+
+    if (product.stock !== null && product.stock < quantity) {
+      throw new BadRequestException(`Only ${product.stock} items available`);
+    }
+
     await this.prisma.cartItem.update({
       where: { id: item.id },
       data: { quantity },

@@ -7,7 +7,7 @@ import { EmailService } from '@/modules/email/email.service';
 import { RegisterDto } from '@/auth/dto/register.dto';
 import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import {
-  DEFAULT_BCRYPT_SALT_ROUNDS,
+  getSaltRounds,
   EMAIL_VERIFICATION_CODE_LENGTH,
   EMAIL_VERIFICATION_EXPIRY_HOURS,
   HOUR_IN_MS,
@@ -55,9 +55,7 @@ export class AuthRegistrationService {
       );
     }
 
-    const saltRounds = parseInt(
-      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
-    );
+    const saltRounds = getSaltRounds(this.configService);
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const verificationCode = this.generateNumericCode(EMAIL_VERIFICATION_CODE_LENGTH);

@@ -718,7 +718,7 @@ describe('OrdersRepository', () => {
         },
         key: {
           findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
-          update: jest.fn().mockResolvedValue({ status: KeyStatus.RESERVED }),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
         orderItem: {
           update: jest.fn().mockResolvedValue({}),
@@ -734,10 +734,14 @@ describe('OrdersRepository', () => {
           status: KeyStatus.AVAILABLE,
         },
       });
-      expect(mockTx.key.update).toHaveBeenCalledWith({
-        where: { id: 'key-id-1' },
+      expect(mockTx.key.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'key-id-1',
+          status: KeyStatus.AVAILABLE,
+        },
         data: {
-          status: KeyStatus.RESERVED,
+          status: KeyStatus.DELIVERED,
+          deliveredAt: expect.any(Date),
           orderItemId: 'item-id-1',
         },
       });
@@ -763,7 +767,37 @@ describe('OrdersRepository', () => {
           findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
           update: jest.fn(),
         },
-        key: { findFirst: jest.fn().mockResolvedValue(null), update: jest.fn() },
+        key: { findFirst: jest.fn().mockResolvedValue(null), updateMany: jest.fn() },
+      };
+      mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
+
+      await expect(repository.deliverOrderAtomic('order-id-1', items)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(repository.deliverOrderAtomic('order-id-1', items)).rejects.toThrow(
+        'No available keys for product: Game Key',
+      );
+    });
+
+    it('deve lancar BadRequestException quando chave ja foi reservada por outra transacao', async () => {
+      const items = [
+        {
+          id: 'item-id-1',
+          productId: 'product-id-1',
+          key: null,
+          product: { name: 'Game Key' },
+        },
+      ];
+      const mockTx = {
+        order: {
+          findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
+          update: jest.fn(),
+        },
+        key: {
+          findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        },
+        orderItem: { update: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
@@ -789,14 +823,14 @@ describe('OrdersRepository', () => {
           findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
           update: jest.fn().mockResolvedValue({ ...mockOrder, status: OrderStatus.DELIVERED }),
         },
-        key: { findFirst: jest.fn(), update: jest.fn() },
+        key: { findFirst: jest.fn(), updateMany: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
       await repository.deliverOrderAtomic('order-id-1', items);
 
       expect(mockTx.key.findFirst).not.toHaveBeenCalled();
-      expect(mockTx.key.update).not.toHaveBeenCalled();
+      expect(mockTx.key.updateMany).not.toHaveBeenCalled();
       expect(mockTx.order.update).toHaveBeenCalled();
     });
   });

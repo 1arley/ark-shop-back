@@ -4,6 +4,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { toNumber } from '@/common/decimal';
+import { MAX_PAGE_SIZE } from '@/common/constants';
 
 @Injectable()
 export class ProductsRepository {
@@ -69,10 +70,11 @@ export class ProductsRepository {
       }),
     };
 
+    const cappedLimit = Math.min(limit, MAX_PAGE_SIZE);
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         skip,
-        take: limit,
+        take: cappedLimit,
         where,
         include: {
           category: true,
@@ -125,12 +127,13 @@ export class ProductsRepository {
   }
 
   async findByCategory(categoryId: string, page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
+    const cappedLimit = Math.min(limit, MAX_PAGE_SIZE);
+    const skip = (page - 1) * cappedLimit;
 
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         skip,
-        take: limit,
+        take: cappedLimit,
         where: { categoryId },
         include: {
           category: true,

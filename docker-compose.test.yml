@@ -1,9 +1,9 @@
-name: seedabit-db-test
+name: ark-shop-db-test
 
 services:
-  seedabit-db-test:
+  ark-shop-db-test:
     image: postgres:15
-    container_name: seedabit-db-test-postgres
+    container_name: ark-shop-db-test-postgres
     env_file: .env.test
     ports:
       - "5433:5432"

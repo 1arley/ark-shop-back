@@ -46,18 +46,21 @@ async function main() {
     prisma.category.create({
       data: {
         name: 'XBOX',
+        slug: 'xbox',
         description: 'Jogos e produtos para plataforma Xbox',
       },
     }),
     prisma.category.create({
       data: {
         name: 'STEAM/PC',
+        slug: 'steam-pc',
         description: 'Jogos e produtos para Steam/PC',
       },
     }),
     prisma.category.create({
       data: {
         name: 'NINTENDO E-SHOP',
+        slug: 'nintendo-e-shop',
         description: 'Jogos e produtos para Nintendo',
       },
     }),

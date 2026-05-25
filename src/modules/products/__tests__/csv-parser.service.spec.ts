@@ -379,6 +379,40 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       expect(result[0].price).toBe(10000.99);
     });
+
+    // ─── Locale detection ────────────────────────────────────────────
+    it('deve detectar locale US com $ e ponto decimal ($100.5)', () => {
+      const csvContent = `XBOX
+Carimbo de data/hora,Nome do jogo,preço de venda
+07/12/2025,Game(xbox-br),$100.5`;
+
+      const result = service.parse(csvContent);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].price).toBe(100.5);
+    });
+
+    it('deve detectar locale US sem simbolo monetario (100.5)', () => {
+      const csvContent = `XBOX
+Carimbo de data/hora,Nome do jogo,preço de venda
+07/12/2025,Game(xbox-br),100.5`;
+
+      const result = service.parse(csvContent);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].price).toBe(100.5);
+    });
+
+    it('deve detectar locale US com separador de milhar ($1,234.56)', () => {
+      const csvContent = `XBOX
+Carimbo de data/hora,Nome do jogo,preço de venda
+07/12/2025,Game(xbox-br),"$1,234.56"`;
+
+      const result = service.parse(csvContent);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].price).toBe(1234.56);
+    });
   });
 
   // ─── extractRegion ────────────────────────────────────────────────

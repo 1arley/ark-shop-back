@@ -7,6 +7,7 @@ import {
   Max,
   IsUUID,
   IsBoolean,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -21,9 +22,10 @@ export class CreateSellerDto {
   @IsNotEmpty()
   companyName!: string;
 
-  @ApiProperty({ description: 'Document (CPF/CNPJ)' })
+  @ApiProperty({ description: 'Document (CPF: 11 digits, CNPJ: 14 digits)' })
   @IsString()
   @IsNotEmpty()
+  @Matches(/^\d{11}$|^\d{14}$/, { message: 'document must be 11 digits (CPF) or 14 digits (CNPJ)' })
   document!: string;
 
   @ApiPropertyOptional({ description: 'Commission percentage', default: 10 })

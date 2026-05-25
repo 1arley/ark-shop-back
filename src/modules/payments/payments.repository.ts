@@ -206,7 +206,7 @@ export class PaymentsRepository {
         throw new NotFoundException(`Payment with ID ${id} not found`);
       }
 
-      await tx.payment.update({
+      const updatedPayment = await tx.payment.update({
         where: { id },
         data: {
           status: PaymentStatus.REJECTED,
@@ -218,6 +218,11 @@ export class PaymentsRepository {
         where: { id: payment.orderId },
         data: { status: OrderStatus.CANCELLED },
       });
+
+      return {
+        ...updatedPayment,
+        amount: toNumber(updatedPayment.amount),
+      };
     });
   }
 

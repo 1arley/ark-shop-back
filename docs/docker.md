@@ -18,7 +18,7 @@
 PORT=3000
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-POSTGRES_DB=seedabit_db
+POSTGRES_DB=ark-shop_db
 ```
 
 > Dentro do Docker, use o nome do serviço (`postgres`) ao invés de `localhost`.

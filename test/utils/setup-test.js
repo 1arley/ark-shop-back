@@ -44,7 +44,7 @@ const run = (cmd) => execSync(cmd, { stdio: 'inherit' });
 checkRequirements();
 
 try {
-  run('docker compose -f ./docker-compose.test.yml rm -sf seedabit-db-test');
+  run('docker compose -f ./docker-compose.test.yml rm -sf ark-shop-db-test');
 
   run('docker compose -f ./docker-compose.test.yml up --build -d --wait');
 

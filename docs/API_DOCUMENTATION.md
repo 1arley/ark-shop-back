@@ -493,7 +493,7 @@ NODE_ENV=development
 PORT=3000
 
 # Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/seedabit_db
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ark-shop_db
 
 # JWT
 JWT_ACCESS_SECRET=your-secret

@@ -210,14 +210,42 @@ export class CsvParserService {
     }
 
     try {
-      // Remove R$ and whitespace
-      let cleaned = priceStr.replace(/R\$\s?/g, '').trim();
+      // Strip currency symbols (R$, $, €, £, etc.) and whitespace
+      let cleaned = priceStr.replace(/[R$\s€£]/g, '').trim();
+      if (!cleaned) return 0;
 
-      // Remove thousands separator (.)
-      cleaned = cleaned.replace(/\./g, '');
+      // Locale-aware decimal detection:
+      // Google Sheets CSV prices can come in different locale formats:
+      //   BRL: 1.234,56  (dot=thousands, comma=decimal)
+      //   USD: 1,234.56  (comma=thousands, dot=decimal)
+      //   INT: 1234.56   (dot=decimal, no thousands separator)
+      //
+      // Strategy: the separator that appears LAST is always the decimal marker.
 
-      // Replace decimal separator (,) with (.)
-      cleaned = cleaned.replace(',', '.');
+      const lastDot = cleaned.lastIndexOf('.');
+      const lastComma = cleaned.lastIndexOf(',');
+
+      if (lastDot !== -1 && lastComma !== -1) {
+        // Both separators present → whichever is last is the decimal separator
+        if (lastDot > lastComma) {
+          // US format: 1,234.56 — remove commas, keep dot
+          cleaned = cleaned.replace(/,/g, '');
+        } else {
+          // Brazilian format: 1.234,56 — remove dots, replace comma with dot
+          cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+        }
+      } else if (lastComma !== -1) {
+        // Only comma — detect if it's a decimal or thousands separator
+        const digitsAfterComma = cleaned.length - lastComma - 1;
+        if (digitsAfterComma <= 2) {
+          // 1-2 digits after comma → decimal separator (BRL format like 100,50)
+          cleaned = cleaned.replace(',', '.');
+        } else {
+          // 3+ digits after comma → thousands separator (like 1,234 → 1234)
+          cleaned = cleaned.replace(/,/g, '');
+        }
+      }
+      // else only dot (or no separator): it's already in standard format
 
       const price = parseFloat(cleaned);
       return isNaN(price) ? 0 : price;

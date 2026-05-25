@@ -83,7 +83,7 @@ export class AuthSessionService {
 
     const oldTokenHash = crypto.createHash('sha256').update(oldRefreshToken).digest('hex');
     const storedToken = await this.prisma.refreshToken.findFirst({
-      where: { token: oldTokenHash },
+      where: { token: oldTokenHash, userId },
     });
 
     if (!storedToken) {

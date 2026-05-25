@@ -36,6 +36,12 @@ export class PaymentsService {
       throw new BadRequestException('You can only create payments for your own orders');
     }
 
+    // Verify payment amount matches order total — prevent under/overpayment fraud
+    const orderTotal = Number(order.total);
+    if (Math.abs(orderTotal - amount) > 0.01) {
+      throw new BadRequestException('Payment amount does not match order total');
+    }
+
     // Resolve provider: use explicit value or fall back to default
     let selectedProvider = provider || this.providerFactory.getDefaultProvider();
 
@@ -205,7 +211,7 @@ export class PaymentsService {
     if (paymentInfo.value !== undefined && paymentInfo.value !== null) {
       const expectedAmount = Number(payment.amount);
       const receivedAmount = Number(paymentInfo.value);
-      if (Math.abs(expectedAmount - receivedAmount) > 0.01) {
+      if (Number.isNaN(receivedAmount) || Math.abs(expectedAmount - receivedAmount) > 0.01) {
         this.logger.error(
           `Payment amount mismatch: expected ${expectedAmount}, received ${receivedAmount} for payment ${providerTxId}`,
         );

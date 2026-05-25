@@ -20,7 +20,7 @@ export class CreateUserDto {
   name?: string;
 
   @ApiProperty({
-    example: 'joao@seedabit.com',
+    example: 'joao@ark-shop.com',
     description: 'Email institucional do usuário',
   })
   @IsEmail({}, { message: 'O email informado não é válido.' })

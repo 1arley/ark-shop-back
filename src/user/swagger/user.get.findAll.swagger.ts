@@ -19,7 +19,7 @@ export function ApiFindAllUsers() {
               example: '123e4567-e89b-12d3-a456-426614174000',
             },
             name: { type: 'string', example: 'João Silva' },
-            email: { type: 'string', example: 'joao@seedabit.com' },
+            email: { type: 'string', example: 'joao@ark-shop.com' },
             createdAt: { type: 'string', example: '2025-10-24T10:00:00.000Z' },
             updatedAt: { type: 'string', example: '2025-10-24T10:00:00.000Z' },
           },

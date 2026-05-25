@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { SellersRepository } from './sellers.repository';
 import { UserService } from '@/user/user.service';
 import { CreateSellerDto, UpdateSellerDto } from './dto/create-seller.dto';
@@ -18,7 +19,15 @@ export class SellersService {
     const user = await this.userService.findById(dto.userId);
 
     // 1. Cria o seller primeiro no banco — se falhar, não criamos nada no Asaas
-    const seller = await this.repository.create(dto);
+    let seller;
+    try {
+      seller = await this.repository.create(dto);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('User already has a seller profile');
+      }
+      throw error;
+    }
 
     // 2. Tenta criar a subconta no Asaas (marketplace)
     // Se falhar, o seller já existe no banco sem Asaas —

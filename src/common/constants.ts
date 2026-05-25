@@ -41,3 +41,15 @@ export function parsePageParam(value: string | undefined, defaultValue: number):
   if (Number.isNaN(parsed) || parsed < 1) return defaultValue;
   return Math.min(parsed, MAX_PAGE_SIZE);
 }
+
+/**
+ * Validates and returns bcrypt salt rounds from environment variable.
+ * Falls back to default if the value is invalid or missing.
+ * Valid range: 4-31. Values outside this range are silently replaced with the default.
+ */
+export function getSaltRounds(configService: { get: (key: string) => string | undefined }): number {
+  const saltRoundsStr = configService.get('BCRYPT_SALT_ROUNDS');
+  const parsed = parseInt(saltRoundsStr ?? String(DEFAULT_BCRYPT_SALT_ROUNDS), 10);
+  const isValid = !Number.isNaN(parsed) && parsed >= 4 && parsed <= 31;
+  return isValid ? parsed : DEFAULT_BCRYPT_SALT_ROUNDS;
+}

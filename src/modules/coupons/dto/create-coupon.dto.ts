@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsNumber,
   Min,
+  Max,
   IsOptional,
   IsBoolean,
   IsDateString,
@@ -27,6 +28,7 @@ export class CreateCouponDto {
   @ApiProperty({ description: 'Discount value (percentage or fixed amount)', example: 10 })
   @IsNumber()
   @Min(0)
+  @Max(10_000)
   value!: number;
 
   @ApiPropertyOptional({

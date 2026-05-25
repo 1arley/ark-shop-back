@@ -396,13 +396,23 @@ describe('PaymentsRepository', () => {
   // ─── rejectPayment ───────────────────────────────────────────────
   describe('rejectPayment', () => {
     it('should reject payment and update order to CANCELLED', async () => {
+      const updatedPayment = {
+        ...mockPayment,
+        status: PaymentStatus.REJECTED,
+        rejectionReason: 'Fraud detected',
+      };
+      const updatedOrder = { status: OrderStatus.CANCELLED };
+
       const transactionMock = jest.fn(async cb => {
         const mockTx = {
           payment: {
             findUnique: jest.fn().mockResolvedValue(mockPayment),
-            update: jest.fn().mockResolvedValue({ status: PaymentStatus.REJECTED }),
+            update: jest.fn().mockResolvedValue({
+              ...updatedPayment,
+              order: updatedOrder,
+            }),
           },
-          order: { update: jest.fn().mockResolvedValue({ status: OrderStatus.CANCELLED }) },
+          order: { update: jest.fn().mockResolvedValue(updatedOrder) },
         };
         return cb(mockTx);
       });
@@ -411,16 +421,21 @@ describe('PaymentsRepository', () => {
       const result = await repository.rejectPayment('payment-id-1', 'Fraud detected');
 
       expect(mockPrisma.$transaction).toHaveBeenCalled();
-      // rejectPayment returns the result of $transaction which is undefined (no return in callback)
-      expect(result).toBeUndefined();
+      expect(result).toBeDefined();
+      expect(result).toMatchObject({
+        status: PaymentStatus.REJECTED,
+        rejectionReason: 'Fraud detected',
+      });
     });
 
     it('should reject payment without reason', async () => {
+      const updatedPayment = { ...mockPayment, status: PaymentStatus.REJECTED };
+
       const transactionMock = jest.fn(async cb => {
         const mockTx = {
           payment: {
             findUnique: jest.fn().mockResolvedValue(mockPayment),
-            update: jest.fn().mockResolvedValue({ status: PaymentStatus.REJECTED }),
+            update: jest.fn().mockResolvedValue(updatedPayment),
           },
           order: { update: jest.fn().mockResolvedValue({}) },
         };
@@ -430,8 +445,10 @@ describe('PaymentsRepository', () => {
 
       const result = await repository.rejectPayment('payment-id-1');
 
-      // rejectPayment returns the result of $transaction which is undefined (no return in callback)
-      expect(result).toBeUndefined();
+      expect(result).toBeDefined();
+      expect(result).toMatchObject({
+        status: PaymentStatus.REJECTED,
+      });
     });
   });
 
