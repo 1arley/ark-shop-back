@@ -720,6 +720,9 @@ describe('OrdersRepository', () => {
           findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
           update: jest.fn().mockResolvedValue({ status: KeyStatus.RESERVED }),
         },
+        orderItem: {
+          update: jest.fn().mockResolvedValue({}),
+        },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 

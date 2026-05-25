@@ -26,6 +26,12 @@ describe('AuthService', () => {
       create: jest.fn(),
       update: jest.fn(),
     },
+    pendingRegistration: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+      update: jest.fn(),
+    },
     refreshToken: {
       create: jest.fn(),
       deleteMany: jest.fn(),
@@ -84,41 +90,20 @@ describe('AuthService', () => {
     };
 
     it('deve registrar um novo usuário com sucesso e requerer verificação de email', async () => {
-      const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-      const createdAt = new Date('2025-01-01T00:00:00Z');
-      const updatedAt = new Date('2025-01-01T00:00:00Z');
-      const createdUser = {
-        id: '1',
-        name: registerDto.name,
-        email: registerDto.email,
-        password: hashedPassword,
-        role: 'USER',
-        emailVerified: false,
-        createdAt,
-        updatedAt,
-      };
-
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      mockPrismaService.user.create.mockResolvedValue(createdUser);
-      mockPrismaService.emailVerificationToken.create.mockResolvedValue({ id: '1' });
+      mockPrismaService.pendingRegistration.findUnique.mockResolvedValue(null);
+      mockPrismaService.pendingRegistration.create.mockResolvedValue({ id: '1' });
 
       const result = await service.register(registerDto);
 
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('emailVerificationRequired', true);
-      expect(result).toHaveProperty('user');
-      expect(result.user.email).toBe(registerDto.email);
-      expect(result.user).not.toHaveProperty('password');
-      expect(result.user).not.toHaveProperty('access_token');
-      expect(result.user).not.toHaveProperty('refresh_token');
-      expect(result.user.createdAt).toEqual(createdAt);
-      expect(result.user.updatedAt).toEqual(updatedAt);
+      expect(result.message).toContain('Registration successful');
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: registerDto.email },
       });
-      expect(prisma.user.create).toHaveBeenCalled();
-      expect(prisma.emailVerificationToken.create).toHaveBeenCalled();
+      expect(prisma.pendingRegistration.create).toHaveBeenCalled();
     });
 
     it('deve lançar ConflictException se email já existir', async () => {
@@ -653,25 +638,35 @@ describe('AuthService', () => {
         role: 'USER',
         emailVerified: false,
       };
-      const verificationToken = {
-        id: 'evt1',
+      const pendingRegistration = {
+        id: '1',
+        email: 'test@example.com',
+        name: 'Test User',
         code: crypto.createHash('sha256').update(verifyDto.code).digest('hex'),
-        userId: '1',
         expiresAt: new Date(Date.now() + 3600000),
-        usedAt: null,
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(user);
-      mockPrismaService.emailVerificationToken.findFirst.mockResolvedValue(verificationToken);
-      mockPrismaService.$transaction.mockResolvedValue([{}, {}]);
+      mockPrismaService.pendingRegistration.findUnique.mockResolvedValue(pendingRegistration);
+      mockPrismaService.user.create.mockResolvedValue({ ...user, emailVerified: true });
+      mockPrismaService.pendingRegistration.delete.mockResolvedValue(undefined);
+      mockPrismaService.$transaction.mockImplementation(async (callback: any) => {
+        const mockTx = {
+          user: { create: mockPrismaService.user.create },
+          pendingRegistration: { delete: mockPrismaService.pendingRegistration.delete },
+        };
+        return await callback(mockTx);
+      });
 
       const result = await service.verifyEmail(verifyDto);
 
       expect(result).toEqual({ message: 'Email verificado com sucesso.', emailVerified: true });
-      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.user.create).toHaveBeenCalled();
+      expect(prisma.pendingRegistration.delete).toHaveBeenCalled();
     });
 
     it('deve lancar BadRequestException quando usuario nao existe', async () => {
+      mockPrismaService.pendingRegistration.findUnique.mockResolvedValue(null);
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       await expect(service.verifyEmail(verifyDto)).rejects.toThrow(BadRequestException);
@@ -688,12 +683,12 @@ describe('AuthService', () => {
         role: 'USER',
         emailVerified: true,
       };
+      mockPrismaService.pendingRegistration.findUnique.mockResolvedValue(null);
       mockPrismaService.user.findUnique.mockResolvedValue(user);
 
       const result = await service.verifyEmail(verifyDto);
 
       expect(result).toEqual({ message: 'Email ja verificado.', emailVerified: true });
-      expect(prisma.emailVerificationToken.findFirst).not.toHaveBeenCalled();
     });
 
     it('deve lancar BadRequestException quando codigo e invalido', async () => {
@@ -704,13 +699,18 @@ describe('AuthService', () => {
         role: 'USER',
         emailVerified: false,
       };
+      const pendingWithWrongCode = {
+        id: '1',
+        email: 'test@example.com',
+        name: 'Test',
+        code: 'wrong-hash',
+        expiresAt: new Date(Date.now() + 3600000),
+      };
       mockPrismaService.user.findUnique.mockResolvedValue(user);
-      mockPrismaService.emailVerificationToken.findFirst.mockResolvedValue(null);
+      mockPrismaService.pendingRegistration.findUnique.mockResolvedValue(pendingWithWrongCode);
 
       await expect(service.verifyEmail(verifyDto)).rejects.toThrow(BadRequestException);
-      await expect(service.verifyEmail(verifyDto)).rejects.toThrow(
-        'Codigo de verificacao invalido ou expirado.',
-      );
+      await expect(service.verifyEmail(verifyDto)).rejects.toThrow('invalido');
     });
 
     it('deve lancar BadRequestException quando codigo esta expirado', async () => {
@@ -721,11 +721,18 @@ describe('AuthService', () => {
         role: 'USER',
         emailVerified: false,
       };
-      // Prisma's `expiresAt: { gt: new Date() }` filter would exclude expired tokens
+      const expiredPending = {
+        id: '1',
+        email: 'test@example.com',
+        name: 'Test',
+        code: crypto.createHash('sha256').update(verifyDto.code).digest('hex'), // Correct code
+        expiresAt: new Date(Date.now() - 1000), // Expired
+      };
       mockPrismaService.user.findUnique.mockResolvedValue(user);
-      mockPrismaService.emailVerificationToken.findFirst.mockResolvedValue(null);
+      mockPrismaService.pendingRegistration.findUnique.mockResolvedValue(expiredPending);
 
       await expect(service.verifyEmail(verifyDto)).rejects.toThrow(BadRequestException);
+      await expect(service.verifyEmail(verifyDto)).rejects.toThrow('expirado');
     });
   });
 
@@ -745,8 +752,7 @@ describe('AuthService', () => {
       const result = await service.resendVerificationEmail('test@example.com');
 
       expect(result).toEqual({ message: 'Se o email existir, um novo codigo sera enviado.' });
-      expect(prisma.emailVerificationToken.deleteMany).toHaveBeenCalled();
-      expect(prisma.emailVerificationToken.create).toHaveBeenCalled();
+      expect(prisma.pendingRegistration.update).toHaveBeenCalled();
       expect(emailService.sendEmailVerification).toHaveBeenCalled();
     });
 
@@ -767,13 +773,12 @@ describe('AuthService', () => {
         role: 'USER',
         emailVerified: true,
       };
+      mockPrismaService.pendingRegistration.findUnique.mockResolvedValue(null);
       mockPrismaService.user.findUnique.mockResolvedValue(user);
 
       const result = await service.resendVerificationEmail('test@example.com');
 
       expect(result).toEqual({ message: 'Email ja esta verificado.', emailVerified: true });
-      expect(prisma.emailVerificationToken.deleteMany).not.toHaveBeenCalled();
-      expect(prisma.emailVerificationToken.create).not.toHaveBeenCalled();
     });
   });
 

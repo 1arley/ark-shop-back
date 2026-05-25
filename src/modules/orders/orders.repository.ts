@@ -423,6 +423,12 @@ export class OrdersRepository {
               orderItemId: item.id,
             },
           });
+
+          // Also set the OrderItem.keyId to establish the bidirectional relation
+          await tx.orderItem.update({
+            where: { id: item.id },
+            data: { keyId: availableKey.id },
+          });
         }
       }
 

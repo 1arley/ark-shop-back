@@ -212,12 +212,12 @@ describe('PaymentsController', () => {
       expect(result).toEqual(mockPayment);
     });
 
-    it('should return null when no payment exists for order', async () => {
+    it('should throw NotFoundException when no payment exists for order', async () => {
       mockPaymentsService.getPaymentByOrderId.mockResolvedValue(null);
 
-      const result = await controller.getPaymentByOrder('order-id-999');
-
-      expect(result).toBeNull();
+      await expect(controller.getPaymentByOrder('order-id-999')).rejects.toThrow(
+        'Payment not found for this order',
+      );
     });
   });
 

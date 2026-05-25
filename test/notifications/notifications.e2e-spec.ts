@@ -9,10 +9,12 @@ interface LoginResponse {
 interface NotificationResponse {
   id: string;
   userId: string;
-  title: string;
-  message: string;
+  subject: string;
+  content: string;
   type: string;
-  isRead: boolean;
+  status: string;
+  readAt: string | null;
+  createdAt: string;
 }
 
 interface PaginatedNotificationsResponse {
@@ -30,7 +32,11 @@ interface UnreadCountResponse {
 }
 
 describe('NotificationsController (e2e)', () => {
-  const prisma = getPrismaService();
+  let prisma: ReturnType<typeof getPrismaService>;
+
+  beforeEach(() => {
+    prisma = getPrismaService();
+  });
 
   afterEach(async () => {
     await prisma.refreshToken.deleteMany({});
@@ -54,29 +60,30 @@ describe('NotificationsController (e2e)', () => {
 
       accessToken = (loginResponse.body as LoginResponse).access_token;
 
-      // Create test notifications
+      // Create test notifications using correct schema fields
       await prisma.notification.createMany({
         data: [
           {
             userId,
-            title: 'Notification 1',
-            message: 'Message 1',
-            type: 'INFO',
-            isRead: false,
+            subject: 'Notification 1',
+            content: 'Message 1',
+            type: 'EMAIL',
+            status: 'PENDING',
           },
           {
             userId,
-            title: 'Notification 2',
-            message: 'Message 2',
-            type: 'WARNING',
-            isRead: true,
+            subject: 'Notification 2',
+            content: 'Message 2',
+            type: 'EMAIL',
+            status: 'SENT',
+            readAt: new Date(),
           },
           {
             userId,
-            title: 'Notification 3',
-            message: 'Message 3',
-            type: 'INFO',
-            isRead: false,
+            subject: 'Notification 3',
+            content: 'Message 3',
+            type: 'EMAIL',
+            status: 'PENDING',
           },
         ],
       });
@@ -118,10 +125,10 @@ describe('NotificationsController (e2e)', () => {
       await prisma.notification.create({
         data: {
           userId: otherUser.id,
-          title: 'Other Notification',
-          message: 'Should not be visible',
-          type: 'INFO',
-          isRead: false,
+          subject: 'Other Notification',
+          content: 'Should not be visible',
+          type: 'EMAIL',
+          status: 'PENDING',
         },
       });
 
@@ -134,7 +141,7 @@ describe('NotificationsController (e2e)', () => {
       // Should only return 3 (our user's notifications), not 4
       expect(body.data.length).toBe(3);
       for (const notif of body.data) {
-        expect(notif.message).not.toBe('Should not be visible');
+        expect(notif.content).not.toBe('Should not be visible');
       }
     });
 
@@ -163,9 +170,16 @@ describe('NotificationsController (e2e)', () => {
 
       await prisma.notification.createMany({
         data: [
-          { userId, title: 'Unread 1', message: 'Msg 1', type: 'INFO', isRead: false },
-          { userId, title: 'Unread 2', message: 'Msg 2', type: 'INFO', isRead: false },
-          { userId, title: 'Read 1', message: 'Msg 3', type: 'INFO', isRead: true },
+          { userId, subject: 'Unread 1', content: 'Msg 1', type: 'EMAIL', status: 'PENDING' },
+          { userId, subject: 'Unread 2', content: 'Msg 2', type: 'EMAIL', status: 'PENDING' },
+          {
+            userId,
+            subject: 'Read 1',
+            content: 'Msg 3',
+            type: 'EMAIL',
+            status: 'SENT',
+            readAt: new Date(),
+          },
         ],
       });
     });
@@ -188,7 +202,7 @@ describe('NotificationsController (e2e)', () => {
       // Mark all as read
       await prisma.notification.updateMany({
         where: { userId },
-        data: { isRead: true },
+        data: { readAt: new Date() },
       });
 
       const response = await request(app.getHttpServer())
@@ -225,10 +239,10 @@ describe('NotificationsController (e2e)', () => {
       const notification = await prisma.notification.create({
         data: {
           userId: user.id,
-          title: 'Single Notification',
-          message: 'Single Message',
-          type: 'INFO',
-          isRead: false,
+          subject: 'Single Notification',
+          content: 'Single Message',
+          type: 'EMAIL',
+          status: 'PENDING',
         },
       });
       notificationId = notification.id;
@@ -244,7 +258,7 @@ describe('NotificationsController (e2e)', () => {
 
       const body = response.body as NotificationResponse;
       expect(body.id).toBe(notificationId);
-      expect(body.title).toBe('Single Notification');
+      expect(body.subject).toBe('Single Notification');
     });
 
     it('should return 404 for non-existing notification', async () => {
@@ -256,7 +270,7 @@ describe('NotificationsController (e2e)', () => {
         .expect(404);
     });
 
-    it('should return 404 for notification belonging to another user', async () => {
+    it('should return 403 for notification belonging to another user', async () => {
       const app = getApp();
 
       // Create another user's notification
@@ -264,17 +278,17 @@ describe('NotificationsController (e2e)', () => {
       const otherNotif = await prisma.notification.create({
         data: {
           userId: otherUser.id,
-          title: 'Other Notification',
-          message: 'Other Message',
-          type: 'INFO',
-          isRead: false,
+          subject: 'Other Notification',
+          content: 'Other Message',
+          type: 'EMAIL',
+          status: 'PENDING',
         },
       });
 
       await request(app.getHttpServer())
         .get(`/notifications/${otherNotif.id}`)
         .set('Authorization', `Bearer ${accessToken}`)
-        .expect(404);
+        .expect(403);
     });
   });
 
@@ -296,10 +310,10 @@ describe('NotificationsController (e2e)', () => {
       const notification = await prisma.notification.create({
         data: {
           userId: user.id,
-          title: 'To Read',
-          message: 'Message',
-          type: 'INFO',
-          isRead: false,
+          subject: 'To Read',
+          content: 'Message',
+          type: 'EMAIL',
+          status: 'PENDING',
         },
       });
       notificationId = notification.id;
@@ -314,13 +328,13 @@ describe('NotificationsController (e2e)', () => {
         .expect(200);
 
       const body = response.body as NotificationResponse;
-      expect(body.isRead).toBe(true);
+      expect(body.readAt).not.toBeNull();
 
       // Verify in DB
       const notifInDb = await prisma.notification.findUnique({
         where: { id: notificationId },
       });
-      expect(notifInDb?.isRead).toBe(true);
+      expect(notifInDb?.readAt).not.toBeNull();
     });
 
     it('should return 404 for non-existing notification', async () => {
@@ -351,9 +365,9 @@ describe('NotificationsController (e2e)', () => {
 
       await prisma.notification.createMany({
         data: [
-          { userId, title: 'N1', message: 'M1', type: 'INFO', isRead: false },
-          { userId, title: 'N2', message: 'M2', type: 'INFO', isRead: false },
-          { userId, title: 'N3', message: 'M3', type: 'INFO', isRead: false },
+          { userId, subject: 'N1', content: 'M1', type: 'EMAIL', status: 'PENDING' },
+          { userId, subject: 'N2', content: 'M2', type: 'EMAIL', status: 'PENDING' },
+          { userId, subject: 'N3', content: 'M3', type: 'EMAIL', status: 'PENDING' },
         ],
       });
     });
@@ -366,11 +380,12 @@ describe('NotificationsController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty('message');
+      expect(response.body).toHaveProperty('count');
+      expect(response.body.count).toBe(3);
 
       // Verify all are read in DB
       const unreadCount = await prisma.notification.count({
-        where: { userId, isRead: false },
+        where: { userId, readAt: null },
       });
       expect(unreadCount).toBe(0);
     });
@@ -383,10 +398,10 @@ describe('NotificationsController (e2e)', () => {
       await prisma.notification.create({
         data: {
           userId: otherUser.id,
-          title: 'Other',
-          message: 'Other',
-          type: 'INFO',
-          isRead: false,
+          subject: 'Other',
+          content: 'Other',
+          type: 'EMAIL',
+          status: 'PENDING',
         },
       });
 
@@ -397,7 +412,7 @@ describe('NotificationsController (e2e)', () => {
 
       // Other user's notification should still be unread
       const otherUnread = await prisma.notification.count({
-        where: { userId: otherUser.id, isRead: false },
+        where: { userId: otherUser.id, readAt: null },
       });
       expect(otherUnread).toBe(1);
     });

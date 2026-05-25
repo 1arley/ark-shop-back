@@ -22,6 +22,8 @@
       "~/*": ["src/*"],
       "@test/*": ["test/*"]
     },
+    "ignoreDeprecations": "6.0",
+    "rootDir": ".",
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,

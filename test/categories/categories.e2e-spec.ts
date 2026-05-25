@@ -13,11 +13,14 @@ interface CategoryResponse {
   slug: string;
   description?: string;
   parentId?: string | null;
-  isActive: boolean;
 }
 
 describe('CategoriesController (e2e)', () => {
-  const prisma = getPrismaService();
+  let prisma: ReturnType<typeof getPrismaService>;
+
+  beforeEach(() => {
+    prisma = getPrismaService();
+  });
 
   afterEach(async () => {
     await prisma.refreshToken.deleteMany({});
@@ -58,7 +61,6 @@ describe('CategoriesController (e2e)', () => {
       expect(body.name).toBe('Games');
       expect(body.slug).toBe('games');
       expect(body.description).toBe('Video games category');
-      expect(body.isActive).toBe(true);
 
       const categoryInDb = await prisma.category.findUnique({ where: { id: body.id } });
       expect(categoryInDb).toBeDefined();
@@ -128,9 +130,9 @@ describe('CategoriesController (e2e)', () => {
     beforeEach(async () => {
       await prisma.category.createMany({
         data: [
-          { name: 'Games', slug: 'games', isActive: true },
-          { name: 'Software', slug: 'software', isActive: true },
-          { name: 'Hardware', slug: 'hardware', isActive: true },
+          { name: 'Games', slug: 'games' },
+          { name: 'Software', slug: 'software' },
+          { name: 'Hardware', slug: 'hardware' },
         ],
       });
     });
@@ -159,13 +161,13 @@ describe('CategoriesController (e2e)', () => {
   describe('GET /categories/root', () => {
     beforeEach(async () => {
       const parent = await prisma.category.create({
-        data: { name: 'Parent', slug: 'parent', isActive: true },
+        data: { name: 'Parent', slug: 'parent' },
       });
 
       await prisma.category.createMany({
         data: [
-          { name: 'Child 1', slug: 'child-1', parentId: parent.id, isActive: true },
-          { name: 'Child 2', slug: 'child-2', parentId: parent.id, isActive: true },
+          { name: 'Child 1', slug: 'child-1', parentId: parent.id },
+          { name: 'Child 2', slug: 'child-2', parentId: parent.id },
         ],
       });
     });
@@ -187,7 +189,7 @@ describe('CategoriesController (e2e)', () => {
 
     beforeEach(async () => {
       const category = await prisma.category.create({
-        data: { name: 'Test Category', slug: 'test-category', isActive: true },
+        data: { name: 'Test Category', slug: 'test-category' },
       });
       categoryId = category.id;
     });
@@ -227,7 +229,7 @@ describe('CategoriesController (e2e)', () => {
       adminToken = (loginResponse.body as LoginResponse).access_token;
 
       const category = await prisma.category.create({
-        data: { name: 'Original', slug: 'original', isActive: true },
+        data: { name: 'Original', slug: 'original' },
       });
       categoryId = category.id;
     });
@@ -303,7 +305,7 @@ describe('CategoriesController (e2e)', () => {
       adminToken = (loginResponse.body as LoginResponse).access_token;
 
       const category = await prisma.category.create({
-        data: { name: 'To Delete', slug: 'to-delete', isActive: true },
+        data: { name: 'To Delete', slug: 'to-delete' },
       });
       categoryId = category.id;
     });
@@ -326,10 +328,8 @@ describe('CategoriesController (e2e)', () => {
       await prisma.product.create({
         data: {
           name: 'Test Product',
-          slug: 'test-product',
           price: 100,
           categoryId,
-          sellerId: 'system',
         },
       });
 
@@ -343,7 +343,7 @@ describe('CategoriesController (e2e)', () => {
       const app = getApp();
 
       await prisma.category.create({
-        data: { name: 'Subcategory', slug: 'subcategory', parentId: categoryId, isActive: true },
+        data: { name: 'Subcategory', slug: 'subcategory', parentId: categoryId },
       });
 
       await request(app.getHttpServer())

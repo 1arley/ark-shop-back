@@ -37,8 +37,9 @@ export class NotificationsController {
   @Get('unread/count')
   @ApiOperation({ summary: 'Count unread notifications' })
   @ApiResponse({ status: 200, description: 'Unread count' })
-  countUnread(@Req() req: AuthenticatedRequest) {
-    return this.notificationsService.countUnread(req.user.id);
+  async countUnread(@Req() req: AuthenticatedRequest) {
+    const count = await this.notificationsService.countUnread(req.user.id);
+    return { count };
   }
 
   @Get(':id')

@@ -116,7 +116,7 @@ describe('NotificationsController', () => {
 
       const result = await controller.countUnread(mockAuthenticatedRequest as any);
 
-      expect(result).toBe(3);
+      expect(result).toEqual({ count: 3 });
       expect(service.countUnread).toHaveBeenCalledWith('user-1');
     });
   });

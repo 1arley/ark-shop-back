@@ -28,11 +28,15 @@ interface PaginatedPaymentsResponse {
 }
 
 describe('PaymentsController (e2e)', () => {
-  const prisma = getPrismaService();
+  let prisma: ReturnType<typeof getPrismaService>;
   let adminToken: string;
   let userToken: string;
   let userId: string;
   let orderId: string;
+
+  beforeEach(() => {
+    prisma = getPrismaService();
+  });
 
   beforeAll(async () => {
     const app = getApp();
@@ -86,6 +90,7 @@ describe('PaymentsController (e2e)', () => {
         data: {
           userId,
           total: 100,
+          subtotal: 100,
           status: 'PENDING',
         },
       });
@@ -100,7 +105,7 @@ describe('PaymentsController (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           amount: 100,
-          provider: 'asaas',
+          provider: 'ASAAS',
           method: 'CREDIT_CARD',
           payerCpf: '12345678901',
         })
@@ -110,7 +115,7 @@ describe('PaymentsController (e2e)', () => {
       expect(body).toHaveProperty('id');
       expect(body.orderId).toBe(orderId);
       expect(body.amount).toBe(100);
-      expect(body.provider).toBe('asaas');
+      expect(body.provider).toBe('ASAAS');
     });
 
     it('should create payment with PIX method', async () => {
@@ -121,7 +126,7 @@ describe('PaymentsController (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           amount: 100,
-          provider: 'asaas',
+          provider: 'ASAAS',
           method: 'PIX',
           payerCpf: '12345678901',
         })
@@ -136,7 +141,7 @@ describe('PaymentsController (e2e)', () => {
 
       await request(app.getHttpServer())
         .post(`/payments/${orderId}`)
-        .send({ amount: 100, provider: 'asaas', method: 'PIX' })
+        .send({ amount: 100, provider: 'ASAAS', method: 'PIX' })
         .expect(401);
     });
 
@@ -146,7 +151,7 @@ describe('PaymentsController (e2e)', () => {
       await request(app.getHttpServer())
         .post('/payments/invalid-uuid')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ amount: 100, provider: 'asaas', method: 'PIX' })
+        .send({ amount: 100, provider: 'ASAAS', method: 'PIX' })
         .expect(400);
     });
   });
@@ -156,7 +161,7 @@ describe('PaymentsController (e2e)', () => {
 
     beforeEach(async () => {
       const order = await prisma.order.create({
-        data: { userId, total: 50, status: 'PENDING' },
+        data: { userId, total: 50, subtotal: 50, status: 'PENDING' },
       });
 
       const payment = await prisma.payment.create({
@@ -164,7 +169,7 @@ describe('PaymentsController (e2e)', () => {
           orderId: order.id,
           userId,
           amount: 50,
-          provider: 'asaas',
+          provider: 'ASAAS',
           method: 'PIX',
           status: 'PENDING',
         },
@@ -204,7 +209,7 @@ describe('PaymentsController (e2e)', () => {
   describe('GET /payments/order/:orderId', () => {
     beforeEach(async () => {
       const order = await prisma.order.create({
-        data: { userId, total: 75, status: 'PENDING' },
+        data: { userId, total: 75, subtotal: 75, status: 'PENDING' },
       });
 
       await prisma.payment.create({
@@ -212,9 +217,9 @@ describe('PaymentsController (e2e)', () => {
           orderId: order.id,
           userId,
           amount: 75,
-          provider: 'asaas',
+          provider: 'ASAAS',
           method: 'CREDIT_CARD',
-          status: 'CONFIRMED',
+          status: 'APPROVED',
         },
       });
       orderId = order.id;
@@ -236,7 +241,7 @@ describe('PaymentsController (e2e)', () => {
       const app = getApp();
 
       const newOrder = await prisma.order.create({
-        data: { userId, total: 25, status: 'PENDING' },
+        data: { userId, total: 25, subtotal: 25, status: 'PENDING' },
       });
 
       await request(app.getHttpServer())
@@ -257,7 +262,7 @@ describe('PaymentsController (e2e)', () => {
 
     beforeEach(async () => {
       const order = await prisma.order.create({
-        data: { userId, total: 200, status: 'CONFIRMED' },
+        data: { userId, total: 200, subtotal: 200, status: 'PAID' },
       });
 
       const payment = await prisma.payment.create({
@@ -265,9 +270,10 @@ describe('PaymentsController (e2e)', () => {
           orderId: order.id,
           userId,
           amount: 200,
-          provider: 'asaas',
+          provider: 'ASAAS',
           method: 'CREDIT_CARD',
-          status: 'CONFIRMED',
+          status: 'APPROVED',
+          providerTxId: 'mock-provider-tx-id', // Required for refund
         },
       });
       paymentId = payment.id;
@@ -282,8 +288,8 @@ describe('PaymentsController (e2e)', () => {
         .send({ amount: 200 })
         .expect(200);
 
-      const body = response.body as PaymentResponse;
-      expect(body.status).toBe('REFUNDED');
+      const body = response.body;
+      expect(body.payment.status).toBe('REFUNDED');
     });
 
     it('should refund partial amount', async () => {
@@ -295,8 +301,8 @@ describe('PaymentsController (e2e)', () => {
         .send({ amount: 100 })
         .expect(200);
 
-      const body = response.body as PaymentResponse;
-      expect(body.status).toBe('PARTIALLY_REFUNDED');
+      const body = response.body;
+      expect(body.payment.status).toBe('REFUNDED');
     });
 
     it('should return 403 for non-admin user', async () => {
@@ -324,7 +330,7 @@ describe('PaymentsController (e2e)', () => {
       // Create multiple payments for the user
       for (let i = 0; i < 3; i++) {
         const order = await prisma.order.create({
-          data: { userId, total: 50 + i * 10, status: 'CONFIRMED' },
+          data: { userId, total: 50 + i * 10, subtotal: 50 + i * 10, status: 'PAID' },
         });
 
         await prisma.payment.create({
@@ -332,9 +338,9 @@ describe('PaymentsController (e2e)', () => {
             orderId: order.id,
             userId,
             amount: 50 + i * 10,
-            provider: 'asaas',
+            provider: 'ASAAS',
             method: 'PIX',
-            status: 'CONFIRMED',
+            status: 'APPROVED',
           },
         });
       }

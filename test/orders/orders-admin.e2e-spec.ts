@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { getApp, getPrismaService, createTestUser } from '@test/setup/e2e.setup';
 import { Role } from '@prisma/client';
+import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
 
 interface LoginResponse {
   access_token: string;
@@ -16,10 +17,14 @@ interface OrderResponse {
 }
 
 describe('OrdersController - Admin Endpoints (e2e)', () => {
-  const prisma = getPrismaService();
+  let prisma: ReturnType<typeof getPrismaService>;
   let adminToken: string;
   let userToken: string;
   let userId: string;
+
+  beforeEach(() => {
+    prisma = getPrismaService();
+  });
 
   beforeAll(async () => {
     const app = getApp();
@@ -80,6 +85,7 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
           data: {
             userId,
             total: 100 + i,
+            subtotal: 100 + i,
             status: 'PENDING',
           },
         });
@@ -136,6 +142,7 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
         data: {
           userId,
           total: 150,
+          subtotal: 150,
           status: 'PENDING',
         },
       });
@@ -148,20 +155,35 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
       const response = await request(app.getHttpServer())
         .patch(`/orders/${orderId}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'CONFIRMED' })
+        .send({ status: 'AWAITING_PAYMENT' })
         .expect(200);
 
       const body = response.body as OrderResponse;
-      expect(body.status).toBe('CONFIRMED');
+      expect(body.status).toBe('AWAITING_PAYMENT');
 
       // Verify in DB
       const orderInDb = await prisma.order.findUnique({ where: { id: orderId } });
-      expect(orderInDb?.status).toBe('CONFIRMED');
+      expect(orderInDb?.status).toBe('AWAITING_PAYMENT');
     });
 
     it('should update status to DELIVERED', async () => {
       const app = getApp();
 
+      // First transition to AWAITING_PAYMENT (valid from PENDING)
+      await request(app.getHttpServer())
+        .patch(`/orders/${orderId}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'AWAITING_PAYMENT' })
+        .expect(200);
+
+      // Then to PAID
+      await request(app.getHttpServer())
+        .patch(`/orders/${orderId}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'PAID' })
+        .expect(200);
+
+      // Finally to DELIVERED
       const response = await request(app.getHttpServer())
         .patch(`/orders/${orderId}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -188,7 +210,7 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
       await request(app.getHttpServer())
         .patch('/orders/non-existing-id/status')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ status: 'CONFIRMED' })
+        .send({ status: 'PROCESSING' })
         .expect(404);
     });
 
@@ -198,7 +220,7 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
       await request(app.getHttpServer())
         .patch(`/orders/${orderId}/status`)
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ status: 'CONFIRMED' })
+        .send({ status: 'PROCESSING' })
         .expect(403);
     });
   });
@@ -208,26 +230,27 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
     let productId: string;
 
     beforeEach(async () => {
+      const app = getApp();
+      const encryptionProvider = app.get(KeysEncryptionProvider);
+
       const category = await prisma.category.create({
-        data: { name: 'Games', slug: 'games', isActive: true },
+        data: { name: 'Games', slug: 'games' },
       });
 
       const product = await prisma.product.create({
         data: {
           name: 'Test Game',
-          slug: 'test-game',
           price: 50,
           categoryId: category.id,
-          sellerId: 'system',
         },
       });
       productId = product.id;
 
-      // Create keys for the product
+      // Create keys for the product (with encrypted keyData)
       await prisma.key.createMany({
         data: [
-          { productId, keyData: 'KEY-001', status: 'AVAILABLE' },
-          { productId, keyData: 'KEY-002', status: 'AVAILABLE' },
+          { productId, keyData: encryptionProvider.encrypt('KEY-001'), status: 'AVAILABLE' },
+          { productId, keyData: encryptionProvider.encrypt('KEY-002'), status: 'AVAILABLE' },
         ],
       });
 
@@ -235,16 +258,8 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
         data: {
           userId,
           total: 50,
-          status: 'CONFIRMED',
-        },
-      });
-
-      await prisma.orderItem.create({
-        data: {
-          orderId: order.id,
-          productId,
-          quantity: 1,
-          price: 50,
+          subtotal: 50,
+          status: 'PAID', // Must be PAID to deliver
         },
       });
 
@@ -291,29 +306,35 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
     let productId: string;
 
     beforeEach(async () => {
+      const app = getApp();
+      const encryptionProvider = app.get(KeysEncryptionProvider);
+
       const category = await prisma.category.create({
-        data: { name: 'Games', slug: 'games', isActive: true },
+        data: { name: 'Games', slug: 'games' },
       });
 
       const product = await prisma.product.create({
         data: {
           name: 'Downloadable Game',
-          slug: 'downloadable-game',
           price: 30,
           categoryId: category.id,
-          sellerId: 'system',
         },
       });
       productId = product.id;
 
       await prisma.key.create({
-        data: { productId, keyData: 'DOWNLOAD-KEY-001', status: 'AVAILABLE' },
+        data: {
+          productId,
+          keyData: encryptionProvider.encrypt('DOWNLOAD-KEY-001'),
+          status: 'AVAILABLE',
+        },
       });
 
       const order = await prisma.order.create({
         data: {
           userId,
           total: 30,
+          subtotal: 30,
           status: 'DELIVERED', // Must be delivered to download
         },
       });
@@ -327,11 +348,16 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
         },
       });
 
-      // Assign key to order
+      // Assign key to order item (both sides of the relation)
+      const orderItem = await prisma.orderItem.findFirst({ where: { orderId: order.id } });
       const key = await prisma.key.findFirst({ where: { productId, status: 'AVAILABLE' } });
       await prisma.key.update({
         where: { id: key!.id },
-        data: { status: 'SOLD', orderId: order.id },
+        data: { status: 'DELIVERED', orderItemId: orderItem!.id },
+      });
+      await prisma.orderItem.update({
+        where: { id: orderItem!.id },
+        data: { keyId: key!.id },
       });
 
       orderId = order.id;
@@ -376,7 +402,8 @@ describe('OrdersController - Admin Endpoints (e2e)', () => {
         data: {
           userId,
           total: 10,
-          status: 'CONFIRMED',
+          subtotal: 10,
+          status: 'PAID',
         },
       });
 

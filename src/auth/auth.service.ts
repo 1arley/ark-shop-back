@@ -157,6 +157,26 @@ export class AuthService {
     return user;
   }
 
+  async getVerificationStatus(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        emailVerified: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    return {
+      email: user.email,
+      emailVerified: user.emailVerified,
+    };
+  }
+
   /**
    * Rotaciona o refresh token: revoga o token antigo e cria um novo.
    * Preserva a configuração rememberMe do token original.
@@ -545,9 +565,7 @@ export class AuthService {
     }
 
     if (pending.expiresAt < new Date()) {
-      throw new BadRequestException(
-        'Codigo de verificacao expirado. Solicite um novo codigo.',
-      );
+      throw new BadRequestException('Codigo de verificacao expirado. Solicite um novo codigo.');
     }
 
     // Atomic: delete pending registration and create user in a transaction
@@ -579,10 +597,33 @@ export class AuthService {
     });
 
     if (!pending) {
-      // Check if user already exists (already verified)
+      // Check if user already exists
       const user = await this.prisma.user.findUnique({ where: { email } });
       if (user?.emailVerified) {
         return { message: 'Email ja esta verificado.', emailVerified: true };
+      }
+      if (user) {
+        // User exists but is unverified — create EmailVerificationToken
+        const verificationCode = this.generateNumericCode(EMAIL_VERIFICATION_CODE_LENGTH);
+        const codeHash = crypto.createHash('sha256').update(verificationCode).digest('hex');
+        const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_HOURS * HOUR_IN_MS);
+
+        await this.prisma.emailVerificationToken.create({
+          data: {
+            userId: user.id,
+            code: codeHash,
+            expiresAt,
+          },
+        });
+
+        // Send verification email (non-blocking)
+        this.emailService
+          .sendEmailVerification(email, verificationCode, user.name || email)
+          .catch((err: Error) => {
+            this.logger.error(`Failed to send verification email: ${err.message}`);
+          });
+
+        return { message: 'Novo codigo de verificacao enviado para o email.' };
       }
       return { message: 'Se o email existir, um novo codigo sera enviado.' };
     }

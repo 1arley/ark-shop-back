@@ -19,6 +19,7 @@ import { ApiRegisterUser } from '@/auth/swagger/auth.post.register.swagger';
 import { ApiLoginUser } from '@/auth/swagger/auth.post.login.swagger';
 import { ApiRefreshTokens } from '@/auth/swagger/auth.post.refresh.swagger';
 import { ApiLogoutUser } from '@/auth/swagger/auth.post.logout.swagger';
+import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { JwtRefreshAuthGuard } from '@/auth/jwt-refresh-auth.guard';
 import { extractRefreshToken } from '@/auth/token-extractor.util';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
@@ -96,6 +97,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Public()
   @SkipEmailVerification()
   @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 refreshes/minuto
   @ApiRefreshTokens()
@@ -127,6 +129,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @Public()
   @SkipEmailVerification()
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
@@ -243,5 +246,17 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Email not verified' })
   async getMe(@Req() req: AuthenticatedRequest) {
     return this.authService.validateUser(req.user.id);
+  }
+
+  @Get('verification-status')
+  @SkipEmailVerification()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Get email verification status' })
+  @ApiResponse({ status: 200, description: 'Verification status' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getVerificationStatus(@Req() req: AuthenticatedRequest) {
+    return this.authService.getVerificationStatus(req.user.id);
   }
 }

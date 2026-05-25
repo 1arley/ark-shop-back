@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CategoriesService } from '../categories.service';
 import { CategoriesRepository } from '../categories.repository';
@@ -77,12 +78,10 @@ describe('CategoriesService', () => {
       expect(repository.findById).toHaveBeenCalledWith('cat-1');
     });
 
-    it('deve retornar null se categoria não existir', async () => {
+    it('deve lançar NotFoundException se categoria não existir', async () => {
       mockCategoriesRepository.findById.mockResolvedValue(null);
 
-      const result = await service.findById('cat-999');
-
-      expect(result).toBeNull();
+      await expect(service.findById('cat-999')).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -4,6 +4,42 @@ import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '@/prisma/prisma.service';
+import { AsaasProvider } from '@/modules/payments/providers/asaas.provider';
+
+/**
+ * Mock AsaasProvider for testing — returns fake data
+ * without making real HTTP calls to the Asaas API.
+ */
+const mockAsaasProvider = {
+  createCustomer: async () => 'mock-customer-id',
+  createPayment: async () => ({
+    id: 'mock-payment-id',
+    status: 'CONFIRMED',
+    value: 100,
+    netValue: 97,
+    pixQrCode: 'data:image/png;base64,mock-qr-code',
+    pixCopyPaste: 'mock-pix-copy-paste',
+    invoiceUrl: null,
+    externalReference: 'mock-order-id',
+    split: [],
+  }),
+  getPixQrCode: async () => ({
+    payload: 'mock-pix-payload',
+    encodedImage: 'mock-encoded-image',
+    expirationDate: null,
+  }),
+  verifyPayment: async () => ({
+    status: 'approved',
+    amount: 100,
+    providerData: { id: 'mock-payment-id', status: 'CONFIRMED' },
+  }),
+  refundPayment: async () => ({
+    id: 'mock-refund-id',
+    status: 'REFUNDED',
+    value: 100,
+  }),
+  getSellerWalletForOrder: async () => null,
+};
 
 let app: INestApplication;
 let prismaService: PrismaService;
@@ -14,9 +50,25 @@ beforeAll(async () => {
     return;
   }
 
-  const moduleRef = await Test.createTestingModule({
+  // Only use mock if no Asaas API key is configured
+  // The .env file may have ASAAS_API_KEY as a literal string with $ prefix,
+  // but when running with dotenv-cli -e .env.test, this env is NOT injected.
+  const asaasKey = process.env.ASAAS_API_KEY;
+  const useMockAsaas = !asaasKey || asaasKey.startsWith('$aact_');
+
+  let moduleBuilder = Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  });
+
+  if (useMockAsaas) {
+    moduleBuilder = moduleBuilder.overrideProvider(AsaasProvider).useValue(mockAsaasProvider);
+  }
+
+  const moduleRef = await moduleBuilder.compile();
+
+  if (useMockAsaas) {
+    console.log('🔧 Using mock AsaasProvider (no production API key)');
+  }
 
   app = moduleRef.createNestApplication();
   app.useGlobalPipes(
@@ -75,6 +127,9 @@ async function cleanupDatabase() {
     await prismaService.refreshToken.deleteMany();
     await prismaService.passwordResetToken.deleteMany();
     await prismaService.emailVerificationToken.deleteMany();
+    await prismaService.pendingRegistration.deleteMany();
+    await prismaService.notification.deleteMany();
+    await prismaService.payment.deleteMany();
     await prismaService.coupon.deleteMany();
     await prismaService.orderItem.deleteMany();
     await prismaService.order.deleteMany();
@@ -86,6 +141,7 @@ async function cleanupDatabase() {
     await prismaService.seller.deleteMany();
     await prismaService.walletTransaction.deleteMany();
     await prismaService.wallet.deleteMany();
+    await prismaService.userDeletionLog.deleteMany();
     await prismaService.user.deleteMany();
   } catch (error) {
     // Ignore cleanup errors

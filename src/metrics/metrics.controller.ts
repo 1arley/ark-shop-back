@@ -4,12 +4,14 @@ import { register } from 'prom-client';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
+import { Public } from '@/auth/decorators/public.decorator';
 
 @Controller('metrics')
 export class MetricsController {
   constructor(private readonly configService: ConfigService) {}
 
   @Get()
+  @Public()
   async getMetrics(): Promise<string> {
     return register.metrics();
   }

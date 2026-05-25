@@ -26,10 +26,17 @@ interface PaginatedResponse {
 }
 
 describe('UserController (e2e)', () => {
-  const prisma = getPrismaService();
+  let prisma: ReturnType<typeof getPrismaService>;
+
+  beforeEach(() => {
+    prisma = getPrismaService();
+  });
 
   afterEach(async () => {
     await prisma.refreshToken.deleteMany({});
+    await prisma.payment.deleteMany({});
+    await prisma.orderItem.deleteMany({});
+    await prisma.order.deleteMany({});
     await prisma.user.deleteMany({});
   });
 
@@ -194,6 +201,7 @@ describe('UserController (e2e)', () => {
         data: {
           userId: user!.id,
           total: 100,
+          subtotal: 100,
           status: 'PENDING',
         },
       });

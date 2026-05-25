@@ -13,6 +13,7 @@ import {
   ParseUUIDPipe,
   Headers,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -106,11 +107,17 @@ export class PaymentsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get payment by order ID' })
   @ApiResponse({ status: 200, description: 'Payment found' })
-  getPaymentByOrder(@Param('orderId') orderId: string) {
-    return this.paymentsService.getPaymentByOrderId(orderId);
+  @ApiResponse({ status: 404, description: 'Payment not found' })
+  async getPaymentByOrder(@Param('orderId') orderId: string) {
+    const payment = await this.paymentsService.getPaymentByOrderId(orderId);
+    if (!payment) {
+      throw new NotFoundException('Payment not found for this order');
+    }
+    return payment;
   }
 
   @Post(':id/refund')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth()

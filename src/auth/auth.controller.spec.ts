@@ -58,15 +58,6 @@ describe('AuthController', () => {
     it('should register a new user successfully without tokens (email verification required)', async () => {
       const mockResponse = {
         message: 'Registration successful. Please check your email to verify your account.',
-        user: {
-          id: '1',
-          name: 'Test User',
-          email: 'test@example.com',
-          role: 'USER',
-          emailVerified: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
         emailVerificationRequired: true,
       };
 
@@ -76,7 +67,7 @@ describe('AuthController', () => {
 
       expect(result.message).toBe(mockResponse.message);
       expect(result.emailVerificationRequired).toBe(true);
-      expect(result.user.email).toBe('test@example.com');
+      expect(result).not.toHaveProperty('user');
       expect(result).not.toHaveProperty('access_token');
       expect(result).not.toHaveProperty('refresh_token');
       expect(authService.register).toHaveBeenCalledWith(registerDto);
@@ -445,15 +436,6 @@ describe('AuthController', () => {
 
       const mockResponse = {
         message: 'Registration successful. Please check your email to verify your account.',
-        user: {
-          id: '1',
-          name: largeDto.name,
-          email: largeDto.email,
-          role: 'USER',
-          emailVerified: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
         emailVerificationRequired: true,
       };
 
@@ -461,7 +443,8 @@ describe('AuthController', () => {
 
       const result = await controller.register(largeDto);
 
-      expect(result.user.name).toBe(largeDto.name);
+      expect(result.message).toBe(mockResponse.message);
+      expect(result.emailVerificationRequired).toBe(true);
       expect(authService.register).toHaveBeenCalledWith(largeDto);
     });
 

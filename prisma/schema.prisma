@@ -217,6 +217,7 @@ model Product {
 model Category {
   id          String     @id @default(uuid())
   name        String
+  slug        String     @unique
   description String?
   parentId    String?
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])

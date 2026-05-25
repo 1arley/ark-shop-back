@@ -59,7 +59,7 @@ export class OrdersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get recent orders (admin)' })
   @ApiResponse({ status: 200, description: 'List of recent orders' })
-  findRecent(@Query('limit', ParseIntPipe) limit: number = 10) {
+  findRecent(@Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number) {
     return this.ordersService.getRecentOrders(limit);
   }
 
@@ -104,6 +104,7 @@ export class OrdersController {
   }
 
   @Post(':id/deliver')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth()

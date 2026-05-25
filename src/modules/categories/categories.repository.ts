@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/create-category.dto';
 import { toNumber } from '@/common/decimal';
@@ -11,6 +11,7 @@ export class CategoriesRepository {
     return this.prisma.category.create({
       data: {
         name: data.name,
+        slug: data.slug,
         description: data.description,
         parentId: data.parentId,
       },
@@ -67,18 +68,26 @@ export class CategoriesRepository {
   }
 
   async update(id: string, data: UpdateCategoryDto) {
-    return this.prisma.category.update({
-      where: { id },
-      data: {
-        name: data.name,
-        description: data.description,
-        parentId: data.parentId,
-      },
-      include: {
-        parent: true,
-        children: true,
-      },
-    });
+    try {
+      return await this.prisma.category.update({
+        where: { id },
+        data: {
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          parentId: data.parentId,
+        },
+        include: {
+          parent: true,
+          children: true,
+        },
+      });
+    } catch (error) {
+      if (error?.code === 'P2025' || error?.message?.includes('Record to update not found')) {
+        throw new NotFoundException('Category not found');
+      }
+      throw error;
+    }
   }
 
   async delete(id: string, force: boolean = false) {
@@ -95,7 +104,7 @@ export class CategoriesRepository {
     });
 
     if (!category) {
-      throw new Error('Category not found');
+      throw new NotFoundException('Category not found');
     }
 
     // Se for force=true, deleta mesmo com produtos/subcategorias (eles serão tratados pelo cascade)
@@ -116,7 +125,7 @@ export class CategoriesRepository {
         if (childrenCount > 0) {
           message.push(`${childrenCount} subcategor${childrenCount > 1 ? 'ies' : 'y'}`);
         }
-        throw new Error(
+        throw new BadRequestException(
           `Cannot delete category: it has ${message.join(' and ')}. Use force=true to delete anyway.`,
         );
       }

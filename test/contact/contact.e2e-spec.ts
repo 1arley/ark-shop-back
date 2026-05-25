@@ -1,16 +1,25 @@
 import request from 'supertest';
-import { getApp, getPrismaService } from '@test/setup/e2e.setup';
+import { getApp, getPrismaService, createTestUser } from '@test/setup/e2e.setup';
+import { Role } from '@prisma/client';
 
 describe('ContactController (e2e)', () => {
-  const prisma = getPrismaService();
+  let prisma: ReturnType<typeof getPrismaService>;
+
+  beforeEach(() => {
+    prisma = getPrismaService();
+  });
 
   afterEach(async () => {
-    await prisma.contact.deleteMany({});
+    await prisma.notification.deleteMany({});
+    await prisma.user.deleteMany({});
   });
 
   describe('POST /contact', () => {
     it('should send contact message successfully', async () => {
       const app = getApp();
+
+      // Create admin user so the contact service creates notification records
+      await createTestUser('admin@arkshop.com', 'Admin123!', 'Admin User', Role.ADMIN);
 
       const response = await request(app.getHttpServer())
         .post('/contact')
@@ -24,13 +33,11 @@ describe('ContactController (e2e)', () => {
 
       expect(response.body).toHaveProperty('message');
 
-      // Verify message was saved in DB
-      const contactInDb = await prisma.contact.findFirst({
-        where: { email: 'test@example.com' },
+      // ContactService creates notification records for admins
+      const notifications = await prisma.notification.findMany({
+        where: { subject: { contains: 'Test Subject' } },
       });
-      expect(contactInDb).toBeDefined();
-      expect(contactInDb?.name).toBe('Test User');
-      expect(contactInDb?.subject).toBe('Test Subject');
+      expect(notifications.length).toBeGreaterThan(0);
     });
 
     it('should return 400 for missing name', async () => {

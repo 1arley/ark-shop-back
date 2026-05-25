@@ -108,9 +108,7 @@ export class AuthRegistrationService {
     }
 
     if (pending.expiresAt < new Date()) {
-      throw new BadRequestException(
-        'Codigo de verificacao expirado. Solicite um novo codigo.',
-      );
+      throw new BadRequestException('Codigo de verificacao expirado. Solicite um novo codigo.');
     }
 
     await this.prisma.$transaction(async tx => {
