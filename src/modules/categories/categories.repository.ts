@@ -82,7 +82,7 @@ export class CategoriesRepository {
           children: true,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error?.code === 'P2025' || error?.message?.includes('Record to update not found')) {
         throw new NotFoundException('Category not found');
       }

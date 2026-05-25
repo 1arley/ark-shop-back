@@ -157,9 +157,11 @@ export class AdminService {
 
     // Create categories
     for (const categoryName of categories) {
+      const slug = categoryName.toLowerCase().replace(/\s+/g, '-');
       const category = await this.prisma.category.create({
         data: {
           name: categoryName,
+          slug,
           description: `${categoryName} games`,
         },
       });
