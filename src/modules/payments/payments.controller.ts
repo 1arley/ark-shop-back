@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -24,7 +24,7 @@ import { AsaasWebhookHandler } from './webhooks/asaas-webhook.handler';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { RawBody } from '@/common/decorators/raw-body.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import type { AuthenticatedUser } from '@/common/interfaces/request.interface';
+import { Public } from '@/auth/decorators/public.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -57,6 +57,7 @@ export class PaymentsController {
   }
 
   @Post('webhook/:provider')
+  @Public()
   @Throttle({ webhook: { limit: 100, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Payment webhook handler' })
@@ -96,9 +97,8 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get payment by ID' })
   @ApiResponse({ status: 200, description: 'Payment found' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not your payment' })
-  getPayment(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.paymentsService.getPayment(id, user.id, user.role);
+  getPayment(@Param('id') id: string) {
+    return this.paymentsService.getPayment(id);
   }
 
   @Get('order/:orderId')
@@ -106,9 +106,8 @@ export class PaymentsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get payment by order ID' })
   @ApiResponse({ status: 200, description: 'Payment found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not your payment' })
-  getPaymentByOrder(@Param('orderId') orderId: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.paymentsService.getPaymentByOrderId(orderId, user.id, user.role);
+  getPaymentByOrder(@Param('orderId') orderId: string) {
+    return this.paymentsService.getPaymentByOrderId(orderId);
   }
 
   @Post(':id/refund')

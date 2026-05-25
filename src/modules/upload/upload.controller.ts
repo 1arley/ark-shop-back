@@ -1,9 +1,10 @@
-﻿import {
+import {
   Controller,
   Post,
   Delete,
   Param,
   Body,
+  UseGuards,
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
@@ -22,7 +23,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { UploadService } from './upload.service';
-import { RequireVerifiedEmail } from '@/auth/decorators/require-verified-email.decorator';
+import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
 import {
   MAX_FILE_SIZE,
@@ -33,7 +34,7 @@ import {
 
 @ApiTags('upload')
 @Controller('upload')
-@RequireVerifiedEmail()
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UploadController {
   private readonly maxFileSize: number;

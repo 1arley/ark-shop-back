@@ -1,8 +1,12 @@
 import { Request } from 'express';
-import type { UserProfile } from '@/common/interfaces/user-profile.interface';
+import { Role } from '@prisma/client';
 
-export interface AuthenticatedUser extends UserProfile {
-  /** Raw refresh token value (available only on /refresh endpoint). */
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+  role: Role;
+  name?: string | null;
+  emailVerified: boolean;
   refreshToken?: string;
 }
 

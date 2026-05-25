@@ -125,11 +125,12 @@ export class KeysEncryptionProvider {
   }
 
   /**
-   * Generate a cryptographically secure random key (for testing/demo)
-   * Uses Node.js crypto.randomUUID for proper entropy
+   * Generate a demo key for testing purposes only
+   * NOT cryptographically secure for production use
+   * Uses Node.js crypto.randomUUID which has ~122 bits of entropy (not suitable for game keys)
    */
-  generateSecureKey(length: number = 32): string {
-    // Use crypto.randomUUID for proper CSPRNG entropy
+  generateDemoKey(length: number = 32): string {
+    // Use crypto.randomUUID for demo/testing purposes only
     const uuid = randomUUID().replace(/-/g, '');
     // Pad/reduce to desired length
     if (length <= uuid.length) {
@@ -140,6 +141,6 @@ export class KeysEncryptionProvider {
     while (result.length < length) {
       result += randomUUID().replace(/-/g, '');
     }
-    return result.slice(0, length);
+    return result.slice(0, length).toUpperCase();
   }
 }

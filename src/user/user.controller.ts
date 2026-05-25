@@ -14,23 +14,20 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 import { UserService } from '@/user/user.service';
 import { UpdateProfileDto } from '@/user/dto/update-profile.dto';
 import { ApiGetUserMe } from '@/user/swagger/user.get.me.swagger';
-import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { ApiFindAllUsers } from '@/user/swagger/user.get.findAll.swagger';
-import { RequireVerifiedEmail } from '@/auth/decorators/require-verified-email.decorator';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, parsePageParam } from '@/common/constants';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
 
 @ApiTags('user')
 @Controller('user')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiFindAllUsers()
   findAll(@Query('page') page: string, @Query('limit') limit: string) {
@@ -41,7 +38,6 @@ export class UserController {
   }
 
   @Get('me')
-  @RequireVerifiedEmail()
   @ApiGetUserMe()
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
@@ -63,7 +59,6 @@ export class UserController {
   }
 
   @Patch('me')
-  @RequireVerifiedEmail()
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Atualizar próprio perfil' })
@@ -74,7 +69,6 @@ export class UserController {
   }
 
   @Delete('me')
-  @RequireVerifiedEmail()
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Deletar próprio usuário' })

@@ -42,7 +42,7 @@ export class AuthTokenService {
       role: user.role,
       email: user.email,
       emailVerified: user.emailVerified,
-      name: user.name,
+      name: user.name || undefined,
       jti: crypto.randomUUID(),
     };
 

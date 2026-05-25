@@ -1,7 +1,7 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -11,6 +11,7 @@ import { UserModule } from '@/user/user.module';
 import { LoggerModule } from '@/logger/logger.module';
 import { MetricsModule } from '@/metrics/metrics.module';
 import { HealthModule } from '@/health/health.module';
+
 import { validateEnv } from '@/config/env.validation';
 
 // D'Ark Games Store Modules
@@ -56,41 +57,12 @@ if (process.env.SENTRY_DSN) {
       isGlobal: true,
       validate: validateEnv,
     }),
-
-    // ─── Schedule (cron jobs) ─────────────────────────────────────
-    ScheduleModule.forRoot(),
-
-    // ─── Rate Limiting ────────────────────────────────────────────
-    // Multiple throttlers for different endpoint types:
-    // - default: 60 req/min (general API)
-    // - auth: stricter limits per-route in auth.controller
-    // - admin: 120 req/min
-    // - webhook: 100 req/min (payment webhooks can be bursty)
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: 60000,
-        limit: 60,
-      },
-      {
-        name: 'admin',
-        ttl: 60000,
-        limit: 120,
-      },
-      {
-        name: 'webhook',
-        ttl: 60000,
-        limit: 100,
-      },
-    ]),
-
-    // ─── Feature Modules ──────────────────────────────────────────
     PrismaModule,
+    AuthModule,
+    UserModule,
     LoggerModule,
     MetricsModule,
     HealthModule,
-    AuthModule,
-    UserModule,
     ProductsModule,
     KeysModule,
     OrdersModule,
@@ -106,6 +78,7 @@ if (process.env.SENTRY_DSN) {
     UploadModule,
     WalletModule,
     CouponsModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [

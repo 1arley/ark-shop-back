@@ -379,7 +379,18 @@ export class OrdersRepository {
    */
   async deliverOrderAtomic(
     orderId: string,
-    items: Array<{ id: string; productId: string; key: any; product: { name: string } | null }>,
+    items: Array<{
+      id: string;
+      productId: string;
+      key: {
+        id: string;
+        status: KeyStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        deliveredAt: Date | null;
+      } | null;
+      product: { name: string } | null;
+    }>,
   ) {
     return this.prisma.$transaction(async tx => {
       // Re-verify order status inside transaction to prevent concurrent delivery

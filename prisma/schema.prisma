@@ -85,6 +85,7 @@ model User {
   avatarUrl               String?
   role                    Role                     @default(USER)
   emailVerified           Boolean                  @default(false)
+  asaasCustomerId         String?                  @unique
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   refreshTokens           RefreshToken[]
@@ -101,6 +102,7 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([asaasCustomerId])
 }
 
 model RefreshToken {

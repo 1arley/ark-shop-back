@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class VerifyEmailDto {
@@ -7,8 +7,12 @@ export class VerifyEmailDto {
   @IsNotEmpty({ message: 'O email nao pode estar vazio.' })
   email!: string;
 
-  @ApiProperty({ description: 'Codigo de verificacao recebido por email' })
+  @ApiProperty({
+    description: 'Verification code received by email (6 digits)',
+    example: '123456',
+  })
   @IsString()
-  @IsNotEmpty({ message: 'O codigo de verificacao nao pode estar vazio.' })
+  @IsNotEmpty({ message: 'The verification code cannot be empty.' })
+  @Matches(/^\d{6}$/, { message: 'Verification code must be exactly 6 digits.' })
   code!: string;
 }

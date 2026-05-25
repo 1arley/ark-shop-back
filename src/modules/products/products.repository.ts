@@ -99,6 +99,9 @@ export class ProductsRepository {
   }
 
   async update(id: string, data: UpdateProductDto) {
+    // Verifica se o produto existe antes de atualizar
+    await this.findById(id);
+
     const product = await this.prisma.product.update({
       where: { id },
       data: {

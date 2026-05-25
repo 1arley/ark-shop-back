@@ -1,9 +1,12 @@
-import { Injectable, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, Optional } from '@nestjs/common';
 import { PaymentsRepository } from './payments.repository';
 import { PaymentProviderFactory } from './payment-provider.factory';
 import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { OrdersService } from '@/modules/orders/orders.service';
+import { EmailService } from '@/modules/email/email.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { toNumber } from '@/common/decimal';
 
 @Injectable()
 export class PaymentsService {
@@ -14,6 +17,8 @@ export class PaymentsService {
     private readonly providerFactory: PaymentProviderFactory,
     private readonly configService: ConfigService,
     private readonly ordersService: OrdersService,
+    @Optional() private readonly emailService?: EmailService,
+    @Optional() private readonly prisma?: PrismaService,
   ) {}
 
   async createPayment(
@@ -119,32 +124,12 @@ export class PaymentsService {
     };
   }
 
-  async getPayment(paymentId: string, userId: string, userRole: string) {
-    const payment = await this.paymentsRepository.findById(paymentId);
-    if (!payment) {
-      throw new BadRequestException('Payment not found');
-    }
-
-    // Users can only view their own payments; admins can view any
-    if (payment.userId !== userId && userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
-      throw new ForbiddenException('You can only view your own payments');
-    }
-
-    return payment;
+  async getPayment(paymentId: string) {
+    return this.paymentsRepository.findById(paymentId);
   }
 
-  async getPaymentByOrderId(orderId: string, userId: string, userRole: string) {
-    const payment = await this.paymentsRepository.findByOrderId(orderId);
-    if (!payment) {
-      throw new BadRequestException('Payment not found');
-    }
-
-    // Users can only view their own payments; admins can view any
-    if (payment.userId !== userId && userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
-      throw new ForbiddenException('You can only view your own payments');
-    }
-
-    return payment;
+  async getPaymentByOrderId(orderId: string) {
+    return this.paymentsRepository.findByOrderId(orderId);
   }
 
   async getUserPayments(userId: string, page: number = 1, limit: number = 10) {
@@ -242,6 +227,33 @@ export class PaymentsService {
 
     // Automatically deliver order after payment approval
     await this.deliverOrderByPayment(approvedPayment);
+
+    // Notify active seller about the split payment (if any)
+    if (this.prisma && this.emailService) {
+      try {
+        const seller = await this.prisma.seller.findFirst({
+          where: { isActive: true, asaasWalletId: { not: null } },
+          include: { user: { select: { email: true, name: true } } },
+        });
+        if (seller?.user?.email) {
+          const platformCommission = toNumber(seller.commission) ?? 10;
+          const sellerPercent = 100 - platformCommission;
+          const paymentAmount = toNumber(approvedPayment.amount) ?? 0;
+          const sellerAmount = (paymentAmount * sellerPercent) / 100;
+          const emailHtml =
+            `<p>Olá ${seller.user.name || ''},</p>` +
+            `<p>Você recebeu R$ ${sellerAmount.toFixed(2)} referente ao pedido #${approvedPayment.orderId}.</p>` +
+            `<p>O valor será creditado na sua conta Asaas.</p>`;
+          await this.emailService.send({
+            to: seller.user.email,
+            subject: `Pagamento recebido - Pedido #${approvedPayment.orderId}`,
+            html: emailHtml,
+          });
+        }
+      } catch (err) {
+        this.logger.error('Failed to send seller split notification email', err);
+      }
+    }
 
     return approvedPayment;
   }

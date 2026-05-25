@@ -2,6 +2,7 @@ import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '@/auth/roles.decorators';
 import { AuthenticatedRequest } from '@/common/interfaces/request.interface';
+import { ROLE_HIERARCHY, Role } from '@/common/enums/role.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -23,9 +24,22 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Usuário não autenticado.');
     }
 
-    const hasRole = requiredRoles.some(role => user.role === role);
+    // Verifica se o usuário tem pelo menos o nível de acesso requerido
+    const userLevel = ROLE_HIERARCHY[user.role] ?? -1;
+    const hasRequiredLevel = requiredRoles.some(role => {
+      const requiredLevel = ROLE_HIERARCHY[role as Role];
+      // Se o role não estiver na hierarquia, requer match exato
+      if (requiredLevel === undefined) {
+        return user.role === role;
+      }
+      // Se o usuário não tiver nível definido, não permite acesso
+      if (userLevel === -1) {
+        return false;
+      }
+      return userLevel >= requiredLevel;
+    });
 
-    if (!hasRole) {
+    if (!hasRequiredLevel) {
       throw new ForbiddenException('Você não tem permissão para acessar este recurso.');
     }
 

@@ -45,6 +45,7 @@ export class EmailService {
         subject: options.subject,
         html: options.html,
         text: options.text,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
       });
 
       if (error) {
@@ -84,7 +85,7 @@ export class EmailService {
   ): Promise<boolean> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #333;">Confirmacao de Pedido</h1>
+         <h1 style="color: #333;">Confirmação de Pedido</h1>
         <p>Obrigado pelo seu pedido!</p>
         
         <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
@@ -116,7 +117,7 @@ export class EmailService {
     `;
 
     const text = `
-Confirmacao de Pedido
+Confirmação de Pedido
 
 Pedido #: ${order.id}
 Data: ${new Date(order.createdAt).toLocaleDateString('pt-BR')}

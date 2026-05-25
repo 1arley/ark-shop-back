@@ -5,9 +5,8 @@ import {
   IsUrl,
   IsOptional,
   IsIn,
-  IsNumberString,
-  MinLength,
   validateSync,
+  MinLength,
 } from 'class-validator';
 
 class EnvironmentVariables {
@@ -34,14 +33,6 @@ class EnvironmentVariables {
   JWT_AUDIENCE?: string;
 
   @IsOptional()
-  @IsString()
-  JWT_ACCESS_EXPIRES_IN?: string;
-
-  @IsOptional()
-  @IsString()
-  JWT_REFRESH_EXPIRES_IN?: string;
-
-  @IsOptional()
   @IsIn(['development', 'production', 'test'])
   NODE_ENV?: string;
 
@@ -59,7 +50,7 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
-  @MinLength(32, { message: 'KEYS_ENCRYPTION_KEY must be at least 32 characters long' })
+  @MinLength(32, { message: 'KEYS_ENCRYPTION_KEY must be at least 32 characters long if provided' })
   KEYS_ENCRYPTION_KEY?: string;
 
   @IsOptional()
@@ -81,42 +72,6 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   S3_SECRET_ACCESS_KEY?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  PORT?: string;
-
-  @IsOptional()
-  @IsString()
-  API_PREFIX?: string;
-
-  @IsOptional()
-  @IsString()
-  SWAGGER_PATH?: string;
-
-  @IsOptional()
-  @IsString()
-  REDIS_HOST?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  REDIS_PORT?: string;
-
-  @IsOptional()
-  @IsString()
-  REDIS_PASSWORD?: string;
-
-  @IsOptional()
-  @IsUrl({ require_tld: false })
-  FRONTEND_URL?: string;
-
-  @IsOptional()
-  @IsString()
-  BCRYPT_SALT_ROUNDS?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  PASSWORD_RESET_EXPIRY_HOURS?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

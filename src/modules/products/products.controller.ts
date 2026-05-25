@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -34,6 +34,7 @@ import { ImportProductsDto } from './dto/import-products.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
+import { Public } from '@/auth/decorators/public.decorator';
 
 @ApiTags('products')
 @Controller('products')
@@ -179,6 +180,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do j
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all products' })
   @ApiResponse({ status: 200, description: 'List of products' })
   @ApiQuery({
@@ -227,6 +229,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do j
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Get product by ID' })
   @ApiResponse({ status: 200, description: 'Product found' })
   @ApiResponse({ status: 404, description: 'Product not found' })

@@ -207,12 +207,14 @@ export class AdminRepository {
   }
 
   async getFraudLogs(page: number = 1, limit: number = 20) {
-    const skip = (page - 1) * limit;
+    // Limit maximum page size to prevent over-fetching
+    const safeLimit = Math.min(limit, 100);
+    const skip = (page - 1) * safeLimit;
 
     const [logs, total] = await this.prisma.$transaction([
       this.prisma.fraudLog.findMany({
         skip,
-        take: limit,
+        take: safeLimit,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.fraudLog.count(),
@@ -223,8 +225,8 @@ export class AdminRepository {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

@@ -49,7 +49,7 @@ describe('PaymentsController', () => {
 
     controller = module.get<PaymentsController>(PaymentsController);
     paymentsService = module.get<PaymentsService>(PaymentsService);
-    _asaasWebhookHandler = module.get<AsaasWebhookHandler>(AsaasWebhookHandler);
+    asaasWebhookHandler = module.get<AsaasWebhookHandler>(AsaasWebhookHandler);
 
     jest.clearAllMocks();
   });
@@ -135,10 +135,9 @@ describe('PaymentsController', () => {
     it('should return payment by ID', async () => {
       mockPaymentsService.getPayment.mockResolvedValue(mockPayment);
 
-      const mockUser = { id: 'user-id-1', role: 'USER' } as any;
-      const result = await controller.getPayment('payment-id-1', mockUser);
+      const result = await controller.getPayment('payment-id-1');
 
-      expect(paymentsService.getPayment).toHaveBeenCalledWith('payment-id-1', 'user-id-1', 'USER');
+      expect(paymentsService.getPayment).toHaveBeenCalledWith('payment-id-1');
       expect(result).toEqual(mockPayment);
     });
   });
@@ -207,22 +206,16 @@ describe('PaymentsController', () => {
     it('should return payment by order ID', async () => {
       mockPaymentsService.getPaymentByOrderId.mockResolvedValue(mockPayment);
 
-      const mockUser = { id: 'user-id-1', role: 'USER' } as any;
-      const result = await controller.getPaymentByOrder('order-id-1', mockUser);
+      const result = await controller.getPaymentByOrder('order-id-1');
 
-      expect(paymentsService.getPaymentByOrderId).toHaveBeenCalledWith(
-        'order-id-1',
-        'user-id-1',
-        'USER',
-      );
+      expect(paymentsService.getPaymentByOrderId).toHaveBeenCalledWith('order-id-1');
       expect(result).toEqual(mockPayment);
     });
 
     it('should return null when no payment exists for order', async () => {
       mockPaymentsService.getPaymentByOrderId.mockResolvedValue(null);
 
-      const mockUser = { id: 'user-id-2', role: 'USER' } as any;
-      const result = await controller.getPaymentByOrder('order-id-999', mockUser);
+      const result = await controller.getPaymentByOrder('order-id-999');
 
       expect(result).toBeNull();
     });

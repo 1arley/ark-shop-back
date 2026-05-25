@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -15,6 +15,7 @@ import { CreateCategoryDto, UpdateCategoryDto } from './dto/create-category.dto'
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
+import { Public } from '@/auth/decorators/public.decorator';
 
 @ApiTags('categories')
 @Controller('categories')
@@ -32,6 +33,7 @@ export class CategoriesController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all categories' })
   @ApiResponse({ status: 200, description: 'List of categories' })
   findAll() {
@@ -39,6 +41,7 @@ export class CategoriesController {
   }
 
   @Get('root')
+  @Public()
   @ApiOperation({ summary: 'Get root categories only' })
   @ApiResponse({ status: 200, description: 'List of root categories' })
   findRoot() {
@@ -46,6 +49,7 @@ export class CategoriesController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Get category by ID' })
   @ApiResponse({ status: 200, description: 'Category found' })
   @ApiResponse({ status: 404, description: 'Category not found' })

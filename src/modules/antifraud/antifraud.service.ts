@@ -30,9 +30,20 @@ export class AntifraudService {
     let riskScore = 0;
     let reason: string | undefined;
 
+    // Execute all checks in parallel to avoid N+1 query problem
+    const [ipReputationResult, deviceBlacklistResult, userOrderCount, userPaymentSuccessRate] =
+      await Promise.all([
+        ipAddress ? this.antifraudRepository.checkIPReputation(ipAddress) : Promise.resolve(true),
+        deviceFingerprint
+          ? this.antifraudRepository.checkDeviceBlacklist(deviceFingerprint)
+          : Promise.resolve(false),
+        userId ? this.antifraudRepository.getUserOrderCount(userId, 24) : Promise.resolve(0),
+        userId ? this.antifraudRepository.getUserPaymentSuccessRate(userId) : Promise.resolve(1),
+      ]);
+
     // Check IP reputation
     if (ipAddress) {
-      checks.ipReputation = await this.antifraudRepository.checkIPReputation(ipAddress);
+      checks.ipReputation = ipReputationResult;
       if (!checks.ipReputation) {
         riskScore += 40;
         reason = 'Blacklisted IP';
@@ -41,7 +52,7 @@ export class AntifraudService {
 
     // Check device fingerprint
     if (deviceFingerprint) {
-      const isBlacklisted = await this.antifraudRepository.checkDeviceBlacklist(deviceFingerprint);
+      const isBlacklisted = deviceBlacklistResult;
       if (isBlacklisted) {
         riskScore += 30;
         reason = reason ? reason + '; Blacklisted device' : 'Blacklisted device';
@@ -50,7 +61,7 @@ export class AntifraudService {
 
     // Velocity check (orders in last 24 hours)
     if (userId) {
-      const orderCount = await this.antifraudRepository.getUserOrderCount(userId, 24);
+      const orderCount = userOrderCount;
       if (orderCount > 5) {
         checks.velocityCheck = false;
         riskScore += 20;
@@ -58,7 +69,7 @@ export class AntifraudService {
       }
 
       // Payment success rate
-      const successRate = await this.antifraudRepository.getUserPaymentSuccessRate(userId);
+      const successRate = userPaymentSuccessRate;
       if (successRate < 0.5) {
         riskScore += 15;
         reason = reason ? reason + '; Low success rate' : 'Low success rate';

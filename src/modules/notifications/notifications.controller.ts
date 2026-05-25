@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Patch,
@@ -6,16 +6,17 @@
   Query,
   ParseIntPipe,
   DefaultValuePipe,
+  UseGuards,
   Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
-import { RequireVerifiedEmail } from '@/auth/decorators/require-verified-email.decorator';
+import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
 
 @ApiTags('notifications')
 @Controller('notifications')
-@RequireVerifiedEmail()
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}

@@ -71,7 +71,7 @@ export class KeysService {
    */
   async generateDemoKeys(productId: string, quantity: number = 10) {
     const keys = Array.from({ length: quantity }, () =>
-      this.encryptionProvider.generateSecureKey(24),
+      this.encryptionProvider.generateDemoKey(24),
     );
 
     return this.importKeys(productId, keys);

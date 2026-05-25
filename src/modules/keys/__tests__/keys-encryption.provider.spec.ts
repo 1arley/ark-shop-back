@@ -274,8 +274,8 @@ describe('KeysEncryptionProvider', () => {
     });
   });
 
-  // ─── generateSecureKey ────────────────────────────────────────────
-  describe('generateSecureKey', () => {
+  // ─── generateDemoKey ────────────────────────────────────────────
+  describe('generateDemoKey', () => {
     beforeEach(async () => {
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -288,40 +288,40 @@ describe('KeysEncryptionProvider', () => {
     });
 
     it('deve gerar chave com tamanho padrao (32 caracteres)', () => {
-      const key = provider.generateSecureKey();
+      const key = provider.generateDemoKey();
 
       expect(key).toBeDefined();
       expect(key.length).toBe(32);
-      expect(key).toMatch(/^[a-f0-9]+$/); // UUID sem hifens = hex chars
+      expect(key).toMatch(/^[a-f0-9]+$/i); // UUID sem hifens = hex chars (case insensitive)
     });
 
     it('deve gerar chave com tamanho customizado', () => {
-      const key = provider.generateSecureKey(24);
+      const key = provider.generateDemoKey(24);
 
       expect(key.length).toBe(24);
     });
 
     it('deve gerar chave com tamanho maior que UUID (64 caracteres)', () => {
-      const key = provider.generateSecureKey(64);
+      const key = provider.generateDemoKey(64);
 
       expect(key.length).toBe(64);
     });
 
     it('deve gerar chaves diferentes a cada chamada (aleatoriedade criptografica)', () => {
-      const key1 = provider.generateSecureKey();
-      const key2 = provider.generateSecureKey();
+      const key1 = provider.generateDemoKey();
+      const key2 = provider.generateDemoKey();
 
       expect(key1).not.toBe(key2);
     });
 
     it('deve gerar chave com tamanho 1', () => {
-      const key = provider.generateSecureKey(1);
+      const key = provider.generateDemoKey(1);
 
       expect(key.length).toBe(1);
     });
 
     it('deve gerar chave com tamanho exatamente igual ao UUID (32)', () => {
-      const key = provider.generateSecureKey(32);
+      const key = provider.generateDemoKey(32);
 
       expect(key.length).toBe(32);
     });

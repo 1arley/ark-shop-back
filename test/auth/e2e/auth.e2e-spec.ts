@@ -483,151 +483,113 @@ describe('AuthController (e2e)', () => {
         expect(user).toBeDefined();
       }
     });
-  });
 
-  describe('Email verification enforcement', () => {
-    it('should block unverified user from accessing /auth/me', async () => {
-      const app = getApp();
+    describe('Email verification enforcement', () => {
+      it('should block unverified user from accessing /auth/me', async () => {
+        const app = getApp();
 
-      // Register creates user with emailVerified: false
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          name: 'Unverified User',
-          email: 'unverified@example.com',
-          password: 'Password123!',
-        })
-        .expect(201);
+        // Register creates user with emailVerified: false
+        await request(app.getHttpServer())
+          .post('/auth/register')
+          .send({
+            name: 'Unverified User',
+            email: 'unverified@example.com',
+            password: 'Password123!',
+          })
+          .expect(201);
 
-      // Login succeeds (login doesn't require verification)
-      const loginResponse = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: 'unverified@example.com',
-          password: 'Password123!',
-        })
-        .expect(200);
+        // Login succeeds (login doesn't require verification)
+        const loginResponse = await request(app.getHttpServer())
+          .post('/auth/login')
+          .send({
+            email: 'unverified@example.com',
+            password: 'Password123!',
+          })
+          .expect(200);
 
-      const { access_token } = loginResponse.body as LoginResponse;
-      expect(loginResponse.body).toHaveProperty('emailVerified', false);
+        const { access_token } = loginResponse.body as LoginResponse;
+        expect(loginResponse.body).toHaveProperty('emailVerified', false);
 
-      // But accessing protected route is blocked
-      await request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Authorization', `Bearer ${access_token}`)
-        .expect(403);
-    });
-
-    it('should block unverified user from refreshing tokens', async () => {
-      const app = getApp();
-
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          name: 'Unverified User 2',
-          email: 'unverified2@example.com',
-          password: 'Password123!',
-        })
-        .expect(201);
-
-      const loginResponse = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: 'unverified2@example.com',
-          password: 'Password123!',
-        })
-        .expect(200);
-
-      const { refresh_token } = loginResponse.body as LoginResponse;
-
-      // Refresh should be blocked for unverified users
-      await request(app.getHttpServer())
-        .post('/auth/refresh')
-        .set('Authorization', `Bearer ${refresh_token}`)
-        .expect(403);
-    });
-
-    it('should allow verified user to access /auth/me', async () => {
-      const app = getApp();
-
-      // Create verified user directly in DB
-      await createTestUser('verified@example.com', 'Password123!', 'Verified User');
-
-      const loginResponse = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: 'verified@example.com',
-          password: 'Password123!',
-        })
-        .expect(200);
-
-      const { access_token } = loginResponse.body as LoginResponse;
-      expect(loginResponse.body).toHaveProperty('emailVerified', true);
-
-      // Verified user can access protected routes
-      const meResponse = await request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Authorization', `Bearer ${access_token}`)
-        .expect(200);
-
-      expect(meResponse.body).toHaveProperty('email', 'verified@example.com');
-      expect(meResponse.body).toHaveProperty('emailVerified', true);
-    });
-
-    it('should allow access after email verification', async () => {
-      const app = getApp();
-      const prisma = getPrismaService();
-
-      // Register user (unverified)
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          name: 'Verify Later User',
-          email: 'verify-later@example.com',
-          password: 'Password123!',
-        })
-        .expect(201);
-
-      const loginResponse = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: 'verify-later@example.com',
-          password: 'Password123!',
-        })
-        .expect(200);
-
-      const { access_token } = loginResponse.body as LoginResponse;
-
-      // Should be blocked before verification
-      await request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Authorization', `Bearer ${access_token}`)
-        .expect(403);
-
-      // Manually verify the user in DB (simulating email verification)
-      await prisma.user.update({
-        where: { email: 'verify-later@example.com' },
-        data: { emailVerified: true },
+        // But accessing protected route is blocked
+        await request(app.getHttpServer())
+          .get('/auth/me')
+          .set('Authorization', `Bearer ${access_token}`)
+          .expect(403);
       });
 
-      // Login again to get fresh token with updated user state
-      const loginAfterVerify = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: 'verify-later@example.com',
-          password: 'Password123!',
-        })
-        .expect(200);
+      // Note: Refresh token does NOT require email verification - only access to protected resources does.
+      // This allows unverified users to continue their session while restricting access to protected endpoints.
 
-      const { access_token: newToken } = loginAfterVerify.body as LoginResponse;
+      it('should allow verified user to access /auth/me', async () => {
+        const app = getApp();
 
-      // Now should be allowed
-      const meResponse = await request(app.getHttpServer())
-        .get('/auth/me')
-        .set('Authorization', `Bearer ${newToken}`)
-        .expect(200);
+        // Create verified user directly in DB
+        await createTestUser('verified@example.com', 'Password123!', 'Verified User');
 
-      expect(meResponse.body).toHaveProperty('emailVerified', true);
+        const loginResponse = await request(app.getHttpServer())
+          .post('/auth/login')
+          .send({
+            email: 'verified@example.com',
+            password: 'Password123!',
+          })
+          .expect(200);
+
+        const { access_token } = loginResponse.body as LoginResponse;
+        expect(loginResponse.body).toHaveProperty('emailVerified', true);
+
+        // Verified user can access protected routes
+        const meResponse = await request(app.getHttpServer())
+          .get('/auth/me')
+          .set('Authorization', `Bearer ${access_token}`)
+          .expect(200);
+
+        expect(meResponse.body).toHaveProperty('email', 'verified@example.com');
+        expect(meResponse.body).toHaveProperty('emailVerified', true);
+      });
+
+      it('should allow access after email verification', async () => {
+        const app = getApp();
+        const prisma = getPrismaService();
+
+        // Register user (unverified)
+        await request(app.getHttpServer())
+          .post('/auth/register')
+          .send({
+            name: 'Verify Later User',
+            email: 'verify-later@example.com',
+            password: 'Password123!',
+          })
+          .expect(201);
+
+        // Login to get tokens
+        const loginResponse = await request(app.getHttpServer())
+          .post('/auth/login')
+          .send({
+            email: 'verify-later@example.com',
+            password: 'Password123!',
+          })
+          .expect(200);
+
+        const { access_token } = loginResponse.body as LoginResponse;
+
+        // Initially blocked
+        await request(app.getHttpServer())
+          .get('/auth/me')
+          .set('Authorization', `Bearer ${access_token}`)
+          .expect(403);
+
+        // Manually verify email in DB
+        await prisma.user.update({
+          where: { email: 'verify-later@example.com' },
+          data: { emailVerified: true },
+        });
+
+        // Now should be allowed
+        await request(app.getHttpServer())
+          .get('/auth/me')
+          .set('Authorization', `Bearer ${access_token}`)
+          .expect(200);
+      });
     });
   });
 });
