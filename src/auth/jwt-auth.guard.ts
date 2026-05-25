@@ -33,8 +33,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
     err: Error | null,
     user: TUser | false | null,
     info: unknown,
-    status: unknown,
-    context?: ExecutionContext,
+    context: ExecutionContext,
+    status?: unknown,
   ): TUser {
     if (err || !user) {
       if (info && process.env.NODE_ENV !== 'production') {
@@ -45,7 +45,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
       this.logger.debug(`JWT auth succeeded for userId: ${user.id}`);
     }
 
-    const authenticatedUser = super.handleRequest(err, user, info, status, context);
+    const authenticatedUser = super.handleRequest(err, user, info, context, status);
     return authenticatedUser;
   }
 
