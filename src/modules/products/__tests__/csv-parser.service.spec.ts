@@ -42,10 +42,10 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].platform).toBe('XBOX');
-      expect(result[0].name).toBe('Game Test');
-      expect(result[0].price).toBe(50);
-      expect(result[0].region).toBe('br');
+      expect(result[0]!.platform).toBe('XBOX');
+      expect(result[0]!.name).toBe('Game Test');
+      expect(result[0]!.price).toBe(50);
+      expect(result[0]!.region).toBe('br');
     });
 
     it('deve lancar BadRequestException quando CSV e null', () => {
@@ -147,10 +147,10 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       expect(result).toHaveLength(1);
       // Tags HTML sao removidas, mas o texto "alert" permanece como texto normal
-      expect(result[0].name).not.toContain('<script>');
-      expect(result[0].name).not.toContain('</script>');
-      expect(result[0].name).not.toContain('<');
-      expect(result[0].name).not.toContain('>');
+      expect(result[0]!.name).not.toContain('<script>');
+      expect(result[0]!.name).not.toContain('</script>');
+      expect(result[0]!.name).not.toContain('<');
+      expect(result[0]!.name).not.toContain('>');
     });
 
     it('deve extrair timestamp quando disponivel', () => {
@@ -161,7 +161,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].timestamp).toBe('07/12/2025 15:01:53');
+      expect(result[0]!.timestamp).toBe('07/12/2025 15:01:53');
     });
 
     it('deve lancar BadRequestException quando CSV tem apenas headers sem dados', () => {
@@ -182,10 +182,10 @@ Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do j
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(2);
-      expect(result[0].platform).toBe('XBOX');
-      expect(result[0].price).toBe(50);
-      expect(result[1].platform).toBe('STEAM/PC');
-      expect(result[1].price).toBe(75);
+      expect(result[0]!.platform).toBe('XBOX');
+      expect(result[0]!.price).toBe(50);
+      expect(result[1]!.platform).toBe('STEAM/PC');
+      expect(result[1]!.price).toBe(75);
     });
   });
 
@@ -200,7 +200,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       expect(result).toHaveLength(1);
       // O nome deve conter a virgula dentro das aspas
-      expect(result[0].name).toContain('virgula no nome');
+      expect(result[0]!.name).toContain('virgula no nome');
     });
 
     it('deve lidar com aspas escapadas (duplas aspas)', () => {
@@ -211,7 +211,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toContain('aspas');
+      expect(result[0]!.name).toContain('aspas');
     });
 
     it('deve lidar com multiplas colunas entre aspas', () => {
@@ -222,7 +222,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].price).toBe(50);
+      expect(result[0]!.price).toBe(50);
     });
   });
 
@@ -304,7 +304,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].price).toBe(1234.56);
+      expect(result[0]!.price).toBe(1234.56);
     });
 
     it('deve parsear formato BRL sem espaco (R$1.234,56)', () => {
@@ -315,7 +315,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].price).toBe(1234.56);
+      expect(result[0]!.price).toBe(1234.56);
     });
 
     it('deve parsear preco simples sem R$', () => {
@@ -326,7 +326,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].price).toBe(99);
+      expect(result[0]!.price).toBe(99);
     });
 
     it('deve parsear preco sem separador de milhar', () => {
@@ -337,7 +337,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].price).toBe(100);
+      expect(result[0]!.price).toBe(100);
     });
 
     it('deve retornar 0 para preco invalido', () => {
@@ -367,7 +367,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].price).toBe(50);
+      expect(result[0]!.price).toBe(50);
     });
 
     it('deve parsear preco com valor alto e separador de milhar', () => {
@@ -377,7 +377,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].price).toBe(10000.99);
+      expect(result[0]!.price).toBe(10000.99);
     });
 
     // ─── Locale detection ────────────────────────────────────────────
@@ -430,7 +430,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 07/12/2025,${t.name},R$50,00`;
 
         const result = service.parse(csvContent);
-        expect(result[0].region).toBe(t.expected);
+        expect(result[0]!.region).toBe(t.expected);
       }
     });
 
@@ -446,7 +446,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 07/12/2025,${t.name},R$50,00`;
 
         const result = service.parse(csvContent);
-        expect(result[0].region).toBe(t.expected);
+        expect(result[0]!.region).toBe(t.expected);
       }
     });
 
@@ -463,7 +463,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 07/12/2025,${t.name},R$50,00`;
 
         const result = service.parse(csvContent);
-        expect(result[0].region).toBe(t.expected);
+        expect(result[0]!.region).toBe(t.expected);
       }
     });
 
@@ -479,7 +479,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 07/12/2025,${t.name},R$50,00`;
 
         const result = service.parse(csvContent);
-        expect(result[0].region).toBe(t.expected);
+        expect(result[0]!.region).toBe(t.expected);
       }
     });
 
@@ -490,7 +490,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].region).toBe('global');
+      expect(result[0]!.region).toBe('global');
     });
 
     it('deve extrair regiao "conta"', () => {
@@ -500,7 +500,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].region).toBe('conta');
+      expect(result[0]!.region).toBe('conta');
     });
 
     it('deve retornar undefined quando nao ha regiao no nome', () => {
@@ -510,7 +510,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].region).toBeUndefined();
+      expect(result[0]!.region).toBeUndefined();
     });
 
     it('deve retornar undefined quando regiao nao e reconhecida', () => {
@@ -520,7 +520,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].region).toBeUndefined();
+      expect(result[0]!.region).toBeUndefined();
     });
   });
 
@@ -533,7 +533,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].name).toBe('Final Fantasy XVI');
+      expect(result[0]!.name).toBe('Final Fantasy XVI');
     });
 
     it('deve remover multiplos parenteses', () => {
@@ -543,7 +543,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].name).toBe('Game Name');
+      expect(result[0]!.name).toBe('Game Name');
     });
 
     it('deve manter nome sem parenteses inalterado', () => {
@@ -553,7 +553,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].name).toBe('Game Simples');
+      expect(result[0]!.name).toBe('Game Simples');
     });
 
     it('deve remover espacos extras ao redor do nome', () => {
@@ -563,7 +563,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].name).toBe('Game Com Espacos');
+      expect(result[0]!.name).toBe('Game Com Espacos');
     });
   });
 
@@ -576,9 +576,9 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].name).not.toContain('<b>');
-      expect(result[0].name).not.toContain('</b>');
-      expect(result[0].name).toContain('Game Negrito');
+      expect(result[0]!.name).not.toContain('<b>');
+      expect(result[0]!.name).not.toContain('</b>');
+      expect(result[0]!.name).toContain('Game Negrito');
     });
 
     it('deve remover script tags (XSS)', () => {
@@ -590,10 +590,10 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       expect(result).toHaveLength(1);
       // Tags HTML sao removidas, texto dentro permanece
-      expect(result[0].name).not.toContain('<script>');
-      expect(result[0].name).not.toContain('</script>');
-      expect(result[0].name).not.toContain('<');
-      expect(result[0].name).not.toContain('>');
+      expect(result[0]!.name).not.toContain('<script>');
+      expect(result[0]!.name).not.toContain('</script>');
+      expect(result[0]!.name).not.toContain('<');
+      expect(result[0]!.name).not.toContain('>');
     });
 
     it('deve remover caracteres perigosos (<>"\'&)', () => {
@@ -605,11 +605,11 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).not.toContain('<');
-      expect(result[0].name).not.toContain('>');
-      expect(result[0].name).not.toContain('"');
-      expect(result[0].name).not.toContain("'");
-      expect(result[0].name).not.toContain('&');
+      expect(result[0]!.name).not.toContain('<');
+      expect(result[0]!.name).not.toContain('>');
+      expect(result[0]!.name).not.toContain('"');
+      expect(result[0]!.name).not.toContain("'");
+      expect(result[0]!.name).not.toContain('&');
     });
 
     it('deve limitar nome a 500 caracteres', () => {
@@ -620,7 +620,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
 
       const result = service.parse(csvContent);
 
-      expect(result[0].name.length).toBeLessThanOrEqual(500);
+      expect(result[0]!.name.length).toBeLessThanOrEqual(500);
     });
 
     it('deve lidar com entrada vazia', () => {
@@ -642,7 +642,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].timestamp).not.toContain('<script>');
+      expect(result[0]!.timestamp).not.toContain('<script>');
     });
   });
 
@@ -687,7 +687,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do j
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].platform).toBe('XBOX');
+      expect(result[0]!.platform).toBe('XBOX');
     });
 
     it('deve lidar com CSV contendo whitespace nos valores', () => {
@@ -698,8 +698,8 @@ Carimbo de data/hora,Nome do jogo,preço de venda
       const result = service.parse(csvContent);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Game Espacos');
-      expect(result[0].price).toBe(50);
+      expect(result[0]!.name).toBe('Game Espacos');
+      expect(result[0]!.price).toBe(50);
     });
   });
 });

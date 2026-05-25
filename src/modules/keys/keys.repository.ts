@@ -19,7 +19,7 @@ export class KeysRepository {
   async create(productId: string, keyData: string) {
     const encryptedKey = this.encryptionProvider.encrypt(keyData);
 
-    return this.prisma.key.create({
+    return await this.prisma.key.create({
       data: {
         productId,
         keyData: encryptedKey,
@@ -177,7 +177,7 @@ export class KeysRepository {
    * para prevenir condições de corrida (TOCTOU).
    */
   async reserveAvailableKeyAtomic(productId: string, orderItemId: string) {
-    return this.prisma.$transaction(async tx => {
+    return await this.prisma.$transaction(async tx => {
       const availableKey = await tx.key.findFirst({
         where: {
           productId,
@@ -200,7 +200,7 @@ export class KeysRepository {
   }
 
   async deliverKey(keyId: string) {
-    return this.prisma.key.update({
+    return await this.prisma.key.update({
       where: { id: keyId },
       data: {
         status: KeyStatus.DELIVERED,

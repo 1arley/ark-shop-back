@@ -8,7 +8,6 @@ import { PaymentProvider, PaymentMethod } from '@prisma/client';
 describe('PaymentsController', () => {
   let controller: PaymentsController;
   let paymentsService: PaymentsService;
-  let _asaasWebhookHandler: AsaasWebhookHandler;
 
   const mockPaymentsService = {
     createPayment: jest.fn(),
@@ -49,7 +48,6 @@ describe('PaymentsController', () => {
 
     controller = module.get<PaymentsController>(PaymentsController);
     paymentsService = module.get<PaymentsService>(PaymentsService);
-    asaasWebhookHandler = module.get<AsaasWebhookHandler>(AsaasWebhookHandler);
 
     jest.clearAllMocks();
   });

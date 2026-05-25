@@ -8,7 +8,6 @@ describe('ContactService', () => {
   let service: ContactService;
   let prisma: PrismaService;
   let emailService: EmailService;
-  let _configService: ConfigService;
 
   const mockPrismaService = {
     user: {
@@ -40,7 +39,6 @@ describe('ContactService', () => {
     service = module.get<ContactService>(ContactService);
     prisma = module.get<PrismaService>(PrismaService);
     emailService = module.get<EmailService>(EmailService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {

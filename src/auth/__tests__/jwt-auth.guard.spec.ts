@@ -7,7 +7,6 @@ import { IS_PUBLIC_KEY } from '@/auth/decorators/public.decorator';
 
 describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;
-  let _reflector: Reflector;
 
   const mockReflector = {
     getAllAndOverride: jest.fn(),
@@ -19,7 +18,6 @@ describe('JwtAuthGuard', () => {
     }).compile();
 
     guard = module.get<JwtAuthGuard>(JwtAuthGuard);
-    reflector = module.get<Reflector>(Reflector);
   });
 
   afterEach(() => {

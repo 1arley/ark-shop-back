@@ -11,6 +11,7 @@ describe('CartController', () => {
     email: 'test@test.com',
     name: 'Test User',
     role: 'USER' as const,
+    emailVerified: false,
   };
 
   const mockCartResult = {

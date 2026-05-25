@@ -6,7 +6,6 @@ import { ROLES_KEY } from '@/auth/roles.decorators';
 
 describe('RolesGuard', () => {
   let guard: RolesGuard;
-  let _reflector: Reflector;
 
   const mockReflector = {
     getAllAndOverride: jest.fn(),
@@ -18,7 +17,6 @@ describe('RolesGuard', () => {
     }).compile();
 
     guard = module.get<RolesGuard>(RolesGuard);
-    reflector = module.get<Reflector>(Reflector);
   });
 
   afterEach(() => {

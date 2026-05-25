@@ -814,7 +814,13 @@ describe('OrdersRepository', () => {
         {
           id: 'item-id-1',
           productId: 'product-id-1',
-          key: { id: 'key-id-1' },
+          key: {
+            id: 'key-id-1',
+            status: KeyStatus.RESERVED,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deliveredAt: null,
+          },
           product: { name: 'Game Key' },
         },
       ];

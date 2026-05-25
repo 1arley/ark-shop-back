@@ -1,12 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CouponsRepository } from '../coupons.repository';
 import { PrismaService } from '@/prisma/prisma.service';
+import { CouponType } from '../dto/create-coupon.dto';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-
-// Use string literals instead of CouponType enum to avoid Prisma client issues in tests
-type CouponType = 'PERCENTAGE' | 'FIXED';
-const PERCENTAGE: CouponType = 'PERCENTAGE';
-const FIXED: CouponType = 'FIXED';
 
 describe('CouponsRepository', () => {
   let repository: CouponsRepository;
@@ -41,7 +37,7 @@ describe('CouponsRepository', () => {
     it('deve criar cupom com sucesso', async () => {
       const createDto = {
         code: 'PROMO10',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         minPurchase: 50,
         maxUses: 100,
@@ -53,7 +49,7 @@ describe('CouponsRepository', () => {
       const createdCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         minPurchase: 50,
         maxUses: 100,
@@ -73,7 +69,7 @@ describe('CouponsRepository', () => {
       expect(prisma.coupon.create).toHaveBeenCalledWith({
         data: {
           code: 'PROMO10',
-          type: PERCENTAGE,
+          type: CouponType.PERCENTAGE,
           value: 10,
           minPurchase: 50,
           maxUses: 100,
@@ -90,7 +86,7 @@ describe('CouponsRepository', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         minPurchase: null,
         isActive: true,
@@ -119,7 +115,7 @@ describe('CouponsRepository', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
       };
 
@@ -145,8 +141,8 @@ describe('CouponsRepository', () => {
   describe('findAll', () => {
     it('deve listar cupons com paginação', async () => {
       const coupons = [
-        { id: '1', code: 'PROMO10', type: PERCENTAGE, value: 10 },
-        { id: '2', code: 'FIXED20', type: FIXED, value: 20 },
+        { id: '1', code: 'PROMO10', type: CouponType.PERCENTAGE, value: 10 },
+        { id: '2', code: 'FIXED20', type: CouponType.FIXED, value: 20 },
       ];
 
       mockPrismaService.$transaction.mockResolvedValue([coupons, 2]);
@@ -166,7 +162,7 @@ describe('CouponsRepository', () => {
       const existingCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         isActive: true,
       };
@@ -193,7 +189,7 @@ describe('CouponsRepository', () => {
       const existingCoupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
       };
 
@@ -212,7 +208,7 @@ describe('CouponsRepository', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'PROMO10',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         isActive: true,
         usedCount: 0,
@@ -239,7 +235,7 @@ describe('CouponsRepository', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'EXPIRED',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         isActive: true,
         usedCount: 0,
@@ -258,7 +254,7 @@ describe('CouponsRepository', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'MAXED',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         isActive: true,
         usedCount: 100,
@@ -277,7 +273,7 @@ describe('CouponsRepository', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'MIN50',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         isActive: true,
         usedCount: 0,
@@ -296,7 +292,7 @@ describe('CouponsRepository', () => {
       const coupon = {
         id: 'coupon-1',
         code: 'INACTIVE',
-        type: PERCENTAGE,
+        type: CouponType.PERCENTAGE,
         value: 10,
         isActive: false,
         usedCount: 0,

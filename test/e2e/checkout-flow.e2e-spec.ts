@@ -125,7 +125,7 @@ describe('Checkout Flow (e2e)', () => {
         .expect(201);
 
       expect((addToCart.body as CartResponse).items).toHaveLength(1);
-      expect((addToCart.body as CartResponse).items[0].productId).toBe(productId);
+      expect((addToCart.body as CartResponse).items[0]!.productId).toBe(productId);
 
       // ─── Step 2: Verify cart ─────────────────────────────────────
       const getCart = await request(app.getHttpServer())
@@ -135,7 +135,7 @@ describe('Checkout Flow (e2e)', () => {
 
       const cart = getCart.body as CartResponse;
       expect(cart.items).toHaveLength(1);
-      expect(Number(cart.items[0].product.price)).toBe(199.9);
+      expect(Number(cart.items[0]!.product.price)).toBe(199.9);
 
       // ─── Step 3: Validate coupon ─────────────────────────────────
       const subtotal = 199.9;
@@ -170,7 +170,7 @@ describe('Checkout Flow (e2e)', () => {
       expect(Number(order.total)).toBeCloseTo(159.92, 2); // 199.9 - 39.98
       expect(order.couponId).toBe(couponId);
       expect(order.items).toHaveLength(1);
-      expect(Number(order.items[0].price)).toBeCloseTo(199.9, 2);
+      expect(Number(order.items[0]!.price)).toBeCloseTo(199.9, 2);
 
       // ─── Step 5: Verify coupon usage incremented ─────────────────
       const couponInDb = await prisma.coupon.findUnique({
@@ -325,7 +325,7 @@ describe('Checkout Flow (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200);
 
-      expect((cart.body as CartResponse).items[0].quantity).toBe(3);
+      expect((cart.body as CartResponse).items[0]!.quantity).toBe(3);
 
       // Remove item
       await request(app.getHttpServer())

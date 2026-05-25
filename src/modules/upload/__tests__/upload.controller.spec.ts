@@ -8,7 +8,6 @@ import type { UploadedFileInfo } from '../storage-provider.interface';
 describe('UploadController', () => {
   let controller: UploadController;
   let uploadService: UploadService;
-  let _configService: ConfigService;
 
   const mockUploadService = {
     upload: jest.fn(),
@@ -59,7 +58,6 @@ describe('UploadController', () => {
 
     controller = module.get<UploadController>(UploadController);
     uploadService = module.get<UploadService>(UploadService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   describe('uploadFile', () => {

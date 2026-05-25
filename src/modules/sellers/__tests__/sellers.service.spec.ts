@@ -9,7 +9,6 @@ import { Role } from '@prisma/client';
 describe('SellersService', () => {
   let service: SellersService;
   let repository: SellersRepository;
-  let _userService: UserService;
   let asaasProvider: AsaasProvider;
 
   const mockSellersRepository = {
@@ -41,7 +40,6 @@ describe('SellersService', () => {
 
     service = module.get<SellersService>(SellersService);
     repository = module.get<SellersRepository>(SellersRepository);
-    userService = module.get<UserService>(UserService);
     asaasProvider = module.get<AsaasProvider>(AsaasProvider);
   });
 

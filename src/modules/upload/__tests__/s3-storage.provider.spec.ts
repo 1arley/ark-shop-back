@@ -30,7 +30,6 @@ jest.mock('crypto', () => ({
 
 describe('S3StorageProvider', () => {
   let provider: S3StorageProvider;
-  let _configService: ConfigService;
 
   const mockConfigService = {
     get: jest.fn(),
@@ -75,7 +74,6 @@ describe('S3StorageProvider', () => {
     }).compile();
 
     provider = module.get<S3StorageProvider>(S3StorageProvider);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   describe('upload', () => {
@@ -228,7 +226,7 @@ describe('S3StorageProvider', () => {
         return defaultValue;
       });
 
-      const freshModule: TestingModule = Test.createTestingModule({
+      const freshModule = Test.createTestingModule({
         providers: [S3StorageProvider, { provide: ConfigService, useValue: mockConfigService }],
       });
 
@@ -246,7 +244,7 @@ describe('S3StorageProvider', () => {
         return defaultValue;
       });
 
-      const freshModule: TestingModule = Test.createTestingModule({
+      const freshModule = Test.createTestingModule({
         providers: [S3StorageProvider, { provide: ConfigService, useValue: mockConfigService }],
       });
 
@@ -264,7 +262,7 @@ describe('S3StorageProvider', () => {
         return defaultValue;
       });
 
-      const freshModule: TestingModule = Test.createTestingModule({
+      const freshModule = Test.createTestingModule({
         providers: [S3StorageProvider, { provide: ConfigService, useValue: mockConfigService }],
       });
 
@@ -279,7 +277,7 @@ describe('S3StorageProvider', () => {
         return defaultValue;
       });
 
-      const freshModule: TestingModule = Test.createTestingModule({
+      const freshModule = Test.createTestingModule({
         providers: [S3StorageProvider, { provide: ConfigService, useValue: mockConfigService }],
       });
 

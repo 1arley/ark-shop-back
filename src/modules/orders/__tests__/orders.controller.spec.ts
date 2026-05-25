@@ -13,6 +13,7 @@ describe('OrdersController', () => {
     email: 'test@test.com',
     name: 'Test User',
     role: 'USER' as const,
+    emailVerified: false,
   };
 
   const mockAdminUser = {
@@ -20,6 +21,7 @@ describe('OrdersController', () => {
     email: 'admin@test.com',
     name: 'Admin User',
     role: 'ADMIN' as const,
+    emailVerified: false,
   };
 
   const mockOrder = {

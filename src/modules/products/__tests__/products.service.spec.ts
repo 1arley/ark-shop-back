@@ -8,7 +8,6 @@ import { PrismaService } from '@/prisma/prisma.service';
 describe('ProductsService', () => {
   let service: ProductsService;
   let productsRepository: ProductsRepository;
-  let _csvParser: CsvParserService;
   let prisma: PrismaService;
 
   const mockProductsRepository = {
@@ -48,7 +47,6 @@ describe('ProductsService', () => {
 
     service = module.get<ProductsService>(ProductsService);
     productsRepository = module.get<ProductsRepository>(ProductsRepository);
-    csvParser = module.get<CsvParserService>(CsvParserService);
     prisma = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();

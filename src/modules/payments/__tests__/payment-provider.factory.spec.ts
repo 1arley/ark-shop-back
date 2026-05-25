@@ -8,7 +8,6 @@ import { PaymentProvider, PaymentMethod } from '@prisma/client';
 
 describe('PaymentProviderFactory', () => {
   let factory: PaymentProviderFactory;
-  let _asaasProvider: AsaasProvider;
 
   const mockAsaasProvider = {
     createPayment: jest.fn(),
@@ -45,7 +44,6 @@ describe('PaymentProviderFactory', () => {
     }).compile();
 
     factory = module.get<PaymentProviderFactory>(PaymentProviderFactory);
-    asaasProvider = module.get<AsaasProvider>(AsaasProvider);
 
     jest.clearAllMocks();
   });

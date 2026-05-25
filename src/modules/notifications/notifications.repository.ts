@@ -25,11 +25,11 @@ export class NotificationsRepository {
   }
 
   async findById(id: string) {
-    return this.prisma.notification.findUnique({ where: { id } });
+    return await this.prisma.notification.findUnique({ where: { id } });
   }
 
   async markAsRead(id: string, userId: string) {
-    return this.prisma.notification.update({
+    return await this.prisma.notification.update({
       where: { id, userId },
       data: { readAt: new Date() },
     });
@@ -44,7 +44,7 @@ export class NotificationsRepository {
   }
 
   async countUnread(userId: string) {
-    return this.prisma.notification.count({
+    return await this.prisma.notification.count({
       where: { userId, readAt: null },
     });
   }

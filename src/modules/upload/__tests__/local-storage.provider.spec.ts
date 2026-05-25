@@ -11,7 +11,6 @@ jest.mock('crypto', () => ({
 
 describe('LocalStorageProvider', () => {
   let provider: LocalStorageProvider;
-  let _configService: ConfigService;
 
   const mockConfigService = {
     get: jest.fn(),
@@ -44,7 +43,6 @@ describe('LocalStorageProvider', () => {
     }).compile();
 
     provider = module.get<LocalStorageProvider>(LocalStorageProvider);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   describe('upload', () => {

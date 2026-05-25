@@ -9,9 +9,6 @@ jest.mock('axios');
 
 describe('HealthController', () => {
   let controller: HealthController;
-  let _healthCheckService: HealthCheckService;
-  let _prismaService: PrismaService;
-  let _configService: ConfigService;
 
   const mockHealthCheckService = {
     check: jest.fn(),
@@ -50,9 +47,6 @@ describe('HealthController', () => {
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
-    healthCheckService = module.get<HealthCheckService>(HealthCheckService);
-    prismaService = module.get<PrismaService>(PrismaService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   describe('check (health check b\u00e1sico)', () => {
@@ -68,7 +62,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.check();
+      const result = (await controller.check()) as any;
 
       expect(result).toHaveProperty('database');
       expect(result.database).toHaveProperty('status', 'up');
@@ -88,7 +82,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.check();
+      const result = (await controller.check()) as any;
 
       expect(result.database).toHaveProperty('status', 'down');
       expect(result.database).toHaveProperty('message', 'Cannot connect to database');
@@ -111,7 +105,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.check();
+      const result = (await controller.check()) as any;
 
       expect(result.memory).toHaveProperty('status', 'down');
       expect(result.memory.message).toContain('exceeds threshold');
@@ -134,7 +128,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.check();
+      const result = (await controller.check()) as any;
 
       expect(result.memory).toHaveProperty('status', 'up');
       expect(result.memory).toHaveProperty('heapUsedMB');
@@ -153,7 +147,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.check();
+      const result = (await controller.check()) as any;
 
       expect(result.uptime).toHaveProperty('status', 'up');
       expect(result.uptime).toHaveProperty('seconds');
@@ -174,7 +168,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.ready();
+      const result = (await controller.ready()) as any;
 
       expect(result.database).toHaveProperty('status', 'up');
     });
@@ -191,7 +185,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.ready();
+      const result = (await controller.ready()) as any;
 
       expect(result.database).toHaveProperty('status', 'down');
       expect(result.database).toHaveProperty('message', 'Database unreachable');
@@ -227,7 +221,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.detailed();
+      const result = (await controller.detailed()) as any;
 
       expect(result.database).toHaveProperty('status', 'up');
       expect(result.database).toHaveProperty('provider', 'postgresql');
@@ -267,7 +261,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.detailed();
+      const result = (await controller.detailed()) as any;
 
       expect(result.database).toHaveProperty('status', 'down');
       expect(result.database.message).toBe('Database connection failed');
@@ -301,7 +295,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.detailed();
+      const result = (await controller.detailed()) as any;
 
       expect(result.storage).toHaveProperty('status', 'down');
     });
@@ -332,7 +326,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.detailed();
+      const result = (await controller.detailed()) as any;
 
       expect(result.email).toHaveProperty('status', 'down');
       expect(result.email.message).toContain('RESEND_API_KEY not configured');
@@ -364,7 +358,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.detailed();
+      const result = (await controller.detailed()) as any;
 
       expect(result.email).toHaveProperty('status', 'down');
       expect(result.email.message).toContain('RESEND_API_KEY not configured or invalid');
@@ -398,7 +392,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.detailed();
+      const result = (await controller.detailed()) as any;
 
       expect(result.payment).toHaveProperty('status', 'down');
       expect(result.payment.message).toContain('ASAAS_API_KEY not configured');
@@ -432,7 +426,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.detailed();
+      const result = (await controller.detailed()) as any;
 
       expect(result.storage).toHaveProperty('status', 'up');
       expect(result.storage).toHaveProperty('driver', 's3');
@@ -467,7 +461,7 @@ describe('HealthController', () => {
         return results;
       });
 
-      const result = await controller.detailed();
+      const result = (await controller.detailed()) as any;
 
       expect(result.payment).toHaveProperty('environment', 'production');
     });

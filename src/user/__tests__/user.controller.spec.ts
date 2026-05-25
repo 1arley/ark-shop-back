@@ -25,6 +25,7 @@ describe('UserController', () => {
       id: 'user-1',
       email: 'test@example.com',
       role: Role.ADMIN,
+      emailVerified: false,
     },
   };
 

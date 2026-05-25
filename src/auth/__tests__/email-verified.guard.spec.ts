@@ -7,7 +7,6 @@ import { IS_PUBLIC_KEY } from '@/auth/decorators/public.decorator';
 
 describe('EmailVerifiedGuard', () => {
   let guard: EmailVerifiedGuard;
-  let _reflector: Reflector;
 
   const mockReflector = {
     getAllAndOverride: jest.fn(),
@@ -19,7 +18,6 @@ describe('EmailVerifiedGuard', () => {
     }).compile();
 
     guard = module.get<EmailVerifiedGuard>(EmailVerifiedGuard);
-    reflector = module.get<Reflector>(Reflector);
   });
 
   afterEach(() => {

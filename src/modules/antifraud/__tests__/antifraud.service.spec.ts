@@ -6,7 +6,6 @@ import { ConfigService } from '@nestjs/config';
 describe('AntifraudService', () => {
   let service: AntifraudService;
   let repository: AntifraudRepository;
-  let _configService: ConfigService;
 
   const mockAntifraudRepository = {
     createFraudLog: jest.fn(),
@@ -33,7 +32,6 @@ describe('AntifraudService', () => {
 
     service = module.get<AntifraudService>(AntifraudService);
     repository = module.get<AntifraudRepository>(AntifraudRepository);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {

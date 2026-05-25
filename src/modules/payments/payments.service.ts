@@ -191,7 +191,7 @@ export class PaymentsService {
   /**
    * Reject payment
    */
-  async rejectPayment(paymentId: string, reason: string) {
+  async rejectPayment(paymentId: string, reason?: string) {
     return this.paymentsRepository.rejectPayment(paymentId, reason);
   }
 

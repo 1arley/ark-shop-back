@@ -11,7 +11,6 @@ jest.mock('crypto', () => ({
 
 describe('AsaasWebhookHandler', () => {
   let handler: AsaasWebhookHandler;
-  let _paymentsService: PaymentsService;
 
   const mockPaymentsService = {
     approvePaymentByProviderTxId: jest.fn(),
@@ -46,7 +45,6 @@ describe('AsaasWebhookHandler', () => {
     }).compile();
 
     handler = module.get<AsaasWebhookHandler>(AsaasWebhookHandler);
-    paymentsService = module.get<PaymentsService>(PaymentsService);
 
     jest.clearAllMocks();
   });

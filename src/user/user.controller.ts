@@ -30,7 +30,7 @@ export class UserController {
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiFindAllUsers()
-  findAll(@Query('page') page: string, @Query('limit') limit: string) {
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
     const pageNumber = parsePageParam(page, DEFAULT_PAGE);
     const limitNumber = parsePageParam(limit, DEFAULT_PAGE_SIZE);
 

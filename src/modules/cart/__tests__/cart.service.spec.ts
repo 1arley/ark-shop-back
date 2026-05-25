@@ -99,7 +99,7 @@ describe('CartService', () => {
         },
       });
       expect(result.items).toHaveLength(1);
-      expect(result.items[0].product).toEqual(mockProduct);
+      expect(result.items[0]!.product).toEqual(mockProduct);
       expect(result.total).toBe(100);
       expect(result.itemCount).toBe(1);
       expect(result.id).toBe('cart-id-1');
@@ -156,7 +156,7 @@ describe('CartService', () => {
 
       const result = await service.getCart('user-id-1');
 
-      expect(result.items[0].product).toBeNull();
+      expect(result.items[0]!.product).toBeNull();
       expect(result.total).toBe(0);
     });
   });
@@ -225,7 +225,7 @@ describe('CartService', () => {
         where: { id: 'cart-item-id-1' },
         data: { quantity: 5 }, // 3 + 2
       });
-      expect(result.items[0].quantity).toBe(5);
+      expect(result.items[0]!.quantity).toBe(5);
     });
 
     it('deve lancar NotFoundException quando produto nao existe', async () => {
@@ -260,7 +260,7 @@ describe('CartService', () => {
         where: { id: 'cart-item-id-1' },
         data: { quantity: 5 },
       });
-      expect(result.items[0].quantity).toBe(5);
+      expect(result.items[0]!.quantity).toBe(5);
     });
 
     it('deve remover item quando quantidade <= 0', async () => {

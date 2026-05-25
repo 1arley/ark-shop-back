@@ -7,7 +7,6 @@ import { PaymentProvider, PaymentMethod, PaymentStatus, OrderStatus } from '@pri
 
 describe('PaymentsRepository', () => {
   let repository: PaymentsRepository;
-  let _prisma: PrismaService;
 
   const mockPaymentProvider = {
     createPaymentIntent: jest.fn(),
@@ -73,7 +72,6 @@ describe('PaymentsRepository', () => {
     }).compile();
 
     repository = module.get<PaymentsRepository>(PaymentsRepository);
-    prisma = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
   });
