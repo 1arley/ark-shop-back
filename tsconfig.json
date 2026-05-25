@@ -15,12 +15,11 @@
     "lib": ["ES2023"],
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "paths": {
-      "@utils/*": ["src/utils/*"],
-      "@/*": ["src/*"],
-      "~/*": ["src/*"],
-      "@test/*": ["test/*"]
+      "@utils/*": ["./src/utils/*"],
+      "@/*": ["./src/*"],
+      "~/*": ["./src/*"],
+      "@test/*": ["./test/*"]
     },
     "rootDir": ".",
     "incremental": true,
