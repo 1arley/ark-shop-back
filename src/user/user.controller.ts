@@ -14,7 +14,6 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 import { UserService } from '@/user/user.service';
 import { UpdateProfileDto } from '@/user/dto/update-profile.dto';
 import { ApiGetUserMe } from '@/user/swagger/user.get.me.swagger';
-import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
 import { ApiFindAllUsers } from '@/user/swagger/user.get.findAll.swagger';
@@ -23,13 +22,12 @@ import type { AuthenticatedRequest } from '@/common/interfaces/request.interface
 
 @ApiTags('user')
 @Controller('user')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiFindAllUsers()
   findAll(@Query('page') page: string, @Query('limit') limit: string) {

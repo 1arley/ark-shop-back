@@ -1,80 +1,168 @@
-import { Injectable } from '@nestjs/common';
-import { WalletRepository } from './wallet.repository';
-import { toNumber } from '@/common/decimal';
+import { Injectable, Logger } from '@nestjs/common';
+import { WalletRepository, InsufficientFundsError, WalletNotFoundError } from './wallet.repository';
+import type { Wallet, WalletTransaction } from '@prisma/client';
+
+/**
+ * Result types for wallet operations using TypeScript advanced types
+ */
+interface WalletBalanceResult {
+  balance: number;
+  transactionId: string;
+}
+
+interface WalletCashbackResult {
+  cashback: number;
+  transactionId: string;
+}
+
+interface WalletTransactionsResult {
+  data: WalletTransaction[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    nextCursor?: string;
+  };
+}
+
+/**
+ * Discriminated union for wallet operation results
+ * Enables type-safe error handling with narrowable types
+ */
+type WalletOperationResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: 'INSUFFICIENT_FUNDS' | 'WALLET_NOT_FOUND'; message: string };
 
 @Injectable()
 export class WalletService {
+  private readonly logger = new Logger(WalletService.name);
+
   constructor(private readonly walletRepository: WalletRepository) {}
 
-  async getWallet(userId: string) {
+  /**
+   * Get or create wallet for user
+   * @param userId - User ID to fetch wallet for
+   * @returns Wallet entity
+   */
+  async getWallet(userId: string): Promise<Wallet> {
     const wallet = await this.walletRepository.findWalletByUserId(userId);
+
     if (!wallet) {
-      // Create wallet if it doesn't exist
       return this.walletRepository.createWallet(userId);
     }
+
     return wallet;
   }
 
-  async addBalance(userId: string, amount: number, description: string = 'Adição de saldo') {
-    const wallet = await this.getWallet(userId);
-    const balance = toNumber(wallet.balance) ?? 0;
-    const cashback = toNumber(wallet.cashback) ?? 0;
-    const newBalance = balance + amount;
-
-    // Update wallet balance
-    await this.walletRepository.updateBalance(userId, newBalance, cashback);
-
-    // Create transaction record
-    await this.walletRepository.createTransaction(wallet.id, 'credit', amount, description);
+  /**
+   * Atomically add balance to user's wallet and record the transaction.
+   * The balance update and transaction record are committed in a single
+   * database transaction, preserving the financial audit trail.
+   * @param userId - User ID
+   * @param amount - Amount to add
+   * @param description - Transaction description
+   * @returns Balance result with transaction ID
+   */
+  async addBalance(
+    userId: string,
+    amount: number,
+    description: string = 'Adição de saldo',
+  ): Promise<WalletBalanceResult> {
+    const result = await this.walletRepository.addBalance(userId, amount, 'credit', description);
 
     return {
-      balance: newBalance,
-      transactionId: wallet.id,
+      balance: result.balance,
+      transactionId: result.transactionId,
     };
   }
 
-  async deductBalance(userId: string, amount: number, description: string = 'Débito de saldo') {
-    const wallet = await this.getWallet(userId);
-    const balance = toNumber(wallet.balance) ?? 0;
-    const cashback = toNumber(wallet.cashback) ?? 0;
+  /**
+   * Atomically deduct balance from user's wallet and record the transaction.
+   * The balance check, decrement, and transaction record are committed in a
+   * single database transaction, preventing TOCTOU race conditions and
+   * preserving the financial audit trail.
+   * @param userId - User ID
+   * @param amount - Amount to deduct
+   * @param description - Transaction description
+   * @returns Balance result or error
+   */
+  async deductBalance(
+    userId: string,
+    amount: number,
+    description: string = 'Débito de saldo',
+  ): Promise<WalletOperationResult<WalletBalanceResult>> {
+    try {
+      const result = await this.walletRepository.deductBalance(
+        userId,
+        amount,
+        'debit',
+        description,
+      );
 
-    if (balance < amount) {
-      throw new Error('Saldo insuficiente');
+      return {
+        success: true,
+        data: {
+          balance: result.balance,
+          transactionId: result.transactionId,
+        },
+      };
+    } catch (error) {
+      if (error instanceof InsufficientFundsError) {
+        return {
+          success: false,
+          error: 'INSUFFICIENT_FUNDS',
+          message: 'Saldo insuficiente',
+        };
+      }
+
+      if (error instanceof WalletNotFoundError) {
+        return {
+          success: false,
+          error: 'WALLET_NOT_FOUND',
+          message: 'Carteira não encontrada',
+        };
+      }
+
+      this.logger.error(`Unexpected error in deductBalance: ${String(error)}`);
+      throw error;
     }
+  }
 
-    const newBalance = balance - amount;
-
-    // Update wallet balance
-    await this.walletRepository.updateBalance(userId, newBalance, cashback);
-
-    // Create transaction record
-    await this.walletRepository.createTransaction(wallet.id, 'debit', amount, description);
+  /**
+   * Atomically add cashback to user's wallet and record the transaction.
+   * The cashback update and transaction record are committed in a single
+   * database transaction, preserving the financial audit trail.
+   * @param userId - User ID
+   * @param amount - Cashback amount to add
+   * @param description - Transaction description
+   * @returns Cashback result with transaction ID
+   */
+  async addCashback(
+    userId: string,
+    amount: number,
+    description: string = 'Cashback adicionado',
+  ): Promise<WalletCashbackResult> {
+    const result = await this.walletRepository.addCashback(userId, amount, 'cashback', description);
 
     return {
-      balance: newBalance,
-      transactionId: wallet.id,
+      cashback: result.cashback,
+      transactionId: result.transactionId,
     };
   }
 
-  async addCashback(userId: string, amount: number, description: string = 'Cashback adicionado') {
-    const wallet = await this.getWallet(userId);
-    const balance = toNumber(wallet.balance) ?? 0;
-    const cashback = toNumber(wallet.cashback) ?? 0;
-    const newCashback = cashback + amount;
-
-    // Update wallet cashback
-    await this.walletRepository.updateBalance(userId, balance, newCashback);
-
-    // Create transaction record
-    await this.walletRepository.createTransaction(wallet.id, 'cashback', amount, description);
-
-    return {
-      cashback: newCashback,
-      transactionId: wallet.id,
-    };
-  }
-
-  async getTransactions(userId: string, page: number = 1, limit: number = 20) {
+  /**
+   * Get wallet transactions with pagination
+   * @param userId - User ID
+   * @param page - Page number
+   * @param limit - Items per page
+   * @returns Paginated transactions
+   */
+  async getTransactions(
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<WalletTransactionsResult> {
     const wallet = await this.getWallet(userId);
     return this.walletRepository.getTransactions(wallet.id, page, limit);
   }

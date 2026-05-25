@@ -1,11 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Wallet, WalletTransaction, Prisma } from '@prisma/client';
+import { Wallet, Prisma } from '@prisma/client';
 
 export interface BalanceUpdateResult {
   balance: number;
   cashback: number;
   transactionId: string;
+}
+
+/** Custom error for insufficient wallet balance — enables type-safe catch handling */
+export class InsufficientFundsError extends Error {
+  constructor() {
+    super('Saldo insuficiente');
+    this.name = 'InsufficientFundsError';
+  }
+}
+
+/** Custom error for missing wallet — enables type-safe catch handling */
+export class WalletNotFoundError extends Error {
+  constructor(userId: string) {
+    super(`Wallet not found for user: ${userId}`);
+    this.name = 'WalletNotFoundError';
+  }
 }
 
 @Injectable()
@@ -37,10 +53,15 @@ export class WalletRepository {
   }
 
   /**
-   * Atomically increment balance by amount to avoid race conditions.
-   * Uses Prisma's atomic increment operation to prevent concurrent update conflicts.
+   * Atomically add balance and record the transaction in a single database transaction.
+   * Both operations succeed or fail together, preserving the financial audit trail.
    */
-  async addBalance(userId: string, amount: number): Promise<BalanceUpdateResult> {
+  async addBalance(
+    userId: string,
+    amount: number,
+    type: string = 'credit',
+    description: string | null = null,
+  ): Promise<BalanceUpdateResult> {
     return this.prisma.$transaction(async tx => {
       const wallet = await tx.wallet.findUnique({
         where: { userId },
@@ -48,18 +69,26 @@ export class WalletRepository {
       });
 
       if (!wallet) {
-        throw new Error('Wallet not found for user');
+        throw new WalletNotFoundError(userId);
       }
 
       const currentCashback = toNumber(wallet.cashback) ?? 0;
 
-      // Use atomic increment to prevent race conditions
+      // Atomic increment to prevent race conditions
       await tx.wallet.update({
         where: { userId },
         data: {
-          balance: {
-            increment: amount,
-          },
+          balance: { increment: amount },
+        },
+      });
+
+      // Create transaction record INSIDE the same transaction
+      const transaction = await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type,
+          amount,
+          description,
         },
       });
 
@@ -72,16 +101,22 @@ export class WalletRepository {
       return {
         balance: toNumber(updatedWallet!.balance)!,
         cashback: currentCashback,
-        transactionId: wallet.id,
+        transactionId: transaction.id,
       };
     });
   }
 
   /**
-   * Atomically deduct balance by amount to avoid race conditions.
-   * Uses Prisma's atomic decrement operation to prevent concurrent update conflicts.
+   * Atomically deduct balance and record the transaction in a single database transaction.
+   * Both operations succeed or fail together, preserving the financial audit trail.
+   * Throws InsufficientFundsError if balance is too low.
    */
-  async deductBalance(userId: string, amount: number): Promise<BalanceUpdateResult> {
+  async deductBalance(
+    userId: string,
+    amount: number,
+    type: string = 'debit',
+    description: string | null = null,
+  ): Promise<BalanceUpdateResult> {
     return this.prisma.$transaction(async tx => {
       const wallet = await tx.wallet.findUnique({
         where: { userId },
@@ -89,23 +124,31 @@ export class WalletRepository {
       });
 
       if (!wallet) {
-        throw new Error('Wallet not found for user');
+        throw new WalletNotFoundError(userId);
       }
 
       const currentBalance = toNumber(wallet.balance) ?? 0;
       const currentCashback = toNumber(wallet.cashback) ?? 0;
 
       if (currentBalance < amount) {
-        throw new Error('Saldo insuficiente');
+        throw new InsufficientFundsError();
       }
 
-      // Use atomic decrement to prevent race conditions
+      // Atomic decrement to prevent race conditions
       await tx.wallet.update({
         where: { userId },
         data: {
-          balance: {
-            decrement: amount,
-          },
+          balance: { decrement: amount },
+        },
+      });
+
+      // Create transaction record INSIDE the same transaction
+      const transaction = await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type,
+          amount,
+          description,
         },
       });
 
@@ -118,16 +161,21 @@ export class WalletRepository {
       return {
         balance: toNumber(updatedWallet!.balance)!,
         cashback: currentCashback,
-        transactionId: wallet.id,
+        transactionId: transaction.id,
       };
     });
   }
 
   /**
-   * Atomically add cashback to avoid race conditions.
-   * Uses Prisma's atomic increment operation to prevent concurrent update conflicts.
+   * Atomically add cashback and record the transaction in a single database transaction.
+   * Both operations succeed or fail together, preserving the financial audit trail.
    */
-  async addCashback(userId: string, amount: number): Promise<BalanceUpdateResult> {
+  async addCashback(
+    userId: string,
+    amount: number,
+    type: string = 'cashback',
+    description: string | null = null,
+  ): Promise<BalanceUpdateResult> {
     return this.prisma.$transaction(async tx => {
       const wallet = await tx.wallet.findUnique({
         where: { userId },
@@ -135,18 +183,26 @@ export class WalletRepository {
       });
 
       if (!wallet) {
-        throw new Error('Wallet not found for user');
+        throw new WalletNotFoundError(userId);
       }
 
       const currentBalance = toNumber(wallet.balance) ?? 0;
 
-      // Use atomic increment to prevent race conditions
+      // Atomic increment to prevent race conditions
       await tx.wallet.update({
         where: { userId },
         data: {
-          cashback: {
-            increment: amount,
-          },
+          cashback: { increment: amount },
+        },
+      });
+
+      // Create transaction record INSIDE the same transaction
+      const transaction = await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type,
+          amount,
+          description,
         },
       });
 
@@ -159,7 +215,7 @@ export class WalletRepository {
       return {
         balance: currentBalance,
         cashback: toNumber(updatedWallet!.cashback)!,
-        transactionId: wallet.id,
+        transactionId: transaction.id,
       };
     });
   }
@@ -170,24 +226,6 @@ export class WalletRepository {
       data: {
         balance,
         cashback,
-      },
-    });
-  }
-
-  async createTransaction(
-    walletId: string,
-    type: string,
-    amount: number,
-    description: string | null = null,
-    referenceId: string | null = null,
-  ): Promise<WalletTransaction> {
-    return this.prisma.walletTransaction.create({
-      data: {
-        walletId,
-        type,
-        amount,
-        description,
-        referenceId,
       },
     });
   }

@@ -19,7 +19,6 @@ import { ApiRegisterUser } from '@/auth/swagger/auth.post.register.swagger';
 import { ApiLoginUser } from '@/auth/swagger/auth.post.login.swagger';
 import { ApiRefreshTokens } from '@/auth/swagger/auth.post.refresh.swagger';
 import { ApiLogoutUser } from '@/auth/swagger/auth.post.logout.swagger';
-import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { JwtRefreshAuthGuard } from '@/auth/jwt-refresh-auth.guard';
 import { extractRefreshToken } from '@/auth/token-extractor.util';
 import type { AuthenticatedRequest } from '@/common/interfaces/request.interface';
@@ -28,6 +27,7 @@ import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
 import { SkipEmailVerification } from '@/auth/decorators/skip-email-verification.decorator';
+import { Public } from '@/auth/decorators/public.decorator';
 
 import { EmailVerifiedGuard } from '@/auth/email-verified.guard';
 
@@ -52,6 +52,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiRegisterUser()
   async register(@Body() registerDto: RegisterDto) {
@@ -65,6 +66,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Public()
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 tentativas/minuto
   @ApiLoginUser()
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
@@ -126,12 +128,12 @@ export class AuthController {
   }
 
   @Post('logout')
-  @SkipThrottle()
   @SkipEmailVerification()
+  @SkipThrottle()
   @HttpCode(HttpStatus.OK)
   @ApiLogoutUser()
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtRefreshAuthGuard)
   async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     const refreshToken = extractRefreshToken(req);
 
@@ -158,6 +160,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Public()
   @SkipEmailVerification()
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 solicitações/minuto
   @HttpCode(HttpStatus.OK)
@@ -171,6 +174,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redefinir senha com token' })
@@ -181,6 +185,7 @@ export class AuthController {
   }
 
   @Post('forgot-password-code')
+  @Public()
   @SkipEmailVerification()
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 solicitacoes/minuto
   @HttpCode(HttpStatus.OK)
@@ -194,6 +199,7 @@ export class AuthController {
   }
 
   @Post('reset-password-code')
+  @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redefinir senha com codigo OTP' })
@@ -204,6 +210,7 @@ export class AuthController {
   }
 
   @Post('verify-email')
+  @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas/minuto
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verificar email com codigo recebido' })
@@ -214,6 +221,7 @@ export class AuthController {
   }
 
   @Post('resend-verification')
+  @Public()
   @SkipEmailVerification()
   @Throttle({ default: { limit: 2, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
@@ -227,7 +235,7 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard, EmailVerifiedGuard)
+  @UseGuards(EmailVerifiedGuard)
   @ApiBearerAuth()
   @SkipThrottle()
   @ApiOperation({ summary: 'Get current user profile' })

@@ -67,6 +67,19 @@ supabase/.temp/
 supabase/migrations/
 uploads/
 
+# Operational runbooks and ad-hoc SQL scripts (belong in internal wiki, not source control)
+FIX_DATABASE.md
+DEPLOYMENT_FIX.md
+CLEANUP_CATEGORIES.md
+run-migration-production.sql
+init_migration.sql
+*.sql
+!prisma/migrations/**/*.sql
+run-migration.ps1
+apply-migration.js
+start.sh
+exemplo-produtos.csv
+
 # Next.js build output (should not be committed)
 .next/
 .next/trace

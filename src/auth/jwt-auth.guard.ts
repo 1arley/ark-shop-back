@@ -27,14 +27,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleRequest(err: any, user: any, info: any, status: any, context?: ExecutionContext) {
-    this.logger.log(
-      `JwtAuthGuard handleRequest - err: ${err}, user: ${JSON.stringify(user)}, info: ${info}, status: ${status}`,
-    );
     if (err || !user) {
       if (info && process.env.NODE_ENV !== 'production') {
         const message = info instanceof Error ? info.message : String(info);
         this.logger.warn(`JWT auth failed: ${message}`);
       }
+    } else {
+      this.logger.debug(`JWT auth succeeded for userId: ${user.id as string}`);
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return
     return super.handleRequest(err, user, info, status, context);

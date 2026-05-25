@@ -24,6 +24,7 @@ import { AsaasWebhookHandler } from './webhooks/asaas-webhook.handler';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { RawBody } from '@/common/decorators/raw-body.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { Public } from '@/auth/decorators/public.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -56,6 +57,7 @@ export class PaymentsController {
   }
 
   @Post('webhook/:provider')
+  @Public()
   @Throttle({ webhook: { limit: 100, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Payment webhook handler' })

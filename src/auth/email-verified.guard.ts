@@ -36,13 +36,13 @@ export class EmailVerifiedGuard implements CanActivate {
     const handlerName = typeof handler === 'function' ? handler.name : 'unknown';
     const className = clazz?.name || 'UnknownClass';
 
-    this.logger.log(`EmailVerifiedGuard called for ${className}.${handlerName}`);
+    this.logger.debug(`EmailVerifiedGuard called for ${className}.${handlerName}`);
 
     // Priority 1: Check if route is public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [handler, clazz]);
 
     if (isPublic) {
-      this.logger.log('Route is public, allowing access');
+      this.logger.debug('Route is public, allowing access');
       return true;
     }
 
@@ -60,8 +60,6 @@ export class EmailVerifiedGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request.user;
 
-    this.logger.log(`EmailVerifiedGuard - User from request: ${JSON.stringify(user)}`);
-
     // No user present - this should not happen if JwtAuthGuard is properly configured
     // Return true to let the authentication guard handle it
     if (!user) {
@@ -69,28 +67,22 @@ export class EmailVerifiedGuard implements CanActivate {
       return true;
     }
 
-    this.logger.log(
-      `Checking email verification for user: ${user.id}, role: ${user.role}, emailVerified: ${user.emailVerified}`,
-    );
-
     // Priority 4: Check if user role is exempt from verification
     if (this.isExemptRole(user.role)) {
-      this.logger.debug(`User has exempt role: ${user.role}`);
+      this.logger.debug(`User ${user.id} has exempt role: ${user.role}`);
       return true;
     }
 
     // Priority 5: Enforce email verification
     // Note: emailVerified can be undefined, null, or false - all should be treated as not verified
     if (!user.emailVerified) {
-      this.logger.warn(
-        `Email verification required for user: ${user.id}, emailVerified: ${user.emailVerified}`,
-      );
+      this.logger.warn(`Email verification required for userId: ${user.id}`);
       throw new ForbiddenException(
         'Email not verified. Please verify your email before accessing this resource.',
       );
     }
 
-    this.logger.log(`Email verified for user: ${user.id}`);
+    this.logger.debug(`Email verified for userId: ${user.id}`);
     return true;
   }
 

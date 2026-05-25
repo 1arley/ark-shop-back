@@ -23,6 +23,7 @@ import { ApplyCouponDto } from './dto/apply-coupon.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
+import { Public } from '@/auth/decorators/public.decorator';
 
 @ApiTags('coupons')
 @Controller('coupons')
@@ -32,6 +33,7 @@ export class CouponsController {
   // ─── Public endpoint (for cart checkout) ───────────────────────
 
   @Post('validate')
+  @Public()
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Validate a coupon and calculate discount' })

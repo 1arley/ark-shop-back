@@ -6,6 +6,10 @@ on:
   push:
     branches: [dev]
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   unit-tests:
     name: Unit Tests + Coverage
@@ -151,8 +155,9 @@ jobs:
           fi
           echo "✅ Security gate passed: 0 CRITICAL/HIGH vulnerabilities"
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
+  - name: Upload Trivy scan results to GitHub Security tab
+    uses: github/codeql-action/upload-sarif@v4
+    if: always()
+    with:
+      sarif_file: 'trivy-results.sarif'
+      wait-for-processing: false

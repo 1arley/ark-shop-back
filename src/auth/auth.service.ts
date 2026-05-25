@@ -36,7 +36,7 @@ import {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private emailFailureCount = 0;
-  private readonly EMAIL_FAILURE_THRESHOLD = 5;
+  private readonly EMAIL_FAILURE_THRESHOLD = 5 as const;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -87,13 +87,14 @@ export class AuthService {
     this.emailService
       .sendEmailVerification(email, verificationCode, name)
       .then(() => {
-        this.emailFailureCount = 0;
+        this.emailFailureCount = 0; // Reset counter on success
       })
       .catch(err => {
         this.emailFailureCount++;
         const errorMessage = err instanceof Error ? err.message : err;
         if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
           this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+          this.emailFailureCount = 0; // Reset after logging to prevent repeated errors
         } else {
           this.logger.warn(
             `Failed to send verification email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
@@ -351,13 +352,14 @@ export class AuthService {
     this.emailService
       .sendPasswordReset(email, token, email)
       .then(() => {
-        this.emailFailureCount = 0;
+        this.emailFailureCount = 0; // Reset counter on success
       })
       .catch(err => {
         this.emailFailureCount++;
         const errorMessage = err instanceof Error ? err.message : err;
         if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
           this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+          this.emailFailureCount = 0; // Reset after logging to prevent repeated errors
         } else {
           this.logger.warn(
             `Failed to send password reset email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
@@ -405,13 +407,14 @@ export class AuthService {
     this.emailService
       .sendPasswordResetWithCode(email, resetCode, email)
       .then(() => {
-        this.emailFailureCount = 0;
+        this.emailFailureCount = 0; // Reset counter on success
       })
       .catch(err => {
         this.emailFailureCount++;
         const errorMessage = err instanceof Error ? err.message : err;
         if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
           this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+          this.emailFailureCount = 0; // Reset after logging to prevent repeated errors
         } else {
           this.logger.warn(
             `Failed to send password reset code email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
@@ -596,13 +599,14 @@ export class AuthService {
     this.emailService
       .sendEmailVerification(email, verificationCode, email)
       .then(() => {
-        this.emailFailureCount = 0;
+        this.emailFailureCount = 0; // Reset counter on success
       })
       .catch(err => {
         this.emailFailureCount++;
         const errorMessage = err instanceof Error ? err.message : err;
         if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
           this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+          this.emailFailureCount = 0; // Reset after logging to prevent repeated errors
         } else {
           this.logger.warn(
             `Failed to send verification email: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
@@ -624,15 +628,27 @@ export class AuthService {
     return code;
   }
 
+  /**
+   * Get and validate bcrypt salt rounds from environment configuration.
+   * Uses strict validation to ensure only valid numeric values are accepted.
+   * @returns Validated salt rounds number (4-31 range)
+   */
   private getSaltRounds(): number {
-    const config = parseInt(
-      this.configService.get<string>('BCRYPT_SALT_ROUNDS') || String(DEFAULT_BCRYPT_SALT_ROUNDS),
-    );
-    const valid = !Number.isNaN(config) && config >= 4 && config <= 31;
-    const result = valid ? config : DEFAULT_BCRYPT_SALT_ROUNDS;
+    const saltRoundsStr = this.configService.get<string>('BCRYPT_SALT_ROUNDS');
+    const config = parseInt(saltRoundsStr || String(DEFAULT_BCRYPT_SALT_ROUNDS), 10);
+    // Strict validation: must be a number in range and exact string match
+    const isValid =
+      !Number.isNaN(config) &&
+      config >= 4 &&
+      config <= 31 &&
+      (saltRoundsStr === undefined || saltRoundsStr === String(config));
 
-    if (!valid) {
-      this.logger.warn(`Invalid BCRYPT_SALT_ROUNDS (${config}), using default ${result}`);
+    const result = isValid ? config : DEFAULT_BCRYPT_SALT_ROUNDS;
+
+    if (!isValid) {
+      this.logger.warn(
+        `Invalid BCRYPT_SALT_ROUNDS value "${saltRoundsStr}", using default ${result}`,
+      );
     }
 
     return result;
