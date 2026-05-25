@@ -1,3 +1,21 @@
+# [1.24.0](https://github.com/1arley/ark-shop-back/compare/v1.23.1...v1.24.0) (2026-05-25)
+
+
+### Bug Fixes
+
+* add async/await to repository methods and fix Decimal type union ([d1f57b9](https://github.com/1arley/ark-shop-back/commit/d1f57b96de0ac1c2c9da7a7500d1ec9a442462ca))
+* correct parameter order in handleRequest method and remove deprecated tsconfig option ([5e823c1](https://github.com/1arley/ark-shop-back/commit/5e823c10a1a4e9bd27e2715b066c11aa415ded6b))
+* prettier trailing zeros in CSV parser tests ([5dea97b](https://github.com/1arley/ark-shop-back/commit/5dea97b32400de70e8286dc059f4a4ac4f7c4b24))
+* remove async from pure-return repository methods and fix Decimal type ([00398b3](https://github.com/1arley/ark-shop-back/commit/00398b3aea83ffbf33e770cc0fa5c66e0eccf647))
+* resolve CI lint failures and improve code quality ([2f6bf54](https://github.com/1arley/ark-shop-back/commit/2f6bf5485b9f3eaaefb6c6fd0d5c2c7d09ca0cc8))
+* resolve TypeScript 6.0 incompatibility and fix pre-existing test failures ([9a499b3](https://github.com/1arley/ark-shop-back/commit/9a499b34bc5fdf6de70dda555402ce83514ef097))
+
+
+### Features
+
+* add slug generation for categories and improve error handling in category updates ([22b9ab7](https://github.com/1arley/ark-shop-back/commit/22b9ab736299cfece35aa4395fce88c29c14ebcb))
+* **auth:** prevent registration until email is verified ([82ecdf7](https://github.com/1arley/ark-shop-back/commit/82ecdf7415f7637f5d39d98d95f73e0bb7118729))
+
 ## [1.20.12](https://github.com/1arley/ark-shop-back/compare/v1.20.11...v1.20.12) (2026-05-20)
 
 ### Bug Fixes
