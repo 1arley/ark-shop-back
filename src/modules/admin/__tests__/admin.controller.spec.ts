@@ -1,4 +1,7 @@
 import { ParseBoolPipe, BadRequestException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { AdminCreateProductDto } from '../dto/admin-product.dto';
 
 describe('AdminController - importKeys isCsv parameter', () => {
   describe('current behavior (bug)', () => {
@@ -21,5 +24,25 @@ describe('AdminController - importKeys isCsv parameter', () => {
       const result = await pipe.transform(false);
       expect(result).toBe(false);
     });
+  });
+});
+
+describe('AdminCreateProductDto', () => {
+  it('accepts isActive when the admin panel creates a product', async () => {
+    const dto = plainToInstance(AdminCreateProductDto, {
+      name: 'Cyberpunk 2077',
+      price: 99.9,
+      stock: 10,
+      isActive: false,
+      imageUrl: 'https://cdn.example.com/products/cyberpunk.jpg',
+    });
+
+    const errors = await validate(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+
+    expect(errors).toHaveLength(0);
+    expect(dto.isActive).toBe(false);
   });
 });

@@ -27,6 +27,11 @@ export class AdminCreateProductDto {
   @IsOptional()
   categoryId?: string;
 
+  @ApiPropertyOptional({ description: 'Product is active' })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+
   @ApiPropertyOptional({ description: 'Product image URL' })
   @IsString()
   @IsOptional()
