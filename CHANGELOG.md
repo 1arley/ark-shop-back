@@ -1,3 +1,10 @@
+## [1.24.1](https://github.com/1arley/ark-shop-back/compare/v1.24.0...v1.24.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* add missing ThrottlerModule configuration for rate limiting ([8b4f362](https://github.com/1arley/ark-shop-back/commit/8b4f36241b9006e5d95b6355daca7a7da1962760))
+
 # [1.24.0](https://github.com/1arley/ark-shop-back/compare/v1.23.1...v1.24.0) (2026-05-25)
 
 
