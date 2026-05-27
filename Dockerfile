@@ -4,7 +4,7 @@
 # ============================================
 
 # Stage 1: Base
-FROM node:22-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 
 RUN apt-get update && \
     apt-get dist-upgrade -y --no-install-recommends && \
