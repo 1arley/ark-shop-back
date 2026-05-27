@@ -179,6 +179,54 @@ describe('PaymentsRepository', () => {
     });
   });
 
+  // ─── updatePixPaymentForOrder ───────────────────────────────────
+  describe('updatePixPaymentForOrder', () => {
+    it('should update existing PIX payment for an order', async () => {
+      const expiresAt = new Date('2026-01-01T00:15:00.000Z');
+      const updatedPayment = {
+        ...mockPayment,
+        providerTxId: 'asaas-tx-2',
+        pixQrCode: 'new-qr-base64',
+        pixCode: 'new-pix-copy-paste',
+        expiresAt,
+      };
+      mockPrismaPayment.update.mockResolvedValue(updatedPayment);
+
+      const result = await repository.updatePixPaymentForOrder(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        {
+          providerTxId: 'asaas-tx-2',
+          pixQrCode: 'new-qr-base64',
+          pixCode: 'new-pix-copy-paste',
+          expiresAt,
+        },
+      );
+
+      expect(mockPrismaPayment.update).toHaveBeenCalledWith({
+        where: { orderId: 'order-id-1' },
+        data: {
+          userId: 'user-id-1',
+          provider: PaymentProvider.ASAAS,
+          method: PaymentMethod.PIX,
+          amount: 100,
+          status: PaymentStatus.PENDING,
+          pixQrCode: 'new-qr-base64',
+          pixCode: 'new-pix-copy-paste',
+          providerTxId: 'asaas-tx-2',
+          expiresAt,
+          rejectionReason: null,
+        },
+        include: {
+          order: true,
+        },
+      });
+      expect(result).toEqual(updatedPayment);
+    });
+  });
+
   // ─── findById ────────────────────────────────────────────────────
   describe('findById', () => {
     it('should return payment when found', async () => {

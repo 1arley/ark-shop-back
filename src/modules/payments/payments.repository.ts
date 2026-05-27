@@ -71,6 +71,43 @@ export class PaymentsRepository {
     };
   }
 
+  async updatePixPaymentForOrder(
+    orderId: string,
+    userId: string,
+    amount: number,
+    provider: PaymentProvider,
+    pixData: {
+      providerTxId?: string;
+      pixQrCode: string;
+      pixCode: string;
+      expiresAt?: Date;
+    },
+  ) {
+    const payment = await this.prisma.payment.update({
+      where: { orderId },
+      data: {
+        userId,
+        provider,
+        method: PaymentMethod.PIX,
+        amount,
+        status: PaymentStatus.PENDING,
+        pixQrCode: pixData.pixQrCode,
+        pixCode: pixData.pixCode,
+        ...(pixData.providerTxId && { providerTxId: pixData.providerTxId }),
+        ...(pixData.expiresAt && { expiresAt: pixData.expiresAt }),
+        rejectionReason: null,
+      },
+      include: {
+        order: true,
+      },
+    });
+
+    return {
+      ...payment,
+      amount: toNumber(payment.amount),
+    };
+  }
+
   async findById(id: string) {
     const payment = await this.prisma.payment.findUnique({
       where: { id },
