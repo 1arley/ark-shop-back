@@ -11,6 +11,9 @@ describe('ProductsRepository', () => {
     key: {
       count: jest.fn(),
     },
+    account: {
+      count: jest.fn(),
+    },
     product: {
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -33,6 +36,7 @@ describe('ProductsRepository', () => {
 
     jest.clearAllMocks();
     mockPrismaService.key.count.mockResolvedValue(0);
+    mockPrismaService.account.count.mockResolvedValue(0);
   });
 
   it('deve estar definido', () => {
@@ -72,6 +76,8 @@ describe('ProductsRepository', () => {
           isActive: true,
           categoryId: 'cat-uuid',
           imageUrl: 'http://img.com/prod.jpg',
+          productType: 'KEY',
+          instructions: undefined,
         },
       });
     });
@@ -123,6 +129,8 @@ describe('ProductsRepository', () => {
           isActive: true,
           categoryId: undefined,
           imageUrl: undefined,
+          productType: 'KEY',
+          instructions: undefined,
         },
       });
     });
@@ -392,9 +400,12 @@ describe('ProductsRepository', () => {
           isActive: undefined,
           categoryId: undefined,
           imageUrl: undefined,
+          productType: undefined,
+          instructions: undefined,
         },
       });
       expect(prisma.key.count).toHaveBeenCalledTimes(2);
+      expect(prisma.account.count).toHaveBeenCalledTimes(2);
     });
 
     it('deve atualizar apenas campos fornecidos', async () => {
@@ -414,9 +425,12 @@ describe('ProductsRepository', () => {
           isActive: false,
           categoryId: undefined,
           imageUrl: undefined,
+          productType: undefined,
+          instructions: undefined,
         },
       });
       expect(prisma.key.count).toHaveBeenCalledTimes(2);
+      expect(prisma.account.count).toHaveBeenCalledTimes(2);
     });
 
     it('deve atualizar todos os campos quando fornecidos', async () => {
@@ -444,6 +458,8 @@ describe('ProductsRepository', () => {
           isActive: true,
           categoryId: 'cat-2',
           imageUrl: 'http://new.img',
+          productType: undefined,
+          instructions: undefined,
         },
       });
     });
@@ -453,6 +469,7 @@ describe('ProductsRepository', () => {
 
       mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1' });
       mockPrismaService.key.count.mockResolvedValueOnce(8).mockResolvedValueOnce(3);
+      mockPrismaService.account.count.mockResolvedValue(0);
       mockPrismaService.product.update.mockResolvedValue({
         id: 'prod-1',
         ...updateDto,
@@ -471,6 +488,41 @@ describe('ProductsRepository', () => {
           isActive: true,
           categoryId: undefined,
           imageUrl: undefined,
+          productType: undefined,
+          instructions: undefined,
+        },
+      });
+    });
+
+    it('deve sincronizar stock com accounts disponiveis quando produto possui accounts', async () => {
+      const updateDto = { stock: 50, isActive: true };
+
+      mockPrismaService.product.findUnique.mockResolvedValue({
+        id: 'prod-1',
+        productType: 'ACCOUNT',
+      });
+      mockPrismaService.key.count.mockResolvedValue(0);
+      mockPrismaService.account.count.mockResolvedValueOnce(8).mockResolvedValueOnce(4);
+      mockPrismaService.product.update.mockResolvedValue({
+        id: 'prod-1',
+        ...updateDto,
+        stock: 4,
+      });
+
+      await repository.update('prod-1', updateDto);
+
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'prod-1' },
+        data: {
+          name: undefined,
+          description: undefined,
+          price: undefined,
+          stock: 4,
+          isActive: true,
+          categoryId: undefined,
+          imageUrl: undefined,
+          productType: undefined,
+          instructions: undefined,
         },
       });
     });

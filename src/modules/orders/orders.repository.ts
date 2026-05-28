@@ -1,10 +1,35 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { OrderStatus, KeyStatus, Prisma } from '@prisma/client';
+import type { ProductType } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
 import { userPublicSelect } from '@/common/prisma/user-public.select';
 import { toNumber } from '@/common/decimal';
+
+const PRODUCT_TYPE_KEY = 'KEY' as ProductType;
+const PRODUCT_TYPE_ACCOUNT = 'ACCOUNT' as ProductType;
+
+interface ItemWithProduct {
+  id: string;
+  productId: string;
+  quantity: number;
+  product: { name: string; productType: ProductType } | null;
+  key: {
+    id: string;
+    status: KeyStatus;
+    createdAt: Date;
+    updatedAt: Date;
+    deliveredAt: Date | null;
+  } | null;
+  account: {
+    id: string;
+    status: KeyStatus;
+    createdAt: Date;
+    updatedAt: Date;
+    deliveredAt: Date | null;
+  } | null;
+}
 
 @Injectable()
 export class OrdersRepository {
@@ -14,16 +39,25 @@ export class OrdersRepository {
   ) {}
 
   private async syncProductStock(productId: string, tx: Prisma.TransactionClient) {
-    const availableKeys = await tx.key.count({
-      where: {
-        productId,
-        status: KeyStatus.AVAILABLE,
-      },
+    const product = await tx.product.findUnique({
+      where: { id: productId },
+      select: { productType: true },
     });
+
+    let availableCount: number;
+    if (product?.productType === PRODUCT_TYPE_ACCOUNT) {
+      availableCount = await tx.account.count({
+        where: { productId, status: KeyStatus.AVAILABLE },
+      });
+    } else {
+      availableCount = await tx.key.count({
+        where: { productId, status: KeyStatus.AVAILABLE },
+      });
+    }
 
     await tx.product.update({
       where: { id: productId },
-      data: { stock: availableKeys },
+      data: { stock: availableCount },
     });
   }
 
@@ -34,7 +68,6 @@ export class OrdersRepository {
   ) {
     const { items } = createOrderDto;
 
-    // Batch fetch all products in a single query (fixes N+1)
     const productIds = items.map(i => i.productId);
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds } },
@@ -42,7 +75,6 @@ export class OrdersRepository {
 
     const productMap = new Map(products.map(p => [p.id, p]));
 
-    // Calculate subtotal and validate products
     let subtotal = 0;
     for (const item of items) {
       const product = productMap.get(item.productId);
@@ -61,8 +93,14 @@ export class OrdersRepository {
     const discountAmount = couponData?.discountAmount ?? 0;
     const total = subtotal - discountAmount;
 
-    // Create order with items in a transaction
-    // Salva o preço real de cada item no momento da compra para integridade financeira
+    const orderItems = items.flatMap(item =>
+      Array.from({ length: item.quantity }, () => ({
+        productId: item.productId,
+        quantity: 1,
+        price: productMap.get(item.productId)!.price,
+      })),
+    );
+
     const order = await this.prisma.order.create({
       data: {
         userId,
@@ -72,26 +110,19 @@ export class OrdersRepository {
         discountAmount,
         couponId: couponData?.couponId ?? null,
         items: {
-          create: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: productMap.get(item.productId)!.price,
-          })),
+          create: orderItems,
         },
       },
       include: {
         items: {
-          include: {
-            product: true,
-          },
+          include: { product: true },
         },
         payment: true,
         coupon: true,
       },
     });
 
-    // Serialize Decimal fields for JSON response
-    const serializedOrder = {
+    return {
       ...order,
       total: toNumber(order.total),
       subtotal: toNumber(order.subtotal),
@@ -104,8 +135,6 @@ export class OrdersRepository {
       payment: order.payment ? { ...order.payment, amount: order.payment.amount.toNumber() } : null,
       coupon: order.coupon ? { ...order.coupon, value: order.coupon.value.toNumber() } : null,
     };
-
-    return serializedOrder;
   }
 
   async findById(id: string) {
@@ -117,7 +146,15 @@ export class OrdersRepository {
           include: {
             product: true,
             key: {
-              // Exclude encrypted keyData from API responses
+              select: {
+                id: true,
+                status: true,
+                deliveredAt: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+            account: {
               select: {
                 id: true,
                 status: true,
@@ -136,8 +173,7 @@ export class OrdersRepository {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
 
-    // Serialize Decimal fields
-    const serialized = {
+    return {
       ...order,
       total: toNumber(order.total),
       subtotal: toNumber(order.subtotal),
@@ -147,11 +183,10 @@ export class OrdersRepository {
         price: toNumber(item.price),
         product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
         key: item.key ?? null,
+        account: item.account ?? null,
       })),
       payment: order.payment ? { ...order.payment, amount: toNumber(order.payment.amount) } : null,
     };
-
-    return serialized;
   }
 
   async findByUser(userId: string, page: number = 1, limit: number = 10) {
@@ -167,7 +202,15 @@ export class OrdersRepository {
             include: {
               product: true,
               key: {
-                // Exclude encrypted keyData from API responses
+                select: {
+                  id: true,
+                  status: true,
+                  deliveredAt: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
+              account: {
                 select: {
                   id: true,
                   status: true,
@@ -196,17 +239,13 @@ export class OrdersRepository {
           price: toNumber(item.price),
           product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
           key: item.key ?? null,
+          account: item.account ?? null,
         })),
         payment: order.payment
           ? { ...order.payment, amount: toNumber(order.payment.amount) }
           : null,
       })),
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
 
@@ -215,8 +254,8 @@ export class OrdersRepository {
       where: { id },
       include: {
         items: {
-          where: { keyId: { not: null } },
-          select: { id: true, keyId: true },
+          where: { OR: [{ keyId: { not: null } }, { accountId: { not: null } }] },
+          select: { id: true, keyId: true, accountId: true },
         },
       },
     });
@@ -225,7 +264,6 @@ export class OrdersRepository {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
 
-    // Validate status transition
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
       PENDING: ['AWAITING_PAYMENT', 'CANCELLED'],
       AWAITING_PAYMENT: ['PAID', 'CANCELLED'],
@@ -240,17 +278,23 @@ export class OrdersRepository {
       throw new BadRequestException(`Invalid status transition from ${order.status} to ${status}`);
     }
 
-    // Se for cancelamento, libera as chaves reservadas de volta para AVAILABLE
     if (status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED) {
-      const reservedKeyIds = order.items.filter(item => item.keyId).map(item => item.keyId!);
+      const reservedKeyIds = order.items.flatMap(item => (item.keyId ? [item.keyId] : []));
+      const reservedAccountIds = order.items.flatMap(item =>
+        item.accountId ? [item.accountId] : [],
+      );
 
       if (reservedKeyIds.length > 0) {
         await this.prisma.key.updateMany({
           where: { id: { in: reservedKeyIds } },
-          data: {
-            status: KeyStatus.AVAILABLE,
-            orderItemId: null,
-          },
+          data: { status: KeyStatus.AVAILABLE, orderItemId: null },
+        });
+      }
+
+      if (reservedAccountIds.length > 0) {
+        await this.prisma.account.updateMany({
+          where: { id: { in: reservedAccountIds } },
+          data: { status: KeyStatus.AVAILABLE, orderItemId: null },
         });
       }
     }
@@ -259,20 +303,14 @@ export class OrdersRepository {
       .update({
         where: { id },
         data: { status },
-        include: {
-          items: true,
-          payment: true,
-        },
+        include: { items: true, payment: true },
       })
       .then(order => ({
         ...order,
         total: toNumber(order.total),
         subtotal: toNumber(order.subtotal),
         discountAmount: toNumber(order.discountAmount),
-        items: order.items.map(item => ({
-          ...item,
-          price: toNumber(item.price),
-        })),
+        items: order.items.map(item => ({ ...item, price: toNumber(item.price) })),
         payment: order.payment
           ? { ...order.payment, amount: toNumber(order.payment.amount) }
           : null,
@@ -284,11 +322,7 @@ export class OrdersRepository {
   }
 
   async countByUser(userId: string) {
-    const count = await this.prisma.order.count({
-      where: { userId },
-    });
-
-    return count;
+    return this.prisma.order.count({ where: { userId } });
   }
 
   async getRecentOrders(limit: number = 10) {
@@ -300,11 +334,10 @@ export class OrdersRepository {
           include: {
             product: true,
             key: {
-              select: {
-                id: true,
-                status: true,
-                deliveredAt: true,
-              },
+              select: { id: true, status: true, deliveredAt: true },
+            },
+            account: {
+              select: { id: true, status: true, deliveredAt: true },
             },
           },
         },
@@ -322,96 +355,77 @@ export class OrdersRepository {
         price: toNumber(item.price),
         product: item.product ? { ...item.product, price: toNumber(item.product.price) } : null,
         key: item.key ?? null,
+        account: item.account ?? null,
       })),
     }));
   }
 
-  /**
-   * Fetch products by IDs (used by OrdersService for subtotal calculation).
-   */
   async getProductsByIds(ids: string[]) {
-    const products = await this.prisma.product.findMany({
-      where: { id: { in: ids } },
-    });
-
-    return products;
+    return this.prisma.product.findMany({ where: { id: { in: ids } } });
   }
 
-  /**
-   * Reserve an available key for a product atomically.
-   * Uses updateMany with a WHERE condition to prevent TOCTOU race conditions.
-   */
   async reserveAvailableKey(productId: string, orderItemId: string) {
-    // Atomic reserve: updateMany only affects keys that are still AVAILABLE
     const result = await this.prisma.key.updateMany({
-      where: {
-        productId,
-        status: KeyStatus.AVAILABLE,
-      },
-      data: {
-        status: KeyStatus.RESERVED,
-        orderItemId,
-      },
+      where: { productId, status: KeyStatus.AVAILABLE },
+      data: { status: KeyStatus.RESERVED, orderItemId },
     });
 
-    if (result.count === 0) {
-      return null;
-    }
+    if (result.count === 0) return null;
 
-    // Fetch the reserved key
     return this.prisma.key.findFirst({
       where: { orderItemId },
       include: { product: true },
     });
   }
 
-  /**
-   * Deliver a key (decrypt and mark as delivered)
-   */
+  async reserveAvailableAccount(productId: string, orderItemId: string) {
+    const availableAccount = await this.prisma.account.findFirst({
+      where: { productId, status: KeyStatus.AVAILABLE },
+    });
+
+    if (!availableAccount) return null;
+
+    const result = await this.prisma.account.updateMany({
+      where: { id: availableAccount.id, status: KeyStatus.AVAILABLE },
+      data: { status: KeyStatus.RESERVED, orderItemId },
+    });
+
+    if (result.count === 0) return null;
+
+    return this.prisma.account.findFirst({
+      where: { orderItemId },
+      include: { product: true },
+    });
+  }
+
   async deliverKey(keyId: string) {
     const key = await this.prisma.key.update({
       where: { id: keyId },
-      data: {
-        status: KeyStatus.DELIVERED,
-        deliveredAt: new Date(),
-      },
-      include: {
-        product: true,
-        orderItem: true,
-      },
+      data: { status: KeyStatus.DELIVERED, deliveredAt: new Date() },
+      include: { product: true, orderItem: true },
     });
 
-    // Decrypt the key for delivery
     const decryptedKey = this.keysEncryption.decrypt(key.keyData);
 
+    return { ...key, decryptedKey };
+  }
+
+  async deliverAccountData(accountId: string) {
+    const account = await this.prisma.account.update({
+      where: { id: accountId },
+      data: { status: KeyStatus.DELIVERED, deliveredAt: new Date() },
+      include: { product: true, orderItem: true },
+    });
+
     return {
-      ...key,
-      decryptedKey,
+      ...account,
+      decryptedEmail: this.keysEncryption.decrypt(account.email),
+      decryptedPassword: this.keysEncryption.decrypt(account.password),
     };
   }
 
-  /**
-   * Atomically reserve keys and mark order as delivered.
-   * Reserves exactly ONE key per item by finding first available key
-   * then updating that specific key within the transaction.
-   */
-  async deliverOrderAtomic(
-    orderId: string,
-    items: Array<{
-      id: string;
-      productId: string;
-      key: {
-        id: string;
-        status: KeyStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        deliveredAt: Date | null;
-      } | null;
-      product: { name: string } | null;
-    }>,
-  ) {
+  async deliverOrderAtomic(orderId: string, items: ItemWithProduct[]) {
     const deliveredOrder = await this.prisma.$transaction(async tx => {
-      // Re-verify order status inside transaction to prevent concurrent delivery
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order || order.status !== OrderStatus.PAID) {
         throw new BadRequestException('Order must be in PAID status to deliver');
@@ -420,13 +434,48 @@ export class OrdersRepository {
       const affectedProductIds = new Set<string>();
 
       for (const item of items) {
-        if (!item.key) {
-          // Find ONE available key first
+        const productType = item.product?.productType ?? PRODUCT_TYPE_KEY;
+        if (item.quantity !== 1) {
+          throw new BadRequestException(
+            `Order item ${item.id} must represent exactly one digital unit`,
+          );
+        }
+
+        if (productType === PRODUCT_TYPE_ACCOUNT) {
+          if (item.account) continue;
+
+          const availableAccount = await tx.account.findFirst({
+            where: { productId: item.productId, status: KeyStatus.AVAILABLE },
+          });
+
+          if (!availableAccount) {
+            throw new BadRequestException(
+              `No available accounts for product: ${item.product?.name ?? item.productId}`,
+            );
+          }
+
+          const accountResult = await tx.account.updateMany({
+            where: { id: availableAccount.id, status: KeyStatus.AVAILABLE },
+            data: { status: KeyStatus.DELIVERED, deliveredAt: new Date(), orderItemId: item.id },
+          });
+
+          if (accountResult.count === 0) {
+            throw new BadRequestException(
+              `No available accounts for product: ${item.product?.name ?? item.productId}`,
+            );
+          }
+
+          await tx.orderItem.update({
+            where: { id: item.id },
+            data: { accountId: availableAccount.id },
+          });
+
+          affectedProductIds.add(item.productId);
+        } else {
+          if (item.key) continue;
+
           const availableKey = await tx.key.findFirst({
-            where: {
-              productId: item.productId,
-              status: KeyStatus.AVAILABLE,
-            },
+            where: { productId: item.productId, status: KeyStatus.AVAILABLE },
           });
 
           if (!availableKey) {
@@ -435,20 +484,9 @@ export class OrdersRepository {
             );
           }
 
-          // Atomically reserve and mark key as delivered.
-          // The WHERE clause includes `status: AVAILABLE` to prevent TOCTOU race conditions:
-          // if another transaction already took this key, updateMany returns count=0
-          // and we avoid the unique constraint violation on orderItemId.
           const keyResult = await tx.key.updateMany({
-            where: {
-              id: availableKey.id,
-              status: KeyStatus.AVAILABLE,
-            },
-            data: {
-              status: KeyStatus.DELIVERED,
-              deliveredAt: new Date(),
-              orderItemId: item.id,
-            },
+            where: { id: availableKey.id, status: KeyStatus.AVAILABLE },
+            data: { status: KeyStatus.DELIVERED, deliveredAt: new Date(), orderItemId: item.id },
           });
 
           if (keyResult.count === 0) {
@@ -457,7 +495,6 @@ export class OrdersRepository {
             );
           }
 
-          // Also set the OrderItem.keyId to establish the bidirectional relation
           await tx.orderItem.update({
             where: { id: item.id },
             data: { keyId: availableKey.id },
@@ -471,14 +508,10 @@ export class OrdersRepository {
         await this.syncProductStock(productId, tx);
       }
 
-      // Update order status to delivered
       const delivered = await tx.order.update({
         where: { id: orderId },
         data: { status: OrderStatus.DELIVERED },
-        include: {
-          items: true,
-          payment: true,
-        },
+        include: { items: true, payment: true },
       });
 
       return {
@@ -486,10 +519,7 @@ export class OrdersRepository {
         total: toNumber(delivered.total),
         subtotal: toNumber(delivered.subtotal),
         discountAmount: toNumber(delivered.discountAmount),
-        items: delivered.items.map(item => ({
-          ...item,
-          price: toNumber(item.price),
-        })),
+        items: delivered.items.map(item => ({ ...item, price: toNumber(item.price) })),
         payment: delivered.payment
           ? { ...delivered.payment, amount: toNumber(delivered.payment.amount) }
           : null,

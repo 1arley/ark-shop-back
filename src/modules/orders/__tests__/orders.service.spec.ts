@@ -3,6 +3,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { OrdersService } from '../orders.service';
 import { OrdersRepository } from '../orders.repository';
 import { KeysService } from '@/modules/keys/keys.service';
+import { AccountsService } from '@/modules/accounts/accounts.service';
 import { CouponsService } from '@/modules/coupons/coupons.service';
 import { OrderStatus, KeyStatus } from '@prisma/client';
 
@@ -10,6 +11,7 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let ordersRepository: OrdersRepository;
   let _keysService: KeysService;
+  let _accountsService: AccountsService;
   let couponsService: CouponsService;
 
   const mockOrder = {
@@ -28,7 +30,8 @@ describe('OrdersService', () => {
         quantity: 1,
         price: 100,
         key: null,
-        product: { id: 'product-id-1', name: 'Game Key', price: 100 },
+        account: null,
+        product: { id: 'product-id-1', name: 'Game Key', price: 100, productType: 'KEY' },
       },
     ],
     payment: null,
@@ -49,6 +52,8 @@ describe('OrdersService', () => {
           deliveredAt: new Date(),
           keyData: 'encrypted-data',
         },
+        account: null,
+        product: { id: 'product-id-1', name: 'Game Key', price: 100, productType: 'KEY' },
       },
     ],
   };
@@ -68,6 +73,10 @@ describe('OrdersService', () => {
     getDecryptedKey: jest.fn(),
   };
 
+  const mockAccountsService = {
+    getDecryptedAccount: jest.fn(),
+  };
+
   const mockCouponsService = {
     validateAndCalculate: jest.fn(),
     markAsUsed: jest.fn(),
@@ -80,6 +89,7 @@ describe('OrdersService', () => {
         OrdersService,
         { provide: OrdersRepository, useValue: mockOrdersRepository },
         { provide: KeysService, useValue: mockKeysService },
+        { provide: AccountsService, useValue: mockAccountsService },
         { provide: CouponsService, useValue: mockCouponsService },
       ],
     }).compile();
@@ -229,12 +239,12 @@ describe('OrdersService', () => {
     });
   });
 
-  describe('downloadKeys', () => {
+  describe('downloadItems', () => {
     it('should return decrypted keys for delivered order', async () => {
       mockOrdersRepository.findById.mockResolvedValue(mockDeliveredOrder);
       mockKeysService.getDecryptedKey.mockResolvedValue('XXXX-YYYY-ZZZZ');
 
-      const result = await service.downloadKeys('order-id-1', 'user-id-1');
+      const result = await service.downloadItems('order-id-1', 'user-id-1');
 
       expect(result.orderId).toBe('order-id-1');
       expect(result.status).toBe(OrderStatus.DELIVERED);
@@ -245,7 +255,7 @@ describe('OrdersService', () => {
     it('should throw if not order owner', async () => {
       mockOrdersRepository.findById.mockResolvedValue(mockDeliveredOrder);
 
-      await expect(service.downloadKeys('order-id-1', 'other-user-id')).rejects.toThrow(
+      await expect(service.downloadItems('order-id-1', 'other-user-id')).rejects.toThrow(
         ForbiddenException,
       );
     });
@@ -253,7 +263,7 @@ describe('OrdersService', () => {
     it('should throw if order not delivered', async () => {
       mockOrdersRepository.findById.mockResolvedValue(mockOrder); // PENDING
 
-      await expect(service.downloadKeys('order-id-1', 'user-id-1')).rejects.toThrow(
+      await expect(service.downloadItems('order-id-1', 'user-id-1')).rejects.toThrow(
         'Order not delivered yet',
       );
     });

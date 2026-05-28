@@ -1,10 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { KeyStatus, Prisma } from '@prisma/client';
+import type { ProductType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { toNumber } from '@/common/decimal';
 import { MAX_PAGE_SIZE } from '@/common/constants';
+
+const PRODUCT_TYPE_ACCOUNT = 'ACCOUNT' as ProductType;
 
 @Injectable()
 export class ProductsRepository {
@@ -20,6 +23,8 @@ export class ProductsRepository {
         isActive: data.isActive ?? true,
         categoryId: data.categoryId,
         imageUrl: data.imageUrl,
+        productType: data.productType ?? 'KEY',
+        instructions: data.instructions,
       },
     });
 
@@ -101,15 +106,21 @@ export class ProductsRepository {
   }
 
   async update(id: string, data: UpdateProductDto) {
-    // Verifica se o produto existe antes de atualizar
-    await this.findById(id);
+    const existingProduct = await this.findById(id);
 
-    const [totalKeys, availableKeys] = await Promise.all([
+    const [totalKeys, availableKeys, totalAccounts, availableAccounts] = await Promise.all([
       this.prisma.key.count({ where: { productId: id } }),
-      this.prisma.key.count({
-        where: { productId: id, status: KeyStatus.AVAILABLE },
-      }),
+      this.prisma.key.count({ where: { productId: id, status: KeyStatus.AVAILABLE } }),
+      this.prisma.account.count({ where: { productId: id } }),
+      this.prisma.account.count({ where: { productId: id, status: KeyStatus.AVAILABLE } }),
     ]);
+
+    const hasDigitalItems = totalKeys > 0 || totalAccounts > 0;
+    const productType = data.productType ?? existingProduct.productType;
+    const derivedStock =
+      productType === PRODUCT_TYPE_ACCOUNT || (totalAccounts > 0 && totalKeys === 0)
+        ? availableAccounts
+        : availableKeys;
 
     const product = await this.prisma.product.update({
       where: { id },
@@ -117,10 +128,12 @@ export class ProductsRepository {
         name: data.name,
         description: data.description,
         price: data.price,
-        stock: totalKeys > 0 ? availableKeys : data.stock,
+        stock: hasDigitalItems ? derivedStock : data.stock,
         isActive: data.isActive,
         categoryId: data.categoryId,
         imageUrl: data.imageUrl,
+        productType: data.productType,
+        instructions: data.instructions,
       },
     });
 

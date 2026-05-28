@@ -28,6 +28,12 @@ describe('OrdersRepository', () => {
       findFirst: jest.fn(),
       update: jest.fn(),
     },
+    account: {
+      count: jest.fn(),
+      updateMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -88,6 +94,7 @@ describe('OrdersRepository', () => {
 
     jest.clearAllMocks();
     mockPrismaService.key.count.mockResolvedValue(0);
+    mockPrismaService.account.count.mockResolvedValue(0);
   });
 
   // ─── create ───────────────────────────────────────────────────────
@@ -117,7 +124,12 @@ describe('OrdersRepository', () => {
             create: [
               {
                 productId: 'product-id-1',
-                quantity: 2,
+                quantity: 1,
+                price: mockProduct.price,
+              },
+              {
+                productId: 'product-id-1',
+                quantity: 1,
                 price: mockProduct.price,
               },
             ],
@@ -277,12 +289,24 @@ describe('OrdersRepository', () => {
                   updatedAt: true,
                 },
               },
+              account: {
+                select: {
+                  id: true,
+                  status: true,
+                  deliveredAt: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
             },
           },
           payment: true,
         },
       });
-      expect(result).toEqual(mockOrder);
+      expect(result).toEqual({
+        ...mockOrder,
+        items: mockOrder.items.map(item => ({ ...item, account: null })),
+      });
     });
 
     it('deve lancar NotFoundException quando pedido nao existe', async () => {
@@ -304,7 +328,12 @@ describe('OrdersRepository', () => {
       const result = await repository.findByUser('user-id-1', 1, 10);
 
       expect(prisma.$transaction).toHaveBeenCalled();
-      expect(result.data).toEqual(orders);
+      expect(result.data).toEqual([
+        {
+          ...mockOrder,
+          items: mockOrder.items.map(item => ({ ...item, account: null })),
+        },
+      ]);
       expect(result.meta).toEqual({
         total: 1,
         page: 1,
@@ -560,7 +589,10 @@ describe('OrdersRepository', () => {
       expect(prisma.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'order-id-1' },
         include: {
-          items: { where: { keyId: { not: null } }, select: { id: true, keyId: true } },
+          items: {
+            where: { OR: [{ keyId: { not: null } }, { accountId: { not: null } }] },
+            select: { id: true, keyId: true, accountId: true },
+          },
         },
       });
       expect(result.status).toBe(OrderStatus.CANCELLED);
@@ -588,12 +620,24 @@ describe('OrdersRepository', () => {
                   deliveredAt: true,
                 },
               },
+              account: {
+                select: {
+                  id: true,
+                  status: true,
+                  deliveredAt: true,
+                },
+              },
             },
           },
         },
         orderBy: { createdAt: 'desc' },
       });
-      expect(result).toEqual([mockOrder]);
+      expect(result).toEqual([
+        {
+          ...mockOrder,
+          items: mockOrder.items.map(item => ({ ...item, account: null })),
+        },
+      ]);
     });
 
     it('deve retornar pedidos recentes com limite customizado', async () => {
@@ -667,6 +711,56 @@ describe('OrdersRepository', () => {
     });
   });
 
+  describe('reserveAvailableAccount', () => {
+    it('deve reservar somente a account selecionada com sucesso', async () => {
+      const availableAccount = {
+        id: 'account-id-1',
+        productId: 'product-id-1',
+        status: KeyStatus.AVAILABLE,
+      };
+      const reservedAccount = {
+        ...availableAccount,
+        status: KeyStatus.RESERVED,
+        orderItemId: 'item-id-1',
+        product: mockProduct,
+      };
+
+      mockPrismaService.account.findFirst
+        .mockResolvedValueOnce(availableAccount)
+        .mockResolvedValueOnce(reservedAccount);
+      mockPrismaService.account.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await repository.reserveAvailableAccount('product-id-1', 'item-id-1');
+
+      expect(prisma.account.findFirst).toHaveBeenNthCalledWith(1, {
+        where: {
+          productId: 'product-id-1',
+          status: KeyStatus.AVAILABLE,
+        },
+      });
+      expect(prisma.account.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'account-id-1',
+          status: KeyStatus.AVAILABLE,
+        },
+        data: {
+          status: KeyStatus.RESERVED,
+          orderItemId: 'item-id-1',
+        },
+      });
+      expect(result).toEqual(reservedAccount);
+    });
+
+    it('deve retornar null quando nao ha accounts disponiveis', async () => {
+      mockPrismaService.account.findFirst.mockResolvedValue(null);
+
+      const result = await repository.reserveAvailableAccount('product-id-1', 'item-id-1');
+
+      expect(result).toBeNull();
+      expect(prisma.account.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
   // ─── deliverKey ───────────────────────────────────────────────────
   describe('deliverKey', () => {
     it('deve marcar chave como entregue e retornar com dados descriptografados', async () => {
@@ -710,8 +804,10 @@ describe('OrdersRepository', () => {
         {
           id: 'item-id-1',
           productId: 'product-id-1',
+          quantity: 1,
           key: null,
-          product: { name: 'Game Key' },
+          account: null,
+          product: { name: 'Game Key', productType: 'KEY' },
         },
       ];
       const mockTx = {
@@ -724,7 +820,13 @@ describe('OrdersRepository', () => {
           findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
+        account: {
+          count: jest.fn(),
+          findFirst: jest.fn(),
+          updateMany: jest.fn(),
+        },
         product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: 'KEY' }),
           update: jest.fn().mockResolvedValue({}),
         },
         orderItem: {
@@ -764,13 +866,81 @@ describe('OrdersRepository', () => {
       expect(result.status).toBe(OrderStatus.DELIVERED);
     });
 
+    it('deve reservar accounts e marcar pedido como entregue com sucesso', async () => {
+      const items = [
+        {
+          id: 'item-id-1',
+          productId: 'product-id-1',
+          quantity: 1,
+          key: null,
+          account: null,
+          product: { name: 'Game Account', productType: 'ACCOUNT' },
+        },
+      ];
+      const mockTx = {
+        order: {
+          findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
+          update: jest.fn().mockResolvedValue({ ...mockOrder, status: OrderStatus.DELIVERED }),
+        },
+        key: {
+          count: jest.fn(),
+          findFirst: jest.fn(),
+          updateMany: jest.fn(),
+        },
+        account: {
+          count: jest.fn().mockResolvedValue(0),
+          findFirst: jest.fn().mockResolvedValue({ id: 'account-id-1' }),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: 'ACCOUNT' }),
+          update: jest.fn().mockResolvedValue({}),
+        },
+        orderItem: {
+          update: jest.fn().mockResolvedValue({}),
+        },
+      };
+      mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
+
+      const result = await repository.deliverOrderAtomic('order-id-1', items);
+
+      expect(mockTx.account.findFirst).toHaveBeenCalledWith({
+        where: {
+          productId: 'product-id-1',
+          status: KeyStatus.AVAILABLE,
+        },
+      });
+      expect(mockTx.account.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'account-id-1',
+          status: KeyStatus.AVAILABLE,
+        },
+        data: {
+          status: KeyStatus.DELIVERED,
+          deliveredAt: expect.any(Date),
+          orderItemId: 'item-id-1',
+        },
+      });
+      expect(mockTx.orderItem.update).toHaveBeenCalledWith({
+        where: { id: 'item-id-1' },
+        data: { accountId: 'account-id-1' },
+      });
+      expect(mockTx.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
+      });
+      expect(result.status).toBe(OrderStatus.DELIVERED);
+    });
+
     it('deve lancar BadRequestException quando nao ha chaves disponiveis para produto', async () => {
       const items = [
         {
           id: 'item-id-1',
           productId: 'product-id-1',
+          quantity: 1,
           key: null,
-          product: { name: 'Game Key' },
+          account: null,
+          product: { name: 'Game Key', productType: 'KEY' },
         },
       ];
       const mockTx = {
@@ -783,7 +953,15 @@ describe('OrdersRepository', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           updateMany: jest.fn(),
         },
-        product: { update: jest.fn() },
+        account: {
+          count: jest.fn(),
+          findFirst: jest.fn(),
+          updateMany: jest.fn(),
+        },
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: 'KEY' }),
+          update: jest.fn(),
+        },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
@@ -800,8 +978,10 @@ describe('OrdersRepository', () => {
         {
           id: 'item-id-1',
           productId: 'product-id-1',
+          quantity: 1,
           key: null,
-          product: { name: 'Game Key' },
+          account: null,
+          product: { name: 'Game Key', productType: 'KEY' },
         },
       ];
       const mockTx = {
@@ -814,7 +994,15 @@ describe('OrdersRepository', () => {
           findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
           updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         },
-        product: { update: jest.fn() },
+        account: {
+          count: jest.fn(),
+          findFirst: jest.fn(),
+          updateMany: jest.fn(),
+        },
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: 'KEY' }),
+          update: jest.fn(),
+        },
         orderItem: { update: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
@@ -832,6 +1020,7 @@ describe('OrdersRepository', () => {
         {
           id: 'item-id-1',
           productId: 'product-id-1',
+          quantity: 1,
           key: {
             id: 'key-id-1',
             status: KeyStatus.RESERVED,
@@ -839,7 +1028,8 @@ describe('OrdersRepository', () => {
             updatedAt: new Date(),
             deliveredAt: null,
           },
-          product: { name: 'Game Key' },
+          account: null,
+          product: { name: 'Game Key', productType: 'KEY' },
         },
       ];
       const mockTx = {
@@ -848,7 +1038,11 @@ describe('OrdersRepository', () => {
           update: jest.fn().mockResolvedValue({ ...mockOrder, status: OrderStatus.DELIVERED }),
         },
         key: { count: jest.fn(), findFirst: jest.fn(), updateMany: jest.fn() },
-        product: { update: jest.fn() },
+        account: { count: jest.fn(), findFirst: jest.fn(), updateMany: jest.fn() },
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: 'KEY' }),
+          update: jest.fn(),
+        },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 

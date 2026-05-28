@@ -118,11 +118,11 @@ export class OrdersController {
   @Get(':id/download')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Download order keys (customer)' })
-  @ApiResponse({ status: 200, description: 'Keys downloaded' })
+  @ApiOperation({ summary: 'Download order items (keys + accounts)' })
+  @ApiResponse({ status: 200, description: 'Items downloaded' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not your order' })
   @ApiResponse({ status: 400, description: 'Order not delivered yet' })
-  downloadKeys(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.ordersService.downloadKeys(id, user.id);
+  downloadItems(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.ordersService.downloadItems(id, user.id);
   }
 }

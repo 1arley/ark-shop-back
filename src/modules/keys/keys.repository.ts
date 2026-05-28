@@ -16,6 +16,10 @@ export class KeysRepository {
     private readonly encryptionProvider: KeysEncryptionProvider,
   ) {}
 
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
+  }
+
   private async syncProductStock(
     productId: string,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
@@ -65,9 +69,9 @@ export class KeysRepository {
     for (const key of keys) {
       try {
         encryptedKeys.push(this.encryptionProvider.encrypt(key));
-      } catch (error: any) {
+      } catch (error: unknown) {
         result.failed++;
-        result.errors.push(`Failed to encrypt key: ${error.message || 'Unknown error'}`);
+        result.errors.push(`Failed to encrypt key: ${this.getErrorMessage(error)}`);
       }
     }
 
@@ -75,37 +79,38 @@ export class KeysRepository {
       return result;
     }
 
-    // Bulk insert with createMany (single DB round-trip)
-    try {
-      await this.prisma.key.createMany({
-        data: encryptedKeys.map(keyData => ({
-          productId,
-          keyData,
-          status: KeyStatus.AVAILABLE,
-        })),
-        skipDuplicates: true,
-      });
-      result.imported = encryptedKeys.length;
-    } catch (_error: any) {
-      // Fallback: insert one by one if createMany fails (e.g. too many params)
-      for (const keyData of encryptedKeys) {
-        try {
-          await this.prisma.key.create({
-            data: {
-              productId,
-              keyData,
-              status: KeyStatus.AVAILABLE,
-            },
-          });
-          result.imported++;
-        } catch (innerError: any) {
-          result.failed++;
-          result.errors.push(`Failed to import key: ${innerError.message || 'Unknown error'}`);
+    await this.prisma.$transaction(async tx => {
+      try {
+        await tx.key.createMany({
+          data: encryptedKeys.map(keyData => ({
+            productId,
+            keyData,
+            status: KeyStatus.AVAILABLE,
+          })),
+          skipDuplicates: true,
+        });
+        result.imported = encryptedKeys.length;
+      } catch (_error: unknown) {
+        // Fallback: insert one by one if createMany fails (e.g. too many params)
+        for (const keyData of encryptedKeys) {
+          try {
+            await tx.key.create({
+              data: {
+                productId,
+                keyData,
+                status: KeyStatus.AVAILABLE,
+              },
+            });
+            result.imported++;
+          } catch (innerError: unknown) {
+            result.failed++;
+            result.errors.push(`Failed to import key: ${this.getErrorMessage(innerError)}`);
+          }
         }
       }
-    }
 
-    await this.syncProductStock(productId);
+      await this.syncProductStock(productId, tx);
+    });
 
     return result;
   }
@@ -277,7 +282,7 @@ export class KeysRepository {
   }
 
   async update(id: string, data: { keyData?: string; status?: KeyStatus }) {
-    const updateData: any = {};
+    const updateData: Prisma.KeyUpdateInput = {};
     if (data.status) {
       updateData.status = data.status;
     }

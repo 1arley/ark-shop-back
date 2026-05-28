@@ -31,6 +31,7 @@ import { SellersModule } from '@/modules/sellers/sellers.module';
 import { UploadModule } from '@/modules/upload/upload.module';
 import { WalletModule } from '@/modules/wallet/wallet.module';
 import { CouponsModule } from '@/modules/coupons/coupons.module';
+import { AccountsModule } from '@/modules/accounts/accounts.module';
 
 // Sentry is enabled only when SENTRY_DSN is configured.
 const sentryModules = process.env.SENTRY_DSN ? [SentryModule.forRoot()] : [];
@@ -80,6 +81,7 @@ const sentryModules = process.env.SENTRY_DSN ? [SentryModule.forRoot()] : [];
     UploadModule,
     WalletModule,
     CouponsModule,
+    AccountsModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
