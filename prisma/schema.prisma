@@ -98,6 +98,7 @@ model User {
   notifications           Notification[]
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  emailChangeRequests     EmailChangeRequest[]
   sellers                 Seller[]
   cart                    Cart?
 
@@ -164,6 +165,22 @@ model EmailVerificationToken {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+  @@index([code])
+  @@index([userId, usedAt, expiresAt])
+}
+
+model EmailChangeRequest {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newEmail  String
+  code      String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([newEmail])
   @@index([code])
   @@index([userId, usedAt, expiresAt])
 }

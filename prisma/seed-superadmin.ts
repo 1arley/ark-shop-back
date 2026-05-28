@@ -5,55 +5,83 @@ import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
-dotenv.config({ path: '.env.local', override: false });
+dotenv.config({ path: '.env.local', override: process.env.NODE_ENV !== 'production' });
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error('DATABASE_URL is required');
-
+const databaseUrl = requireEnv('DATABASE_URL');
 const pool = new Pool({ connectionString: databaseUrl });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  const password = await bcrypt.hash('12345678', 10);
+async function main(): Promise<void> {
+  const email = requireEnv('SEED_SUPERADMIN_EMAIL').toLowerCase();
+  const password = requireEnv('SEED_SUPERADMIN_PASSWORD');
+  const name = process.env.SEED_SUPERADMIN_NAME?.trim() || 'Super Admin';
 
+  assertStrongPassword('SEED_SUPERADMIN_PASSWORD', password);
+
+  const hashedPassword = await bcrypt.hash(password, 12);
   const user = await prisma.user.upsert({
-    where: { email: 'superadmin@darkgames.com' },
+    where: { email },
     update: {
-      emailVerified: true,
-    },
-    create: {
-      email: 'superadmin@darkgames.com',
-      password,
-      name: 'Super Admin',
+      name,
+      password: hashedPassword,
       role: 'SUPERADMIN',
       emailVerified: true,
     },
-  });
-
-  // Garantir que todos os ADMIN/SUPERADMIN existentes estejam verificados
-  const updated = await prisma.user.updateMany({
-    where: {
-      role: { in: ['ADMIN', 'SUPERADMIN'] },
-      emailVerified: false,
+    create: {
+      email,
+      password: hashedPassword,
+      name,
+      role: 'SUPERADMIN',
+      emailVerified: true,
     },
-    data: { emailVerified: true },
+    select: {
+      email: true,
+      name: true,
+      role: true,
+      emailVerified: true,
+    },
   });
 
-  if (updated.count > 0) {
-    console.log(`✅ ${updated.count} admin(s) marcado(s) como verificado(s)`);
+  await prisma.pendingRegistration.deleteMany({ where: { email } });
+
+  console.log('Superadmin seed completed successfully.');
+  console.log(`Email: ${user.email}`);
+  console.log(`Name: ${user.name}`);
+  console.log(`Role: ${user.role}`);
+  console.log(`Email verified: ${user.emailVerified}`);
+}
+
+function requireEnv(name: string): string {
+  const value = process.env[name]?.trim();
+
+  if (!value) {
+    throw new Error(`${name} is required.`);
   }
 
-  console.log('✅ SUPERADMIN created:');
-  console.log(`   Email: ${user.email}`);
-  console.log(`   Name:  ${user.name}`);
-  console.log(`   Role:  ${user.role}`);
-  console.log(`   Pass:  12345678`);
+  return value;
+}
+
+function assertStrongPassword(envName: string, password: string): void {
+  const hasMinimumLength = password.length >= 12;
+  const hasLowercase = /[a-z]/.test(password);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSymbol = /[^A-Za-z0-9]/.test(password);
+
+  if (!hasMinimumLength || !hasLowercase || !hasUppercase || !hasNumber || !hasSymbol) {
+    throw new Error(
+      `${envName} must have at least 12 chars, uppercase, lowercase, number and symbol.`,
+    );
+  }
 }
 
 main()
-  .catch(e => {
-    console.error('❌', e);
+  .catch(error => {
+    console.error('Superadmin seed failed:', error);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });
