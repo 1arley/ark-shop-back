@@ -129,6 +129,38 @@ describe('KeysRepository', () => {
       });
     });
 
+    it('deve importar chaves e sincronizar estoque na mesma transacao', async () => {
+      const keys = ['key-1'];
+      const tx = {
+        key: {
+          createMany: jest.fn().mockResolvedValue({ count: 1 }),
+          create: jest.fn(),
+          count: jest.fn().mockResolvedValue(1),
+        },
+        product: {
+          update: jest.fn(),
+        },
+      };
+
+      mockEncryptionProvider.encrypt.mockReturnValue('v2:encrypted-1');
+      mockPrismaService.$transaction.mockImplementationOnce(async cb => cb(tx));
+
+      await repository.createBatch('product-id-1', keys);
+
+      expect(tx.key.createMany).toHaveBeenCalledWith({
+        data: [
+          { productId: 'product-id-1', keyData: 'v2:encrypted-1', status: KeyStatus.AVAILABLE },
+        ],
+        skipDuplicates: true,
+      });
+      expect(tx.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 1 },
+      });
+      expect(prisma.key.createMany).not.toHaveBeenCalled();
+      expect(prisma.product.update).not.toHaveBeenCalled();
+    });
+
     it('deve contabilizar falhas de criptografia', async () => {
       const keys = ['key-1', 'bad-key', 'key-3'];
       mockEncryptionProvider.encrypt
