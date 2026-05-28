@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
-import { KeyStatus, Prisma, ProductType, PrismaClientKnownRequestError } from '@prisma/client';
+import { KeyStatus, Prisma, ProductType } from '@prisma/client';
 
 export interface ImportAccountsResult {
   imported: number;
@@ -140,13 +140,7 @@ export class AccountsRepository {
 
     await this.ensureAccountProduct(productId);
 
-    const data: Array<{
-      productId: string;
-      email: string;
-      password: string;
-      metadata: Prisma.InputJsonValue;
-      status: KeyStatus;
-    }> = parsed.map(({ email, password, metadata }) => ({
+    const data: Prisma.AccountCreateManyInput[] = parsed.map(({ email, password, metadata }) => ({
       productId,
       email: this.encryptionProvider.encrypt(email),
       password: this.encryptionProvider.encrypt(password),
@@ -164,12 +158,7 @@ export class AccountsRepository {
           result.imported++;
         } catch (innerError: unknown) {
           result.failed++;
-          const message =
-            innerError instanceof PrismaClientKnownRequestError
-              ? innerError.message
-              : innerError instanceof Error
-                ? innerError.message
-                : 'Unknown error';
+          const message = innerError instanceof Error ? innerError.message : 'Unknown error';
           result.errors.push(`Failed to import: ${message}`);
         }
       }
