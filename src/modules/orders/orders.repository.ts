@@ -1,14 +1,19 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { OrderStatus, KeyStatus, ProductType, Prisma } from '@prisma/client';
+import { OrderStatus, KeyStatus, Prisma } from '@prisma/client';
+import type { ProductType } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
 import { userPublicSelect } from '@/common/prisma/user-public.select';
 import { toNumber } from '@/common/decimal';
 
+const PRODUCT_TYPE_KEY = 'KEY' as ProductType;
+const PRODUCT_TYPE_ACCOUNT = 'ACCOUNT' as ProductType;
+
 interface ItemWithProduct {
   id: string;
   productId: string;
+  quantity: number;
   product: { name: string; productType: ProductType } | null;
   key: {
     id: string;
@@ -40,7 +45,7 @@ export class OrdersRepository {
     });
 
     let availableCount: number;
-    if (product?.productType === ProductType.ACCOUNT) {
+    if (product?.productType === PRODUCT_TYPE_ACCOUNT) {
       availableCount = await tx.account.count({
         where: { productId, status: KeyStatus.AVAILABLE },
       });
@@ -88,6 +93,14 @@ export class OrdersRepository {
     const discountAmount = couponData?.discountAmount ?? 0;
     const total = subtotal - discountAmount;
 
+    const orderItems = items.flatMap(item =>
+      Array.from({ length: item.quantity }, () => ({
+        productId: item.productId,
+        quantity: 1,
+        price: productMap.get(item.productId)!.price,
+      })),
+    );
+
     const order = await this.prisma.order.create({
       data: {
         userId,
@@ -97,11 +110,7 @@ export class OrdersRepository {
         discountAmount,
         couponId: couponData?.couponId ?? null,
         items: {
-          create: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: productMap.get(item.productId)!.price,
-          })),
+          create: orderItems,
         },
       },
       include: {
@@ -270,10 +279,10 @@ export class OrdersRepository {
     }
 
     if (status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED) {
-      const reservedKeyIds = order.items.filter(item => item.keyId).map(item => item.keyId!);
-      const reservedAccountIds = order.items
-        .filter(item => item.accountId)
-        .map(item => item.accountId!);
+      const reservedKeyIds = order.items.flatMap(item => (item.keyId ? [item.keyId] : []));
+      const reservedAccountIds = order.items.flatMap(item =>
+        item.accountId ? [item.accountId] : [],
+      );
 
       if (reservedKeyIds.length > 0) {
         await this.prisma.key.updateMany({
@@ -419,9 +428,14 @@ export class OrdersRepository {
       const affectedProductIds = new Set<string>();
 
       for (const item of items) {
-        const productType = item.product?.productType ?? ProductType.KEY;
+        const productType = item.product?.productType ?? PRODUCT_TYPE_KEY;
+        if (item.quantity !== 1) {
+          throw new BadRequestException(
+            `Order item ${item.id} must represent exactly one digital unit`,
+          );
+        }
 
-        if (productType === ProductType.ACCOUNT) {
+        if (productType === PRODUCT_TYPE_ACCOUNT) {
           if (item.account) continue;
 
           const availableAccount = await tx.account.findFirst({

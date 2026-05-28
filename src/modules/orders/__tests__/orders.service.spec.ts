@@ -5,7 +5,7 @@ import { OrdersRepository } from '../orders.repository';
 import { KeysService } from '@/modules/keys/keys.service';
 import { AccountsService } from '@/modules/accounts/accounts.service';
 import { CouponsService } from '@/modules/coupons/coupons.service';
-import { OrderStatus, KeyStatus, ProductType } from '@prisma/client';
+import { OrderStatus, KeyStatus } from '@prisma/client';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -31,7 +31,7 @@ describe('OrdersService', () => {
         price: 100,
         key: null,
         account: null,
-        product: { id: 'product-id-1', name: 'Game Key', price: 100, productType: ProductType.KEY },
+        product: { id: 'product-id-1', name: 'Game Key', price: 100, productType: 'KEY' },
       },
     ],
     payment: null,
@@ -53,7 +53,7 @@ describe('OrdersService', () => {
           keyData: 'encrypted-data',
         },
         account: null,
-        product: { id: 'product-id-1', name: 'Game Key', price: 100, productType: ProductType.KEY },
+        product: { id: 'product-id-1', name: 'Game Key', price: 100, productType: 'KEY' },
       },
     ],
   };

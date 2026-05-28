@@ -184,7 +184,7 @@ export class AccountsRepository {
     };
   }
 
-  async findAvailableAccount(productId: string) {
+  findAvailableAccount(productId: string) {
     return this.prisma.account.findFirst({
       where: { productId, status: KeyStatus.AVAILABLE },
     });

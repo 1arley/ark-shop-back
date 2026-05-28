@@ -9,7 +9,12 @@ import {
   IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProductType } from '@prisma/client';
+import type { ProductType } from '@prisma/client';
+
+const PRODUCT_TYPE_VALUES = {
+  KEY: 'KEY',
+  ACCOUNT: 'ACCOUNT',
+} as const;
 
 export class AdminCreateProductDto {
   @ApiProperty({ description: 'Product name' })
@@ -48,11 +53,11 @@ export class AdminCreateProductDto {
   imageUrl?: string;
 
   @ApiPropertyOptional({
-    enum: ProductType,
+    enum: PRODUCT_TYPE_VALUES,
     description: 'Product type (KEY or ACCOUNT)',
     default: 'KEY',
   })
-  @IsEnum(ProductType)
+  @IsEnum(PRODUCT_TYPE_VALUES)
   @IsOptional()
   productType?: ProductType;
 
@@ -100,8 +105,8 @@ export class AdminUpdateProductDto {
   @IsOptional()
   imageUrl?: string;
 
-  @ApiPropertyOptional({ enum: ProductType, description: 'Product type (KEY or ACCOUNT)' })
-  @IsEnum(ProductType)
+  @ApiPropertyOptional({ enum: PRODUCT_TYPE_VALUES, description: 'Product type (KEY or ACCOUNT)' })
+  @IsEnum(PRODUCT_TYPE_VALUES)
   @IsOptional()
   productType?: ProductType;
 
