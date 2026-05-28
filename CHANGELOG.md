@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/1arley/ark-shop-back/compare/v1.25.0...v1.26.0) (2026-05-28)
+
+
+### Features
+
+* add isDemo flag to Product and Category models; update related logic and tests ([fd1a033](https://github.com/1arley/ark-shop-back/commit/fd1a033cb902b6697aa03868536fede47dfc49e1))
+
 # [1.25.0](https://github.com/1arley/ark-shop-back/compare/v1.24.1...v1.25.0) (2026-05-27)
 
 
