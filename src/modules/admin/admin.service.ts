@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { OrderStatus } from '@prisma/client';
@@ -18,6 +19,8 @@ import { AdminCreateProductDto, AdminUpdateProductDto } from './dto/admin-produc
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     private readonly adminRepository: AdminRepository,
     private readonly prisma: PrismaService,
@@ -27,6 +30,23 @@ export class AdminService {
     private readonly userService: UserService,
     private readonly sellersService: SellersService,
   ) {}
+
+  private auditAdminAction(
+    action: string,
+    actor: { id: string; role: string },
+    target: Record<string, unknown>,
+  ) {
+    this.logger.log(
+      JSON.stringify({
+        type: 'ADMIN_AUDIT',
+        action,
+        actorId: actor.id,
+        actorRole: actor.role,
+        target,
+        at: new Date().toISOString(),
+      }),
+    );
+  }
 
   async getDashboardStats() {
     return this.adminRepository.getDashboardStats();
@@ -69,15 +89,28 @@ export class AdminService {
     return this.adminRepository.findAllProducts(page, limit, search);
   }
 
-  async createProduct(dto: AdminCreateProductDto) {
-    return this.productsService.create(dto);
+  async createProduct(dto: AdminCreateProductDto, actor: { id: string; role: string }) {
+    const product = await this.productsService.create(dto);
+    this.auditAdminAction('PRODUCT_CREATE', actor, {
+      productId: product.id,
+      productType: product.productType,
+      isActive: product.isActive,
+    });
+    return product;
   }
 
-  async updateProduct(id: string, dto: AdminUpdateProductDto) {
-    return this.productsService.update(id, dto);
+  async updateProduct(id: string, dto: AdminUpdateProductDto, actor: { id: string; role: string }) {
+    const product = await this.productsService.update(id, dto);
+    this.auditAdminAction('PRODUCT_UPDATE', actor, {
+      productId: id,
+      fields: Object.keys(dto),
+      isActive: product.isActive,
+      stock: product.stock,
+    });
+    return product;
   }
 
-  async deleteProduct(id: string) {
+  async deleteProduct(id: string, actor: { id: string; role: string }) {
     const orderCount = await this.prisma.orderItem.count({
       where: { productId: id },
     });
@@ -86,10 +119,12 @@ export class AdminService {
         `Cannot delete product with ${orderCount} associated order(s). Remove or archive the product instead.`,
       );
     }
-    return this.productsService.delete(id);
+    const deleted = await this.productsService.delete(id);
+    this.auditAdminAction('PRODUCT_DELETE', actor, { productId: id });
+    return deleted;
   }
 
-  async addKeysToProduct(productId: string, keys: string[]) {
+  async addKeysToProduct(productId: string, keys: string[], actor: { id: string; role: string }) {
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
     });
@@ -97,6 +132,11 @@ export class AdminService {
       throw new NotFoundException('Product not found');
     }
     const result = await this.keysService.importKeys(productId, keys);
+    this.auditAdminAction('PRODUCT_KEYS_IMPORT', actor, {
+      productId,
+      imported: result.imported,
+      failed: result.failed,
+    });
     return { count: result.imported };
   }
 
@@ -106,8 +146,13 @@ export class AdminService {
     return this.adminRepository.findAllOrders(page, limit, status);
   }
 
-  async updateOrderStatus(id: string, status: string) {
-    return this.ordersService.updateStatus(id, status as OrderStatus);
+  async updateOrderStatus(id: string, status: string, actor: { id: string; role: string }) {
+    const updated = await this.ordersService.updateStatus(id, status as OrderStatus);
+    this.auditAdminAction('ORDER_STATUS_UPDATE', actor, {
+      orderId: id,
+      status,
+    });
+    return updated;
   }
 
   // ─── Keys ─────────────────────────────────────────────────
@@ -116,7 +161,12 @@ export class AdminService {
     return this.adminRepository.findAllKeys(page, limit, productId);
   }
 
-  async bulkImportKeys(productId: string, keysText: string, isCsv = false) {
+  async bulkImportKeys(
+    productId: string,
+    keysText: string,
+    isCsv = false,
+    actor?: { id: string; role: string },
+  ) {
     let keys: string[];
 
     if (isCsv) {
@@ -135,7 +185,16 @@ export class AdminService {
       throw new BadRequestException('No keys to import');
     }
 
-    return this.keysService.importKeys(productId, keys);
+    const result = await this.keysService.importKeys(productId, keys);
+    if (actor) {
+      this.auditAdminAction('KEYS_BULK_IMPORT', actor, {
+        productId,
+        imported: result.imported,
+        failed: result.failed,
+        isCsv,
+      });
+    }
+    return result;
   }
 
   async generateDemoData(productsCount = 5, keysPerProduct = 10) {

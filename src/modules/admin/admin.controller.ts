@@ -148,8 +148,11 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new product (admin)' })
   @ApiResponse({ status: 201, description: 'Product created' })
-  createProduct(@Body() dto: AdminCreateProductDto) {
-    return this.adminService.createProduct(dto);
+  createProduct(
+    @Body() dto: AdminCreateProductDto,
+    @CurrentUser() user: { id: string; role: string },
+  ) {
+    return this.adminService.createProduct(dto, user);
   }
 
   @Patch('products/:id')
@@ -158,8 +161,12 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a product (admin)' })
   @ApiResponse({ status: 200, description: 'Product updated' })
-  updateProduct(@Param('id') id: string, @Body() dto: AdminUpdateProductDto) {
-    return this.adminService.updateProduct(id, dto);
+  updateProduct(
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateProductDto,
+    @CurrentUser() user: { id: string; role: string },
+  ) {
+    return this.adminService.updateProduct(id, dto, user);
   }
 
   @Delete('products/:id')
@@ -169,8 +176,8 @@ export class AdminController {
   @ApiOperation({ summary: 'Delete a product (admin)' })
   @ApiResponse({ status: 200, description: 'Product deleted' })
   @ApiResponse({ status: 409, description: 'Product has associated orders' })
-  deleteProduct(@Param('id') id: string) {
-    return this.adminService.deleteProduct(id);
+  deleteProduct(@Param('id') id: string, @CurrentUser() user: { id: string; role: string }) {
+    return this.adminService.deleteProduct(id, user);
   }
 
   @Post('products/:id/keys')
@@ -179,8 +186,12 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add keys to a product (admin)' })
   @ApiResponse({ status: 201, description: 'Keys added' })
-  addKeys(@Param('id') productId: string, @Body() dto: AddKeysDto) {
-    return this.adminService.addKeysToProduct(productId, dto.keys);
+  addKeys(
+    @Param('id') productId: string,
+    @Body() dto: AddKeysDto,
+    @CurrentUser() user: { id: string; role: string },
+  ) {
+    return this.adminService.addKeysToProduct(productId, dto.keys, user);
   }
 
   // ─── Orders ───────────────────────────────────────────────
@@ -209,8 +220,12 @@ export class AdminController {
   @ApiOperation({ summary: 'Update order status (admin)' })
   @ApiResponse({ status: 200, description: 'Order status updated' })
   @ApiResponse({ status: 400, description: 'Invalid status transition' })
-  updateOrderStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
-    return this.adminService.updateOrderStatus(id, dto.status);
+  updateOrderStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderStatusDto,
+    @CurrentUser() user: { id: string; role: string },
+  ) {
+    return this.adminService.updateOrderStatus(id, dto.status, user);
   }
 
   // ─── Keys ─────────────────────────────────────────────────
@@ -242,8 +257,9 @@ export class AdminController {
     @Body('productId') productId: string,
     @Body('keysText') keysText: string,
     @Body('isCsv', new DefaultValuePipe(false), ParseBoolPipe) isCsv: boolean,
+    @CurrentUser() user: { id: string; role: string },
   ) {
-    return this.adminService.bulkImportKeys(productId, keysText, isCsv);
+    return this.adminService.bulkImportKeys(productId, keysText, isCsv, user);
   }
 
   // ─── Sellers ────────────────────────────────────────────────

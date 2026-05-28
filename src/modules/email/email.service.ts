@@ -328,6 +328,53 @@ Se voce nao solicitou esta redefinicao, ignore este email.
     });
   }
 
+  async sendEmailChangeConfirmation(to: string, code: string, name: string): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #e67e22;">Confirmacao de Alteracao de Email</h1>
+        <p>Ola ${name},</p>
+        <p>Voce solicitou a alteracao do seu email na D'Ark Games Store.</p>
+
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+          <p style="font-size: 14px; color: #666; margin-bottom: 10px;">Seu codigo de confirmacao:</p>
+          <p style="font-size: 32px; font-weight: bold; color: #e67e22; letter-spacing: 8px; margin: 0;">${code}</p>
+        </div>
+
+        <p style="color: #666; font-size: 14px;">
+          Use este codigo para confirmar a alteracao do seu email.
+          Este codigo expira em 10 minutos.
+        </p>
+
+        <p style="color: #999; font-size: 12px;">
+          Se voce nao solicitou esta alteracao, ignore este email.
+          Sua conta permanecera segura com o email atual.
+        </p>
+      </div>
+    `;
+
+    const text = `
+Confirmacao de Alteracao de Email
+
+Ola ${name},
+Voce solicitou a alteracao do seu email na D'Ark Games Store.
+
+Seu codigo de confirmacao: ${code}
+
+Use este codigo para confirmar a alteracao do seu email.
+Este codigo expira em 10 minutos.
+
+Se voce nao solicitou esta alteracao, ignore este email.
+Sua conta permanecera segura com o email atual.
+    `;
+
+    return this.send({
+      to,
+      subject: "Confirmacao de Alteracao de Email - D'Ark Games Store",
+      html,
+      text,
+    });
+  }
+
   async sendPaymentReceipt(
     to: string,
     payment: Payment & { order?: Order },
