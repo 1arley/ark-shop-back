@@ -452,9 +452,7 @@ describe('ProductsRepository', () => {
       const updateDto = { stock: 50, isActive: true };
 
       mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1' });
-      mockPrismaService.key.count
-        .mockResolvedValueOnce(8)
-        .mockResolvedValueOnce(3);
+      mockPrismaService.key.count.mockResolvedValueOnce(8).mockResolvedValueOnce(3);
       mockPrismaService.product.update.mockResolvedValue({
         id: 'prod-1',
         ...updateDto,

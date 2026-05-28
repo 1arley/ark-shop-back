@@ -212,10 +212,12 @@ export class AdminService {
   }
 
   async clearDemoData() {
-    const demoProductIds = await this.prisma.product.findMany({
-      where: { isDemo: true },
-      select: { id: true },
-    }).then((products) => products.map((p) => p.id));
+    const demoProductIds = await this.prisma.product
+      .findMany({
+        where: { isDemo: true },
+        select: { id: true },
+      })
+      .then(products => products.map(p => p.id));
 
     const keysDeleted = await this.prisma.key.deleteMany({
       where: { productId: { in: demoProductIds } },
