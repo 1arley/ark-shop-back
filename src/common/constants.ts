@@ -23,6 +23,8 @@ export const EMAIL_VERIFICATION_CODE_LENGTH = 6;
 export const EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
 export const PASSWORD_RESET_CODE_LENGTH = 6;
 export const PASSWORD_RESET_CODE_EXPIRY_MINUTES = 10;
+export const EMAIL_CHANGE_CODE_LENGTH = 6;
+export const EMAIL_CHANGE_EXPIRY_MINUTES = 10;
 
 // ─── Database ──────────────────────────────────────────────────
 export const DB_CONNECTION_TIMEOUT_MS = 10_000;

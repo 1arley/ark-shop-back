@@ -41,9 +41,11 @@ const sentryModules = process.env.SENTRY_DSN ? [SentryModule.forRoot()] : [];
     ...sentryModules,
     ConfigModule.forRoot({
       envFilePath: [
-        '.env',
-        ...(process.env.NODE_ENV !== 'production' ? ['.env.local'] : []),
-        ...(process.env.NODE_ENV === 'test' ? ['.env.test'] : []),
+        ...(process.env.NODE_ENV === 'test'
+          ? ['.env.test', '.env.local', '.env']
+          : process.env.NODE_ENV !== 'production'
+            ? ['.env.local', '.env']
+            : ['.env']),
       ],
       isGlobal: true,
       validate: validateEnv,
