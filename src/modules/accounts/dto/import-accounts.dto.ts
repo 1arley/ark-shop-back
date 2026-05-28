@@ -7,10 +7,10 @@ export class ImportAccountsDto {
   productId!: string;
 
   @ApiProperty({
-    description:
-      'Accounts in format "email:password:jsonMetadata?" one per line, or JSON array of {email, password, metadata?}',
+    description: 'Accounts in format "email:password:jsonMetadata?" one per array entry',
   })
   @IsArray()
   @ArrayNotEmpty()
+  @IsString({ each: true })
   accounts!: string[];
 }

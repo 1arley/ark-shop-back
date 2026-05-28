@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsEnum } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { KeyStatus } from '@prisma/client';
 
@@ -13,9 +13,9 @@ export class UpdateAccountDto {
   @IsString()
   password?: string;
 
-  @ApiPropertyOptional({ description: 'Account status' })
+  @ApiPropertyOptional({ description: 'Account status', enum: KeyStatus })
   @IsOptional()
-  @IsString()
+  @IsEnum(KeyStatus)
   status?: KeyStatus;
 
   @ApiPropertyOptional({ description: 'Additional metadata (JSON object)' })
