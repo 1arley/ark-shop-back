@@ -379,8 +379,14 @@ export class OrdersRepository {
   }
 
   async reserveAvailableAccount(productId: string, orderItemId: string) {
-    const result = await this.prisma.account.updateMany({
+    const availableAccount = await this.prisma.account.findFirst({
       where: { productId, status: KeyStatus.AVAILABLE },
+    });
+
+    if (!availableAccount) return null;
+
+    const result = await this.prisma.account.updateMany({
+      where: { id: availableAccount.id, status: KeyStatus.AVAILABLE },
       data: { status: KeyStatus.RESERVED, orderItemId },
     });
 

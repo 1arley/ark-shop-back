@@ -711,6 +711,56 @@ describe('OrdersRepository', () => {
     });
   });
 
+  describe('reserveAvailableAccount', () => {
+    it('deve reservar somente a account selecionada com sucesso', async () => {
+      const availableAccount = {
+        id: 'account-id-1',
+        productId: 'product-id-1',
+        status: KeyStatus.AVAILABLE,
+      };
+      const reservedAccount = {
+        ...availableAccount,
+        status: KeyStatus.RESERVED,
+        orderItemId: 'item-id-1',
+        product: mockProduct,
+      };
+
+      mockPrismaService.account.findFirst
+        .mockResolvedValueOnce(availableAccount)
+        .mockResolvedValueOnce(reservedAccount);
+      mockPrismaService.account.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await repository.reserveAvailableAccount('product-id-1', 'item-id-1');
+
+      expect(prisma.account.findFirst).toHaveBeenNthCalledWith(1, {
+        where: {
+          productId: 'product-id-1',
+          status: KeyStatus.AVAILABLE,
+        },
+      });
+      expect(prisma.account.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'account-id-1',
+          status: KeyStatus.AVAILABLE,
+        },
+        data: {
+          status: KeyStatus.RESERVED,
+          orderItemId: 'item-id-1',
+        },
+      });
+      expect(result).toEqual(reservedAccount);
+    });
+
+    it('deve retornar null quando nao ha accounts disponiveis', async () => {
+      mockPrismaService.account.findFirst.mockResolvedValue(null);
+
+      const result = await repository.reserveAvailableAccount('product-id-1', 'item-id-1');
+
+      expect(result).toBeNull();
+      expect(prisma.account.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
   // ─── deliverKey ───────────────────────────────────────────────────
   describe('deliverKey', () => {
     it('deve marcar chave como entregue e retornar com dados descriptografados', async () => {
