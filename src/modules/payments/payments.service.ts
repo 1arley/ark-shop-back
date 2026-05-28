@@ -57,6 +57,22 @@ export class PaymentsService {
 
     // If PIX, generate QR code directly (no duplicate payment record)
     if (method === PaymentMethod.PIX) {
+      const existingPayment = await this.paymentsRepository.findByOrderId(orderId);
+      if (existingPayment) {
+        if (existingPayment.status !== PaymentStatus.PENDING) {
+          throw new BadRequestException(
+            `Cannot create a new PIX for payment with status ${existingPayment.status}`,
+          );
+        }
+
+        const expiresAt = existingPayment.expiresAt
+          ? new Date(existingPayment.expiresAt).getTime()
+          : null;
+        if (!expiresAt || expiresAt > Date.now()) {
+          return existingPayment;
+        }
+      }
+
       const providerImpl = this.providerFactory.getProvider(selectedProvider);
 
       const userEmail = order.user.email ?? undefined;
@@ -74,13 +90,30 @@ export class PaymentsService {
       });
 
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-      return this.paymentsRepository.createPixPayment(orderId, userId, amount, selectedProvider, {
+      const pixData = {
         providerTxId: paymentIntent.id,
         pixQrCode: paymentIntent.providerData?.pix_qr_code || '',
         pixCode: paymentIntent.providerData?.pix_copy_paste || '',
         expiresAt,
-      });
+      };
+
+      if (existingPayment) {
+        return this.paymentsRepository.updatePixPaymentForOrder(
+          orderId,
+          userId,
+          amount,
+          selectedProvider,
+          pixData,
+        );
+      }
+
+      return this.paymentsRepository.createPixPayment(
+        orderId,
+        userId,
+        amount,
+        selectedProvider,
+        pixData,
+      );
     }
 
     // For other payment methods, create standard payment record

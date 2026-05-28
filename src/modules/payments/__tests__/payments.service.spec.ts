@@ -51,6 +51,7 @@ describe('PaymentsService', () => {
   const mockPaymentsRepository = {
     createPayment: jest.fn(),
     createPixPayment: jest.fn(),
+    updatePixPaymentForOrder: jest.fn(),
     findById: jest.fn(),
     findByOrderId: jest.fn(),
     findByProviderTxId: jest.fn(),
@@ -93,6 +94,7 @@ describe('PaymentsService', () => {
     ordersService = module.get<OrdersService>(OrdersService);
 
     jest.clearAllMocks();
+    mockPaymentsRepository.findByOrderId.mockResolvedValue(null);
   });
 
   // ─── createPayment ───────────────────────────────────────────────
@@ -160,6 +162,91 @@ describe('PaymentsService', () => {
       );
       expect(mockPaymentsRepository.createPixPayment).toHaveBeenCalled();
       expect(result).toEqual(mockPayment);
+    });
+
+    it('should return existing pending PIX payment when it has not expired', async () => {
+      const activePayment = {
+        ...mockPayment,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      };
+
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1', email: 'test@test.com', name: 'Test User' },
+      });
+      mockPaymentsRepository.findByOrderId.mockResolvedValue(activePayment);
+
+      const result = await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        PaymentMethod.PIX,
+      );
+
+      expect(mockPaymentProvider.createPaymentIntent).not.toHaveBeenCalled();
+      expect(mockPaymentsRepository.createPixPayment).not.toHaveBeenCalled();
+      expect(result).toEqual(activePayment);
+    });
+
+    it('should regenerate expired pending PIX payment by updating the existing record', async () => {
+      const fixedDate = Date.parse('2026-01-01T00:00:00.000Z');
+      jest.useFakeTimers();
+      jest.setSystemTime(fixedDate);
+
+      const expiredPayment = {
+        ...mockPayment,
+        expiresAt: new Date('2025-12-31T23:59:00.000Z'),
+      };
+      const paymentIntent = {
+        id: 'asaas-pix-2',
+        providerData: {
+          pix_qr_code: 'new-qr-base64',
+          pix_copy_paste: 'new-pix-code',
+        },
+      };
+      const regeneratedPayment = {
+        ...mockPayment,
+        providerTxId: 'asaas-pix-2',
+        pixQrCode: 'new-qr-base64',
+        pixCode: 'new-pix-code',
+        expiresAt: new Date('2026-01-01T00:15:00.000Z'),
+      };
+
+      mockOrdersService.findById.mockResolvedValue({
+        id: 'order-id-1',
+        total: 100,
+        user: { id: 'user-id-1', email: 'test@test.com', name: 'Test User' },
+      });
+      mockPaymentsRepository.findByOrderId.mockResolvedValue(expiredPayment);
+      mockPaymentProvider.createPaymentIntent.mockResolvedValue(paymentIntent);
+      mockPaymentsRepository.updatePixPaymentForOrder.mockResolvedValue(regeneratedPayment);
+
+      const result = await service.createPayment(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        PaymentMethod.PIX,
+      );
+
+      expect(mockPaymentsRepository.createPixPayment).not.toHaveBeenCalled();
+      expect(mockPaymentsRepository.updatePixPaymentForOrder).toHaveBeenCalledWith(
+        'order-id-1',
+        'user-id-1',
+        100,
+        PaymentProvider.ASAAS,
+        expect.objectContaining({
+          providerTxId: 'asaas-pix-2',
+          pixQrCode: 'new-qr-base64',
+          pixCode: 'new-pix-code',
+          expiresAt: new Date('2026-01-01T00:15:00.000Z'),
+        }),
+      );
+      expect(result).toEqual(regeneratedPayment);
+
+      jest.useRealTimers();
     });
 
     it('should create PIX payment com dados do pagador', async () => {
