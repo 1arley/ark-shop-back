@@ -7,8 +7,8 @@ import { PrismaService } from '@/prisma/prisma.service';
 
 describe('AccountsRepository', () => {
   let repository: AccountsRepository;
-
   const mockPrismaService = {
+    $transaction: jest.fn(),
     product: {
       findUnique: jest.fn(),
       update: jest.fn(),

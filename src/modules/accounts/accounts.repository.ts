@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
-import { KeyStatus, Prisma, ProductType } from '@prisma/client';
+import { KeyStatus, Prisma, ProductType, PrismaClientKnownRequestError } from '@prisma/client';
 
 export interface ImportAccountsResult {
   imported: number;
@@ -105,7 +105,7 @@ export class AccountsRepository {
           productId,
           email: encryptedEmail,
           password: encryptedPassword,
-          metadata: (metadata ?? undefined) as any,
+          metadata: metadata ?? Prisma.DbNull,
           status: KeyStatus.AVAILABLE,
         },
         include: { product: true },
@@ -117,8 +117,6 @@ export class AccountsRepository {
   }
 
   async createBatch(productId: string, rawLines: string[]): Promise<ImportAccountsResult> {
-    await this.ensureAccountProduct(productId);
-
     const result: ImportAccountsResult = {
       imported: 0,
       failed: 0,
@@ -140,7 +138,15 @@ export class AccountsRepository {
       return result;
     }
 
-    const data: any[] = parsed.map(({ email, password, metadata }) => ({
+    await this.ensureAccountProduct(productId);
+
+    const data: Array<{
+      productId: string;
+      email: string;
+      password: string;
+      metadata: Prisma.InputJsonValue;
+      status: KeyStatus;
+    }> = parsed.map(({ email, password, metadata }) => ({
       productId,
       email: this.encryptionProvider.encrypt(email),
       password: this.encryptionProvider.encrypt(password),
@@ -151,14 +157,20 @@ export class AccountsRepository {
     try {
       await this.prisma.account.createMany({ data, skipDuplicates: false });
       result.imported = parsed.length;
-    } catch {
+    } catch (_error) {
       for (const entry of data) {
         try {
           await this.prisma.account.create({ data: entry });
           result.imported++;
-        } catch (innerError: any) {
+        } catch (innerError: unknown) {
           result.failed++;
-          result.errors.push(`Failed to import: ${innerError.message || 'Unknown error'}`);
+          const message =
+            innerError instanceof PrismaClientKnownRequestError
+              ? innerError.message
+              : innerError instanceof Error
+                ? innerError.message
+                : 'Unknown error';
+          result.errors.push(`Failed to import: ${message}`);
         }
       }
     }
