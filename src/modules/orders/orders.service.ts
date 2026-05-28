@@ -3,6 +3,7 @@ import { OrdersRepository } from './orders.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, KeyStatus } from '@prisma/client';
 import { KeysService } from '@/modules/keys/keys.service';
+import { AccountsService } from '@/modules/accounts/accounts.service';
 import { CouponsService } from '@/modules/coupons/coupons.service';
 import { toNumber } from '@/common/decimal';
 
@@ -13,6 +14,7 @@ export class OrdersService {
   constructor(
     private readonly ordersRepository: OrdersRepository,
     private readonly keysService: KeysService,
+    private readonly accountsService: AccountsService,
     private readonly couponsService: CouponsService,
   ) {}
 
@@ -21,9 +23,7 @@ export class OrdersService {
       | { couponId: string; discountAmount: number; maxUses: number | null }
       | undefined;
 
-    // Validate and calculate discount if coupon code is provided
     if (createOrderDto.couponCode) {
-      // First calculate subtotal to validate coupon
       const subtotal = await this.calculateSubtotal(createOrderDto);
 
       const validationResult = await this.couponsService.validateAndCalculate({
@@ -44,17 +44,12 @@ export class OrdersService {
 
     const order = await this.ordersRepository.create(createOrderDto, userId, couponData);
 
-    // Mark coupon as used atomically after successful order creation.
-    // Uses conditional increment to prevent TOCTOU race conditions where
-    // concurrent orders could exceed maxUses.
     if (couponData) {
       const incremented = await this.couponsService.markAsUsedIfAvailable(
         couponData.couponId,
         couponData.maxUses,
       );
       if (!incremented) {
-        // Coupon reached maxUses between validation and this increment — order still valid
-        // but coupon discount was applied. Log for audit.
         this.logger.warn(
           `Coupon ${createOrderDto.couponCode} reached maxUses during order ${order.id} — ` +
             'discount was applied but usage count could not be incremented',
@@ -69,9 +64,6 @@ export class OrdersService {
     return order;
   }
 
-  /**
-   * Calculate subtotal from order items (without discount).
-   */
   private async calculateSubtotal(createOrderDto: CreateOrderDto): Promise<number> {
     const productIds = createOrderDto.items.map(i => i.productId);
     const products = await this.ordersRepository.getProductsByIds(productIds);
@@ -113,10 +105,6 @@ export class OrdersService {
     return this.ordersRepository.getRecentOrders(limit);
   }
 
-  /**
-   * Deliver order - reserve keys and mark as delivered
-   * This is the critical delivery flow
-   */
   async deliverOrder(orderId: string) {
     const order = await this.ordersRepository.findById(orderId);
     if (!order) {
@@ -129,37 +117,27 @@ export class OrdersService {
       );
     }
 
-    // Wrap key reservation in a transaction to prevent TOCTOU race conditions
     return this.ordersRepository.deliverOrderAtomic(orderId, order.items);
   }
 
-  /**
-   * Download keys for a delivered order
-   * Only the order owner can download keys
-   * Returns decrypted key data
-   */
-  async downloadKeys(orderId: string, userId: string) {
+  async downloadItems(orderId: string, userId: string) {
     const order = await this.ordersRepository.findById(orderId);
 
-    // Verify ownership
-    if (order.user.id !== userId) {
-      throw new ForbiddenException('You can only download keys from your own orders');
+    if ((order as any).user?.id !== userId) {
+      throw new ForbiddenException('You can only download items from your own orders');
     }
 
     if (order.status !== OrderStatus.DELIVERED) {
       throw new BadRequestException(
-        'Order not delivered yet. Keys will be available after delivery.',
+        'Order not delivered yet. Items will be available after delivery.',
       );
     }
 
-    // Collect delivered keys with decrypted data
     const deliveredKeys = await Promise.all(
       order.items
-        .filter(item => item.key && item.key.status === KeyStatus.DELIVERED)
-        .map(async item => {
-          // Read-only decrypt (no status update needed — keys are already delivered)
+        .filter((item: any) => item.key && item.key.status === KeyStatus.DELIVERED)
+        .map(async (item: any) => {
           const decryptedKey = await this.keysService.getDecryptedKey(item.key!.id);
-
           return {
             productName: item.product?.name ?? 'Unknown',
             keyId: item.key!.id,
@@ -169,10 +147,28 @@ export class OrdersService {
         }),
     );
 
+    const deliveredAccounts = await Promise.all(
+      order.items
+        .filter((item: any) => item.account && item.account.status === KeyStatus.DELIVERED)
+        .map(async (item: any) => {
+          const decrypted = await this.accountsService.getDecryptedAccount(item.account!.id);
+          return {
+            productName: item.product?.name ?? 'Unknown',
+            accountId: item.account!.id,
+            deliveredAt: item.account!.deliveredAt,
+            email: decrypted.email,
+            password: decrypted.password,
+            metadata: decrypted.metadata,
+            instructions: item.product?.instructions ?? null,
+          };
+        }),
+    );
+
     return {
       orderId: order.id,
       status: order.status,
       keys: deliveredKeys,
+      accounts: deliveredAccounts,
     };
   }
 }

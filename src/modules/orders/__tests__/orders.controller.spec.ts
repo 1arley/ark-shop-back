@@ -57,7 +57,7 @@ describe('OrdersController', () => {
     cancel: jest.fn(),
     getRecentOrders: jest.fn(),
     deliverOrder: jest.fn(),
-    downloadKeys: jest.fn(),
+    downloadItems: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -200,30 +200,30 @@ describe('OrdersController', () => {
           },
         ],
       };
-      mockOrdersService.downloadKeys.mockResolvedValue(downloadResult);
+      mockOrdersService.downloadItems.mockResolvedValue(downloadResult);
 
-      const result = await controller.downloadKeys('order-id-1', mockUser);
+      const result = await controller.downloadItems('order-id-1', mockUser);
 
-      expect(ordersService.downloadKeys).toHaveBeenCalledWith('order-id-1', mockUser.id);
+      expect(ordersService.downloadItems).toHaveBeenCalledWith('order-id-1', mockUser.id);
       expect(result).toEqual(downloadResult);
     });
 
     it('deve lancar BadRequestException quando pedido nao esta entregue', async () => {
-      mockOrdersService.downloadKeys.mockRejectedValue(
+      mockOrdersService.downloadItems.mockRejectedValue(
         new BadRequestException('Order not delivered yet'),
       );
 
-      await expect(controller.downloadKeys('order-id-1', mockUser)).rejects.toThrow(
+      await expect(controller.downloadItems('order-id-1', mockUser)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('deve lancar ForbiddenException quando usuario nao e proprietario', async () => {
-      mockOrdersService.downloadKeys.mockRejectedValue(
+      mockOrdersService.downloadItems.mockRejectedValue(
         new ForbiddenException('You can only download keys from your own orders'),
       );
 
-      await expect(controller.downloadKeys('order-id-1', mockUser)).rejects.toThrow(
+      await expect(controller.downloadItems('order-id-1', mockUser)).rejects.toThrow(
         ForbiddenException,
       );
     });

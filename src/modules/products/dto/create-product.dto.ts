@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsNumber, Min, IsBoolean, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, IsBoolean, IsUUID, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ProductType } from '@prisma/client';
 
 export class CreateProductDto {
   @ApiProperty({ description: 'Product name' })
@@ -36,4 +37,18 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   imageUrl?: string;
+
+  @ApiPropertyOptional({
+    enum: ProductType,
+    description: 'Product type (KEY or ACCOUNT)',
+    default: 'KEY',
+  })
+  @IsEnum(ProductType)
+  @IsOptional()
+  productType?: ProductType;
+
+  @ApiPropertyOptional({ description: 'Post-purchase instructions for accounts' })
+  @IsString()
+  @IsOptional()
+  instructions?: string;
 }

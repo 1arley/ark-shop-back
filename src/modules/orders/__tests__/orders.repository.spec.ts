@@ -3,7 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { OrdersRepository } from '../orders.repository';
 import { PrismaService } from '@/prisma/prisma.service';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
-import { OrderStatus, KeyStatus } from '@prisma/client';
+import { OrderStatus, KeyStatus, ProductType } from '@prisma/client';
 
 describe('OrdersRepository', () => {
   let repository: OrdersRepository;
@@ -711,7 +711,8 @@ describe('OrdersRepository', () => {
           id: 'item-id-1',
           productId: 'product-id-1',
           key: null,
-          product: { name: 'Game Key' },
+          account: null,
+          product: { name: 'Game Key', productType: ProductType.KEY },
         },
       ];
       const mockTx = {
@@ -725,6 +726,7 @@ describe('OrdersRepository', () => {
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
         product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: ProductType.KEY }),
           update: jest.fn().mockResolvedValue({}),
         },
         orderItem: {
@@ -770,7 +772,8 @@ describe('OrdersRepository', () => {
           id: 'item-id-1',
           productId: 'product-id-1',
           key: null,
-          product: { name: 'Game Key' },
+          account: null,
+          product: { name: 'Game Key', productType: ProductType.KEY },
         },
       ];
       const mockTx = {
@@ -783,7 +786,10 @@ describe('OrdersRepository', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           updateMany: jest.fn(),
         },
-        product: { update: jest.fn() },
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: ProductType.KEY }),
+          update: jest.fn(),
+        },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
@@ -801,7 +807,8 @@ describe('OrdersRepository', () => {
           id: 'item-id-1',
           productId: 'product-id-1',
           key: null,
-          product: { name: 'Game Key' },
+          account: null,
+          product: { name: 'Game Key', productType: ProductType.KEY },
         },
       ];
       const mockTx = {
@@ -814,7 +821,10 @@ describe('OrdersRepository', () => {
           findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
           updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         },
-        product: { update: jest.fn() },
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: ProductType.KEY }),
+          update: jest.fn(),
+        },
         orderItem: { update: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
@@ -839,7 +849,8 @@ describe('OrdersRepository', () => {
             updatedAt: new Date(),
             deliveredAt: null,
           },
-          product: { name: 'Game Key' },
+          account: null,
+          product: { name: 'Game Key', productType: ProductType.KEY },
         },
       ];
       const mockTx = {
@@ -848,7 +859,10 @@ describe('OrdersRepository', () => {
           update: jest.fn().mockResolvedValue({ ...mockOrder, status: OrderStatus.DELIVERED }),
         },
         key: { count: jest.fn(), findFirst: jest.fn(), updateMany: jest.fn() },
-        product: { update: jest.fn() },
+        product: {
+          findUnique: jest.fn().mockResolvedValue({ productType: ProductType.KEY }),
+          update: jest.fn(),
+        },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
