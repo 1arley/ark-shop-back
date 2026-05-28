@@ -15,11 +15,13 @@ import { RegisterDto } from '@/auth/dto/register.dto';
 import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
+
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '@/modules/email/email.service';
 
 import type { StringValue } from 'ms';
 import type { JwtPayload } from '@/auth/interfaces/jwt-payload.interface';
+import { ConfirmEmailChangeDto } from '@/auth/dto/confirm-email-change.dto';
 import { userPublicSelect } from '@/common/prisma/user-public.select';
 import {
   DEFAULT_BCRYPT_SALT_ROUNDS,
@@ -30,6 +32,8 @@ import {
   PASSWORD_RESET_CODE_LENGTH,
   PASSWORD_RESET_CODE_EXPIRY_MINUTES,
   MINUTE_IN_MS,
+  EMAIL_CHANGE_CODE_LENGTH,
+  EMAIL_CHANGE_EXPIRY_MINUTES,
 } from '@/common/constants';
 
 @Injectable()
@@ -114,18 +118,22 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password, rememberMe } = loginDto;
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: { ...userPublicSelect, password: true },
     });
 
     if (!user) {
+      this.logger.debug(`Login failed: user not found for ${normalizedEmail}`);
       throw new UnauthorizedException('Invalid credentials.');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      this.logger.debug(`Login failed: password mismatch for ${normalizedEmail}`);
       throw new UnauthorizedException('Invalid credentials.');
     }
 
@@ -660,6 +668,132 @@ export class AuthService {
       });
 
     return { message: 'Se o email existir, um novo codigo sera enviado.' };
+  }
+
+  async requestEmailChange(userId: string, newEmail: string) {
+    const normalizedNewEmail = newEmail.trim().toLowerCase();
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario nao encontrado.');
+    }
+
+    if (user.email === normalizedNewEmail) {
+      throw new BadRequestException('O novo email deve ser diferente do email atual.');
+    }
+
+    const emailInUse = await this.prisma.user.findUnique({
+      where: { email: normalizedNewEmail },
+      select: { id: true },
+    });
+
+    if (emailInUse) {
+      throw new ConflictException('Este email ja esta em uso.');
+    }
+
+    await this.prisma.emailChangeRequest.deleteMany({
+      where: {
+        userId,
+        usedAt: null,
+      },
+    });
+
+    const code = this.generateNumericCode(EMAIL_CHANGE_CODE_LENGTH);
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    const expiresAt = new Date(Date.now() + EMAIL_CHANGE_EXPIRY_MINUTES * MINUTE_IN_MS);
+
+    await this.prisma.emailChangeRequest.create({
+      data: {
+        userId,
+        newEmail: normalizedNewEmail,
+        code: codeHash,
+        expiresAt,
+      },
+    });
+
+    this.emailService
+      .sendEmailChangeConfirmation(normalizedNewEmail, code, user.name || 'Usuario')
+      .then(() => {
+        this.emailFailureCount = 0;
+      })
+      .catch(err => {
+        this.emailFailureCount++;
+        const errorMessage = err instanceof Error ? err.message : err;
+        if (this.emailFailureCount >= this.EMAIL_FAILURE_THRESHOLD) {
+          this.logger.error(`Email service failed ${this.emailFailureCount} times consecutively`);
+          this.emailFailureCount = 0;
+        } else {
+          this.logger.warn(
+            `Failed to send email change confirmation: ${errorMessage} (${this.emailFailureCount}/${this.EMAIL_FAILURE_THRESHOLD})`,
+          );
+        }
+      });
+
+    return {
+      message: 'Um codigo de confirmacao foi enviado para o novo email.',
+    };
+  }
+
+  async confirmEmailChange(userId: string, dto: ConfirmEmailChangeDto) {
+    const { newEmail, code } = dto;
+    const normalizedNewEmail = newEmail.trim().toLowerCase();
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario nao encontrado.');
+    }
+
+    if (user.email === normalizedNewEmail) {
+      throw new BadRequestException('O novo email deve ser diferente do email atual.');
+    }
+
+    const emailInUse = await this.prisma.user.findUnique({
+      where: { email: normalizedNewEmail },
+      select: { id: true },
+    });
+
+    if (emailInUse) {
+      throw new ConflictException('Este email ja esta em uso.');
+    }
+
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+    const changeRequest = await this.prisma.emailChangeRequest.findFirst({
+      where: {
+        userId,
+        newEmail: normalizedNewEmail,
+        code: codeHash,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!changeRequest) {
+      throw new BadRequestException('Codigo de confirmacao invalido ou expirado.');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.emailChangeRequest.update({
+        where: { id: changeRequest.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { email: normalizedNewEmail },
+      }),
+    ]);
+
+    return {
+      message: 'Email alterado com sucesso.',
+    };
   }
 
   /**

@@ -27,6 +27,8 @@ import { ForgotPasswordDto } from '@/auth/dto/forgot-password.dto';
 import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { VerifyEmailDto } from '@/auth/dto/verify-email.dto';
 import { ResetPasswordWithCodeDto } from '@/auth/dto/reset-password-code.dto';
+import { RequestEmailChangeDto } from '@/auth/dto/request-email-change.dto';
+import { ConfirmEmailChangeDto } from '@/auth/dto/confirm-email-change.dto';
 import { SkipEmailVerification } from '@/auth/decorators/skip-email-verification.decorator';
 import { Public } from '@/auth/decorators/public.decorator';
 
@@ -171,7 +173,7 @@ export class AuthController {
     status: 200,
     description: 'Se o email existir, um link de redefinição será enviado.',
   })
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);
   }
 
@@ -182,7 +184,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Redefinir senha com token' })
   @ApiResponse({ status: 200, description: 'Password reset successfully.' })
   @ApiResponse({ status: 400, description: 'Invalid or expired token.' })
-  async resetPassword(@Body() dto: ResetPasswordDto) {
+  resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
 
@@ -196,7 +198,7 @@ export class AuthController {
     status: 200,
     description: 'If the email exists, a reset code will be sent.',
   })
-  async forgotPasswordWithCode(@Body() dto: ForgotPasswordDto) {
+  forgotPasswordWithCode(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPasswordWithCode(dto.email);
   }
 
@@ -207,7 +209,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Redefinir senha com codigo OTP' })
   @ApiResponse({ status: 200, description: 'Password reset successfully.' })
   @ApiResponse({ status: 400, description: 'Invalid or expired code.' })
-  async resetPasswordWithCode(@Body() dto: ResetPasswordWithCodeDto) {
+  resetPasswordWithCode(@Body() dto: ResetPasswordWithCodeDto) {
     return this.authService.resetPasswordWithCode(dto);
   }
 
@@ -218,7 +220,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Verificar email com codigo recebido' })
   @ApiResponse({ status: 200, description: 'Email verified successfully.' })
   @ApiResponse({ status: 400, description: 'Invalid or expired verification code.' })
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
+  verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto);
   }
 
@@ -232,10 +234,36 @@ export class AuthController {
     status: 200,
     description: 'Se o email existir, um novo codigo sera enviado.',
   })
-  async resendVerification(@Body() dto: ForgotPasswordDto) {
+  resendVerification(@Body() dto: ForgotPasswordDto) {
     return this.authService.resendVerificationEmail(dto.email);
   }
 
+  @Post('change-email')
+  @SkipEmailVerification()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Solicitar alteracao de email' })
+  @ApiResponse({
+    status: 200,
+    description: 'Codigo de confirmacao enviado para o novo email.',
+  })
+  @ApiResponse({ status: 409, description: 'Email ja em uso.' })
+  requestEmailChange(@Req() req: AuthenticatedRequest, @Body() dto: RequestEmailChangeDto) {
+    return this.authService.requestEmailChange(req.user.id, dto.newEmail);
+  }
+
+  @Post('confirm-email-change')
+  @SkipEmailVerification()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Confirmar alteracao de email com codigo' })
+  @ApiResponse({ status: 200, description: 'Email alterado com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Codigo invalido ou expirado.' })
+  confirmEmailChange(@Req() req: AuthenticatedRequest, @Body() dto: ConfirmEmailChangeDto) {
+    return this.authService.confirmEmailChange(req.user.id, dto);
+  }
   @Get('me')
   @UseGuards(EmailVerifiedGuard)
   @ApiBearerAuth()
@@ -244,7 +272,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Current user profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Email not verified' })
-  async getMe(@Req() req: AuthenticatedRequest) {
+  getMe(@Req() req: AuthenticatedRequest) {
     return this.authService.validateUser(req.user.id);
   }
 
@@ -256,7 +284,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get email verification status' })
   @ApiResponse({ status: 200, description: 'Verification status' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getVerificationStatus(@Req() req: AuthenticatedRequest) {
+  getVerificationStatus(@Req() req: AuthenticatedRequest) {
     return this.authService.getVerificationStatus(req.user.id);
   }
 }

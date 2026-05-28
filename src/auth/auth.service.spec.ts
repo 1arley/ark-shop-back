@@ -51,6 +51,12 @@ describe('AuthService', () => {
       deleteMany: jest.fn(),
       update: jest.fn(),
     },
+    emailChangeRequest: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      deleteMany: jest.fn(),
+      update: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -58,6 +64,7 @@ describe('AuthService', () => {
     sendEmailVerification: jest.fn().mockResolvedValue(true),
     sendPasswordReset: jest.fn().mockResolvedValue(true),
     sendPasswordResetWithCode: jest.fn().mockResolvedValue(true),
+    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(true),
   };
 
   beforeEach(async () => {
@@ -804,6 +811,113 @@ describe('AuthService', () => {
       await expect(service.revokeRefreshToken('invalid-token')).rejects.toThrow(
         'Refresh token não encontrado.',
       );
+    });
+  });
+
+  describe('requestEmailChange', () => {
+    it('deve criar solicitacao com email normalizado e enviar codigo ao novo email', async () => {
+      const user = {
+        id: '1',
+        name: 'Test User',
+        email: 'test@example.com',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(user).mockResolvedValueOnce(null);
+      mockPrismaService.emailChangeRequest.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.emailChangeRequest.create.mockResolvedValue({ id: 'ecr1' });
+
+      const result = await service.requestEmailChange('1', ' New.Email@Example.COM ');
+
+      expect(result).toEqual({
+        message: 'Um codigo de confirmacao foi enviado para o novo email.',
+      });
+      expect(prisma.user.findUnique).toHaveBeenNthCalledWith(2, {
+        where: { email: 'new.email@example.com' },
+        select: { id: true },
+      });
+      expect(prisma.emailChangeRequest.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: '1',
+          newEmail: 'new.email@example.com',
+        }),
+      });
+      expect(emailService.sendEmailChangeConfirmation).toHaveBeenCalledWith(
+        'new.email@example.com',
+        expect.stringMatching(/^\d{6}$/),
+        'Test User',
+      );
+    });
+
+    it('deve bloquear email ja em uso', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce({ id: '1', name: 'Test User', email: 'test@example.com' })
+        .mockResolvedValueOnce({ id: '2' });
+
+      await expect(service.requestEmailChange('1', 'used@example.com')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.emailChangeRequest.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('confirmEmailChange', () => {
+    it('deve confirmar codigo valido e atualizar usuario com email normalizado', async () => {
+      const changeRequest = {
+        id: 'ecr1',
+        userId: '1',
+        newEmail: 'new.email@example.com',
+        code: crypto.createHash('sha256').update('123456').digest('hex'),
+        expiresAt: new Date(Date.now() + 600000),
+        usedAt: null,
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce({ id: '1', email: 'old@example.com' })
+        .mockResolvedValueOnce(null);
+      mockPrismaService.emailChangeRequest.findFirst.mockResolvedValue(changeRequest);
+      mockPrismaService.emailChangeRequest.update.mockReturnValue({
+        id: 'ecr1',
+        usedAt: new Date(),
+      });
+      mockPrismaService.user.update.mockReturnValue({
+        id: '1',
+        email: 'new.email@example.com',
+      });
+      mockPrismaService.$transaction.mockResolvedValue([{}, {}]);
+
+      const result = await service.confirmEmailChange('1', {
+        newEmail: ' New.Email@Example.COM ',
+        code: '123456',
+      });
+
+      expect(result).toEqual({ message: 'Email alterado com sucesso.' });
+      expect(prisma.emailChangeRequest.findFirst).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId: '1',
+          newEmail: 'new.email@example.com',
+          code: changeRequest.code,
+          usedAt: null,
+        }),
+      });
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: { email: 'new.email@example.com' },
+      });
+      expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('deve rejeitar codigo invalido ou expirado', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce({ id: '1', email: 'old@example.com' })
+        .mockResolvedValueOnce(null);
+      mockPrismaService.emailChangeRequest.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.confirmEmailChange('1', {
+          newEmail: 'new@example.com',
+          code: '123456',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
