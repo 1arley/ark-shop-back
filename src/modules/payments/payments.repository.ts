@@ -14,6 +14,7 @@ export class PaymentsRepository {
     amount: number,
     provider: PaymentProvider,
     method: PaymentMethod,
+    idempotencyKey?: string,
   ) {
     const payment = await this.prisma.payment.create({
       data: {
@@ -23,6 +24,7 @@ export class PaymentsRepository {
         method,
         amount,
         status: PaymentStatus.PENDING,
+        ...(idempotencyKey ? { webhookData: { idempotencyKey } } : {}),
       },
       include: {
         order: true,
@@ -46,6 +48,7 @@ export class PaymentsRepository {
       pixCode: string;
       expiresAt?: Date;
     },
+    idempotencyKey?: string,
   ) {
     const payment = await this.prisma.payment.create({
       data: {
@@ -59,6 +62,7 @@ export class PaymentsRepository {
         pixCode: pixData.pixCode,
         ...(pixData.providerTxId && { providerTxId: pixData.providerTxId }),
         ...(pixData.expiresAt && { expiresAt: pixData.expiresAt }),
+        ...(idempotencyKey ? { webhookData: { idempotencyKey } } : {}),
       },
       include: {
         order: true,
@@ -82,6 +86,7 @@ export class PaymentsRepository {
       pixCode: string;
       expiresAt?: Date;
     },
+    idempotencyKey?: string,
   ) {
     const payment = await this.prisma.payment.update({
       where: { orderId },
@@ -95,6 +100,7 @@ export class PaymentsRepository {
         pixCode: pixData.pixCode,
         ...(pixData.providerTxId && { providerTxId: pixData.providerTxId }),
         ...(pixData.expiresAt && { expiresAt: pixData.expiresAt }),
+        ...(idempotencyKey ? { webhookData: { idempotencyKey } } : {}),
         rejectionReason: null,
       },
       include: {

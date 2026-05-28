@@ -67,6 +67,14 @@ export class OrdersRepository {
     couponData?: { couponId: string; discountAmount: number },
   ) {
     const { items } = createOrderDto;
+    const requestedByProduct = new Map<string, number>();
+
+    for (const item of items) {
+      requestedByProduct.set(
+        item.productId,
+        (requestedByProduct.get(item.productId) ?? 0) + item.quantity,
+      );
+    }
 
     const productIds = items.map(i => i.productId);
     const products = await this.prisma.product.findMany({
@@ -85,6 +93,14 @@ export class OrdersRepository {
 
       if (!product.isActive) {
         throw new BadRequestException(`Product ${product.name} is not active`);
+      }
+
+      const requestedQuantity = requestedByProduct.get(item.productId) ?? item.quantity;
+      if (product.stock < requestedQuantity) {
+        throw new BadRequestException(
+          `Insufficient stock for product ${product.name}. ` +
+            `Available: ${product.stock}, requested: ${requestedQuantity}`,
+        );
       }
 
       subtotal += toNumber(product.price)! * item.quantity;

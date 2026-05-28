@@ -243,6 +243,7 @@ describe('PaymentsService', () => {
           pixCode: 'new-pix-code',
           expiresAt: new Date('2026-01-01T00:15:00.000Z'),
         }),
+        undefined,
       );
       expect(result).toEqual(regeneratedPayment);
 
@@ -344,6 +345,7 @@ describe('PaymentsService', () => {
           pixQrCode: '',
           pixCode: '',
         }),
+        undefined,
       );
     });
 
@@ -370,6 +372,7 @@ describe('PaymentsService', () => {
         100,
         PaymentProvider.ASAAS,
         PaymentMethod.CREDIT_CARD,
+        undefined,
       );
       expect(mockOrdersService.findById).toHaveBeenCalledWith('order-id-1');
       expect(result).toEqual(mockPayment);
@@ -474,6 +477,7 @@ describe('PaymentsService', () => {
         expect.objectContaining({
           expiresAt: new Date('2026-01-01T00:15:00.000Z'),
         }),
+        undefined,
       );
 
       jest.useRealTimers();

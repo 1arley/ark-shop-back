@@ -29,6 +29,7 @@ export class PaymentsService {
     method: PaymentMethod = PaymentMethod.PIX,
     payerCpf?: string,
     payerBirthDate?: string,
+    idempotencyKey?: string,
   ) {
     // Verify order ownership — user can only pay for their own orders
     const order = await this.ordersService.findById(orderId);
@@ -55,9 +56,42 @@ export class PaymentsService {
       selectedProvider = this.providerFactory.getDefaultProvider();
     }
 
+    const existingPayment = await this.paymentsRepository.findByOrderId(orderId);
+    if (existingPayment) {
+      const existingIdempotencyKey =
+        existingPayment.webhookData &&
+        typeof existingPayment.webhookData === 'object' &&
+        'idempotencyKey' in existingPayment.webhookData
+          ? String((existingPayment.webhookData as Record<string, unknown>).idempotencyKey)
+          : undefined;
+
+      const isCompatibleRequest =
+        Number(existingPayment.amount) === amount &&
+        existingPayment.method === method &&
+        (existingIdempotencyKey === undefined ||
+          idempotencyKey === undefined ||
+          existingIdempotencyKey === idempotencyKey);
+
+      if (isCompatibleRequest && existingPayment.status !== PaymentStatus.REJECTED) {
+        this.logger.log(
+          `Idempotent payment create hit for order ${orderId} ` +
+            `(paymentId=${existingPayment.id}, status=${existingPayment.status})`,
+        );
+      }
+
+      if (
+        isCompatibleRequest &&
+        (existingPayment.status === PaymentStatus.APPROVED ||
+          existingPayment.status === PaymentStatus.PENDING)
+      ) {
+        if (method !== PaymentMethod.PIX) {
+          return existingPayment;
+        }
+      }
+    }
+
     // If PIX, generate QR code directly (no duplicate payment record)
     if (method === PaymentMethod.PIX) {
-      const existingPayment = await this.paymentsRepository.findByOrderId(orderId);
       if (existingPayment) {
         if (existingPayment.status !== PaymentStatus.PENDING) {
           throw new BadRequestException(
@@ -104,6 +138,7 @@ export class PaymentsService {
           amount,
           selectedProvider,
           pixData,
+          idempotencyKey,
         );
       }
 
@@ -113,11 +148,19 @@ export class PaymentsService {
         amount,
         selectedProvider,
         pixData,
+        idempotencyKey,
       );
     }
 
     // For other payment methods, create standard payment record
-    return this.paymentsRepository.createPayment(orderId, userId, amount, selectedProvider, method);
+    return this.paymentsRepository.createPayment(
+      orderId,
+      userId,
+      amount,
+      selectedProvider,
+      method,
+      idempotencyKey,
+    );
   }
 
   async processPayment(paymentId: string, providerTxId: string, webhookData?: any) {

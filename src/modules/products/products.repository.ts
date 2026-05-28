@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { KeyStatus, Prisma } from '@prisma/client';
 import type { ProductType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -13,17 +13,60 @@ const PRODUCT_TYPE_ACCOUNT = 'ACCOUNT' as ProductType;
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async validateActivationInventory(
+    productId: string | null,
+    productType: ProductType,
+    shouldBeActive: boolean,
+  ) {
+    if (!shouldBeActive) {
+      return;
+    }
+
+    const whereBase = productId ? { productId } : undefined;
+    const availableKeys = await this.prisma.key.count({
+      where: {
+        ...(whereBase ?? {}),
+        status: KeyStatus.AVAILABLE,
+      },
+    });
+    const availableAccounts = await this.prisma.account.count({
+      where: {
+        ...(whereBase ?? {}),
+        status: KeyStatus.AVAILABLE,
+      },
+    });
+
+    if (productType === PRODUCT_TYPE_ACCOUNT && availableAccounts <= 0) {
+      throw new BadRequestException(
+        'Cannot activate ACCOUNT product without available stock. ' +
+          'Import at least one available account first.',
+      );
+    }
+
+    if (productType !== PRODUCT_TYPE_ACCOUNT && availableKeys <= 0) {
+      throw new BadRequestException(
+        'Cannot activate KEY product without available stock. ' +
+          'Import at least one available key first.',
+      );
+    }
+  }
+
   async create(data: CreateProductDto) {
+    const productType = data.productType ?? 'KEY';
+    const shouldBeActive = data.isActive ?? false;
+
+    await this.validateActivationInventory(null, productType, shouldBeActive);
+
     const product = await this.prisma.product.create({
       data: {
         name: data.name,
         description: data.description,
         price: data.price,
         stock: data.stock ?? 0,
-        isActive: data.isActive ?? true,
+        isActive: shouldBeActive,
         categoryId: data.categoryId,
         imageUrl: data.imageUrl,
-        productType: data.productType ?? 'KEY',
+        productType,
         instructions: data.instructions,
       },
     });
@@ -117,10 +160,13 @@ export class ProductsRepository {
 
     const hasDigitalItems = totalKeys > 0 || totalAccounts > 0;
     const productType = data.productType ?? existingProduct.productType;
+    const shouldBeActive = data.isActive ?? existingProduct.isActive;
     const derivedStock =
       productType === PRODUCT_TYPE_ACCOUNT || (totalAccounts > 0 && totalKeys === 0)
         ? availableAccounts
         : availableKeys;
+
+    await this.validateActivationInventory(id, productType, shouldBeActive);
 
     const product = await this.prisma.product.update({
       where: { id },
@@ -129,7 +175,7 @@ export class ProductsRepository {
         description: data.description,
         price: data.price,
         stock: hasDigitalItems ? derivedStock : data.stock,
-        isActive: data.isActive,
+        isActive: shouldBeActive,
         categoryId: data.categoryId,
         imageUrl: data.imageUrl,
         productType: data.productType,

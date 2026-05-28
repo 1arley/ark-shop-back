@@ -14,6 +14,7 @@ import {
   Headers,
   UnauthorizedException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -36,6 +37,7 @@ export class PaymentsController {
   ) {}
 
   @Post(':orderId')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create payment for order' })
@@ -45,7 +47,13 @@ export class PaymentsController {
     @Param('orderId', ParseUUIDPipe) orderId: string,
     @Body() createPaymentDto: CreatePaymentDto,
     @CurrentUser() user: { id: string },
+    @Headers('x-idempotency-key') idempotencyKey?: string,
   ) {
+    const normalizedIdempotencyKey = idempotencyKey?.trim();
+    if (normalizedIdempotencyKey && normalizedIdempotencyKey.length > 128) {
+      throw new BadRequestException('x-idempotency-key must be at most 128 characters');
+    }
+
     return this.paymentsService.createPayment(
       orderId,
       user.id,
@@ -54,6 +62,7 @@ export class PaymentsController {
       createPaymentDto.method,
       createPaymentDto.payerCpf,
       createPaymentDto.payerBirthDate,
+      normalizedIdempotencyKey,
     );
   }
 
@@ -117,6 +126,7 @@ export class PaymentsController {
   }
 
   @Post(':id/refund')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')

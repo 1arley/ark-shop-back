@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProductsRepository } from '../products.repository';
 import { PrismaService } from '@/prisma/prisma.service';
 
@@ -51,7 +51,7 @@ describe('ProductsRepository', () => {
         description: 'Descricao completa',
         price: 199.9,
         stock: 10,
-        isActive: true,
+        isActive: false,
         categoryId: 'cat-uuid',
         imageUrl: 'http://img.com/prod.jpg',
       };
@@ -73,7 +73,7 @@ describe('ProductsRepository', () => {
           description: 'Descricao completa',
           price: 199.9,
           stock: 10,
-          isActive: true,
+          isActive: false,
           categoryId: 'cat-uuid',
           imageUrl: 'http://img.com/prod.jpg',
           productType: 'KEY',
@@ -97,9 +97,9 @@ describe('ProductsRepository', () => {
       });
     });
 
-    it('deve usar isActive padrao true quando nao fornecido', async () => {
+    it('deve usar isActive padrao false quando nao fornecido', async () => {
       const createDto = { name: 'Ativo Padrao', price: 30 };
-      const created = { id: 'prod-3', ...createDto, stock: 0, isActive: true };
+      const created = { id: 'prod-3', ...createDto, stock: 0, isActive: false };
 
       mockPrismaService.product.create.mockResolvedValue(created);
 
@@ -107,14 +107,14 @@ describe('ProductsRepository', () => {
 
       expect(prisma.product.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          isActive: true,
+          isActive: false,
         }),
       });
     });
 
     it('deve criar produto com campos opcionais undefined (categoryId, imageUrl)', async () => {
       const createDto = { name: 'Simples', price: 10 };
-      const created = { id: 'prod-4', ...createDto, stock: 0, isActive: true };
+      const created = { id: 'prod-4', ...createDto, stock: 0, isActive: false };
 
       mockPrismaService.product.create.mockResolvedValue(created);
 
@@ -126,7 +126,7 @@ describe('ProductsRepository', () => {
           description: undefined,
           price: 10,
           stock: 0,
-          isActive: true,
+          isActive: false,
           categoryId: undefined,
           imageUrl: undefined,
           productType: 'KEY',
@@ -148,6 +148,41 @@ describe('ProductsRepository', () => {
           isActive: false,
         }),
       });
+    });
+
+    it('deve bloquear criacao ativa sem estoque real para produto KEY', async () => {
+      const createDto = {
+        name: 'Sem Keys',
+        price: 25,
+        isActive: true,
+        productType: 'KEY' as const,
+      };
+
+      await expect(repository.create(createDto)).rejects.toThrow(BadRequestException);
+      await expect(repository.create(createDto)).rejects.toThrow(
+        'Cannot activate KEY product without available stock. Import at least one available key first.',
+      );
+      expect(prisma.product.create).not.toHaveBeenCalled();
+    });
+
+    it('deve permitir criacao ativa quando houver estoque real para produto ACCOUNT', async () => {
+      const createDto = {
+        name: 'Conta Ativa',
+        price: 25,
+        isActive: true,
+        productType: 'ACCOUNT' as const,
+      };
+      const created = { id: 'prod-account', ...createDto, stock: 0 };
+      mockPrismaService.account.count.mockResolvedValue(1);
+      mockPrismaService.product.create.mockResolvedValue(created);
+
+      await repository.create(createDto);
+
+      expect(prisma.product.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ isActive: true, productType: 'ACCOUNT' }),
+        }),
+      );
     });
   });
 
@@ -410,7 +445,7 @@ describe('ProductsRepository', () => {
 
     it('deve atualizar apenas campos fornecidos', async () => {
       const updateDto = { isActive: false };
-      mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1' });
+      mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1', isActive: true });
       mockPrismaService.product.update.mockResolvedValue({ id: 'prod-1', isActive: false });
 
       await repository.update('prod-1', updateDto);
@@ -443,7 +478,12 @@ describe('ProductsRepository', () => {
         categoryId: 'cat-2',
         imageUrl: 'http://new.img',
       };
-      mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1' });
+      mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1', isActive: false });
+      mockPrismaService.key.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1);
+      mockPrismaService.account.count.mockResolvedValue(0);
       mockPrismaService.product.update.mockResolvedValue({ id: 'prod-1', ...updateDto });
 
       await repository.update('prod-1', updateDto);
@@ -467,8 +507,11 @@ describe('ProductsRepository', () => {
     it('deve sincronizar stock com keys disponiveis quando produto possui keys', async () => {
       const updateDto = { stock: 50, isActive: true };
 
-      mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1' });
-      mockPrismaService.key.count.mockResolvedValueOnce(8).mockResolvedValueOnce(3);
+      mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1', isActive: false });
+      mockPrismaService.key.count
+        .mockResolvedValueOnce(8)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(3);
       mockPrismaService.account.count.mockResolvedValue(0);
       mockPrismaService.product.update.mockResolvedValue({
         id: 'prod-1',
@@ -500,9 +543,13 @@ describe('ProductsRepository', () => {
       mockPrismaService.product.findUnique.mockResolvedValue({
         id: 'prod-1',
         productType: 'ACCOUNT',
+        isActive: false,
       });
       mockPrismaService.key.count.mockResolvedValue(0);
-      mockPrismaService.account.count.mockResolvedValueOnce(8).mockResolvedValueOnce(4);
+      mockPrismaService.account.count
+        .mockResolvedValueOnce(8)
+        .mockResolvedValueOnce(4)
+        .mockResolvedValueOnce(4);
       mockPrismaService.product.update.mockResolvedValue({
         id: 'prod-1',
         ...updateDto,
@@ -525,6 +572,24 @@ describe('ProductsRepository', () => {
           instructions: undefined,
         },
       });
+    });
+
+    it('deve bloquear ativacao quando nao houver estoque disponivel do tipo KEY', async () => {
+      mockPrismaService.product.findUnique.mockResolvedValue({
+        id: 'prod-1',
+        productType: 'KEY',
+        isActive: false,
+      });
+      mockPrismaService.key.count.mockResolvedValue(0);
+      mockPrismaService.account.count.mockResolvedValue(0);
+
+      await expect(repository.update('prod-1', { isActive: true })).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(repository.update('prod-1', { isActive: true })).rejects.toThrow(
+        'Cannot activate KEY product without available stock. Import at least one available key first.',
+      );
+      expect(prisma.product.update).not.toHaveBeenCalled();
     });
   });
 

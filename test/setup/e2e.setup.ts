@@ -127,6 +127,7 @@ async function cleanupDatabase() {
     await prismaService.refreshToken.deleteMany();
     await prismaService.passwordResetToken.deleteMany();
     await prismaService.emailVerificationToken.deleteMany();
+    await prismaService.emailChangeRequest.deleteMany();
     await prismaService.pendingRegistration.deleteMany();
     await prismaService.notification.deleteMany();
     await prismaService.payment.deleteMany();

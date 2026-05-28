@@ -50,6 +50,7 @@ describe('OrdersRepository', () => {
     name: 'Game Key',
     price: 100,
     isActive: true,
+    stock: 10,
   };
 
   const mockOrder = {
@@ -226,6 +227,23 @@ describe('OrdersRepository', () => {
       await expect(repository.create(createOrderDto, 'user-id-1')).rejects.toThrow(
         'Product Game Key is not active',
       );
+    });
+
+    it('deve lancar BadRequestException quando quantidade excede estoque', async () => {
+      const lowStockProduct = { ...mockProduct, stock: 1 };
+      const createOrderDto = {
+        items: [{ productId: 'product-id-1', quantity: 2 }],
+      };
+
+      mockPrismaService.product.findMany.mockResolvedValue([lowStockProduct]);
+
+      await expect(repository.create(createOrderDto, 'user-id-1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(repository.create(createOrderDto, 'user-id-1')).rejects.toThrow(
+        'Insufficient stock for product Game Key. Available: 1, requested: 2',
+      );
+      expect(prisma.order.create).not.toHaveBeenCalled();
     });
 
     it('deve criar pedido com multiplos itens', async () => {
