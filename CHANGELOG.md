@@ -1,3 +1,15 @@
+# [1.27.0](https://github.com/1arley/ark-shop-back/compare/v1.26.0...v1.27.0) (2026-05-28)
+
+
+### Bug Fixes
+
+* correct indentation for Trivy scan results upload step in CI workflow ([8583a70](https://github.com/1arley/ark-shop-back/commit/8583a70557eedb9310fef1336f21dab754547808))
+
+
+### Features
+
+* add account selling support ([#29](https://github.com/1arley/ark-shop-back/issues/29)) ([ae2ee42](https://github.com/1arley/ark-shop-back/commit/ae2ee42479fca0c5bec0656494e2193f731f0151))
+
 # [1.26.0](https://github.com/1arley/ark-shop-back/compare/v1.25.0...v1.26.0) (2026-05-28)
 
 
