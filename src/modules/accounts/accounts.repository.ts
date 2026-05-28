@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
-import { KeyStatus, Prisma } from '@prisma/client';
+import { KeyStatus, Prisma, ProductType } from '@prisma/client';
 
 export interface ImportAccountsResult {
   imported: number;
@@ -56,7 +56,28 @@ export class AccountsRepository {
     return { email, password, metadata };
   }
 
-  private async syncProductStock(productId: string, tx: Prisma.TransactionClient) {
+  private async ensureAccountProduct(
+    productId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const product = await client.product.findUnique({
+      where: { id: productId },
+      select: { productType: true },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${productId} not found`);
+    }
+
+    if (product.productType !== ProductType.ACCOUNT) {
+      throw new BadRequestException('Accounts can only be imported into ACCOUNT products');
+    }
+  }
+
+  private async syncProductStock(
+    productId: string,
+    tx: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
     const availableAccounts = await tx.account.count({
       where: { productId, status: KeyStatus.AVAILABLE },
     });
@@ -77,6 +98,8 @@ export class AccountsRepository {
     const encryptedPassword = this.encryptionProvider.encrypt(password);
 
     return await this.prisma.$transaction(async tx => {
+      await this.ensureAccountProduct(productId, tx);
+
       const account = await tx.account.create({
         data: {
           productId,
@@ -94,6 +117,8 @@ export class AccountsRepository {
   }
 
   async createBatch(productId: string, rawLines: string[]): Promise<ImportAccountsResult> {
+    await this.ensureAccountProduct(productId);
+
     const result: ImportAccountsResult = {
       imported: 0,
       failed: 0,
@@ -120,7 +145,7 @@ export class AccountsRepository {
       email: this.encryptionProvider.encrypt(email),
       password: this.encryptionProvider.encrypt(password),
       metadata: metadata ?? Prisma.DbNull,
-      status: 'AVAILABLE',
+      status: KeyStatus.AVAILABLE,
     }));
 
     try {
@@ -138,7 +163,7 @@ export class AccountsRepository {
       }
     }
 
-    await this.syncProductStock(productId, this.prisma as any);
+    await this.syncProductStock(productId);
 
     return result;
   }
