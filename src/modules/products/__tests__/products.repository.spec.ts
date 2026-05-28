@@ -8,6 +8,9 @@ describe('ProductsRepository', () => {
   let prisma: PrismaService;
 
   const mockPrismaService = {
+    key: {
+      count: jest.fn(),
+    },
     product: {
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -29,6 +32,7 @@ describe('ProductsRepository', () => {
     prisma = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
+    mockPrismaService.key.count.mockResolvedValue(0);
   });
 
   it('deve estar definido', () => {
@@ -390,6 +394,7 @@ describe('ProductsRepository', () => {
           imageUrl: undefined,
         },
       });
+      expect(prisma.key.count).toHaveBeenCalledTimes(2);
     });
 
     it('deve atualizar apenas campos fornecidos', async () => {
@@ -411,6 +416,7 @@ describe('ProductsRepository', () => {
           imageUrl: undefined,
         },
       });
+      expect(prisma.key.count).toHaveBeenCalledTimes(2);
     });
 
     it('deve atualizar todos os campos quando fornecidos', async () => {
@@ -438,6 +444,35 @@ describe('ProductsRepository', () => {
           isActive: true,
           categoryId: 'cat-2',
           imageUrl: 'http://new.img',
+        },
+      });
+    });
+
+    it('deve sincronizar stock com keys disponiveis quando produto possui keys', async () => {
+      const updateDto = { stock: 50, isActive: true };
+
+      mockPrismaService.product.findUnique.mockResolvedValue({ id: 'prod-1' });
+      mockPrismaService.key.count
+        .mockResolvedValueOnce(8)
+        .mockResolvedValueOnce(3);
+      mockPrismaService.product.update.mockResolvedValue({
+        id: 'prod-1',
+        ...updateDto,
+        stock: 3,
+      });
+
+      await repository.update('prod-1', updateDto);
+
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'prod-1' },
+        data: {
+          name: undefined,
+          description: undefined,
+          price: undefined,
+          stock: 3,
+          isActive: true,
+          categoryId: undefined,
+          imageUrl: undefined,
         },
       });
     });

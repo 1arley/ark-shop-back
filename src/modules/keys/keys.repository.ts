@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { KeysEncryptionProvider } from './keys-encryption.provider';
-import { KeyStatus } from '@prisma/client';
+import { KeyStatus, Prisma } from '@prisma/client';
 
 export interface ImportKeysResult {
   imported: number;
@@ -16,18 +16,40 @@ export class KeysRepository {
     private readonly encryptionProvider: KeysEncryptionProvider,
   ) {}
 
-  async create(productId: string, keyData: string) {
-    const encryptedKey = this.encryptionProvider.encrypt(keyData);
-
-    return await this.prisma.key.create({
-      data: {
+  private async syncProductStock(
+    productId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const availableKeys = await client.key.count({
+      where: {
         productId,
-        keyData: encryptedKey,
         status: KeyStatus.AVAILABLE,
       },
-      include: {
-        product: true,
-      },
+    });
+
+    await client.product.update({
+      where: { id: productId },
+      data: { stock: availableKeys },
+    });
+  }
+
+  async create(productId: string, keyData: string) {
+    const encryptedKey = this.encryptionProvider.encrypt(keyData);
+    return await this.prisma.$transaction(async tx => {
+      const createdKey = await tx.key.create({
+        data: {
+          productId,
+          keyData: encryptedKey,
+          status: KeyStatus.AVAILABLE,
+        },
+        include: {
+          product: true,
+        },
+      });
+
+      await this.syncProductStock(productId, tx);
+
+      return createdKey;
     });
   }
 
@@ -82,6 +104,8 @@ export class KeysRepository {
         }
       }
     }
+
+    await this.syncProductStock(productId);
 
     return result;
   }
@@ -148,26 +172,37 @@ export class KeysRepository {
   }
 
   async reserveKey(keyId: string, orderItemId: string) {
-    // Atomic update: only succeeds if key is still AVAILABLE
-    const result = await this.prisma.key.updateMany({
-      where: { id: keyId, status: KeyStatus.AVAILABLE },
-      data: {
-        status: KeyStatus.RESERVED,
-        orderItemId,
-      },
-    });
+    return this.prisma.$transaction(async tx => {
+      const existingKey = await tx.key.findUnique({
+        where: { id: keyId },
+        select: { id: true, productId: true, status: true },
+      });
 
-    if (result.count === 0) {
-      const key = await this.prisma.key.findUnique({ where: { id: keyId } });
-      if (!key) {
+      if (!existingKey) {
         throw new NotFoundException(`Key with ID ${keyId} not found`);
       }
-      throw new BadRequestException(`Key is not available (current status: ${key.status})`);
-    }
 
-    return this.prisma.key.findUnique({
-      where: { id: keyId },
-      include: { product: true },
+      // Atomic update: only succeeds if key is still AVAILABLE
+      const result = await tx.key.updateMany({
+        where: { id: keyId, status: KeyStatus.AVAILABLE },
+        data: {
+          status: KeyStatus.RESERVED,
+          orderItemId,
+        },
+      });
+
+      if (result.count === 0) {
+        throw new BadRequestException(
+          `Key is not available (current status: ${existingKey.status})`,
+        );
+      }
+
+      await this.syncProductStock(existingKey.productId, tx);
+
+      return tx.key.findUnique({
+        where: { id: keyId },
+        include: { product: true },
+      });
     });
   }
 
@@ -200,12 +235,18 @@ export class KeysRepository {
   }
 
   async deliverKey(keyId: string) {
-    return await this.prisma.key.update({
-      where: { id: keyId },
-      data: {
-        status: KeyStatus.DELIVERED,
-        deliveredAt: new Date(),
-      },
+    return await this.prisma.$transaction(async tx => {
+      const deliveredKey = await tx.key.update({
+        where: { id: keyId },
+        data: {
+          status: KeyStatus.DELIVERED,
+          deliveredAt: new Date(),
+        },
+      });
+
+      await this.syncProductStock(deliveredKey.productId, tx);
+
+      return deliveredKey;
     });
   }
 
@@ -244,13 +285,28 @@ export class KeysRepository {
       updateData.keyData = this.encryptionProvider.encrypt(data.keyData);
     }
 
-    const key = await this.prisma.key.update({
+    const existingKey = await this.prisma.key.findUnique({
       where: { id },
-      data: updateData,
-      include: { product: true },
+      select: { productId: true },
     });
 
-    return key;
+    if (!existingKey) {
+      throw new NotFoundException(`Key with ID ${id} not found`);
+    }
+
+    return this.prisma.$transaction(async tx => {
+      const key = await tx.key.update({
+        where: { id },
+        data: updateData,
+        include: { product: true },
+      });
+
+      if (data.status) {
+        await this.syncProductStock(existingKey.productId, tx);
+      }
+
+      return key;
+    });
   }
 
   async delete(id: string) {
@@ -266,8 +322,14 @@ export class KeysRepository {
       throw new BadRequestException('Can only delete available keys');
     }
 
-    return this.prisma.key.delete({
-      where: { id },
+    return this.prisma.$transaction(async tx => {
+      const deletedKey = await tx.key.delete({
+        where: { id },
+      });
+
+      await this.syncProductStock(key.productId, tx);
+
+      return deletedKey;
     });
   }
 }

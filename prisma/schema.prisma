@@ -202,6 +202,7 @@ model Product {
   imageUrl    String?
   stock       Int         @default(0)
   isActive    Boolean     @default(true)
+  isDemo      Boolean     @default(false)
   categoryId  String?
   category    Category?   @relation(fields: [categoryId], references: [id])
   keys        Key[]
@@ -219,6 +220,7 @@ model Category {
   name        String
   slug        String     @unique
   description String?
+  isDemo      Boolean    @default(false)
   parentId    String?
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")

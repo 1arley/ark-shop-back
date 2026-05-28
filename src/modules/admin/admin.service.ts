@@ -2,7 +2,6 @@ import {
   Injectable,
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -13,7 +12,6 @@ import { ProductsService } from '@/modules/products/products.service';
 import { OrdersService } from '@/modules/orders/orders.service';
 import { UserService } from '@/user/user.service';
 import { AdminUpdateUserDto } from '@/user/dto/admin-update-user.dto';
-import { ConfigService } from '@nestjs/config';
 import { SellersService } from '@/modules/sellers/sellers.service';
 import { CreateSellerDto, UpdateSellerDto } from '@/modules/sellers/dto/create-seller.dto';
 import { AdminCreateProductDto, AdminUpdateProductDto } from './dto/admin-product.dto';
@@ -27,7 +25,6 @@ export class AdminService {
     private readonly productsService: ProductsService,
     private readonly ordersService: OrdersService,
     private readonly userService: UserService,
-    private readonly configService: ConfigService,
     private readonly sellersService: SellersService,
   ) {}
 
@@ -163,6 +160,7 @@ export class AdminService {
           name: categoryName,
           slug,
           description: `${categoryName} games`,
+          isDemo: true,
         },
       });
       createdCategories.push(category);
@@ -181,6 +179,7 @@ export class AdminService {
           price: Math.floor(Math.random() * 50) + 9.99,
           stock: keysPerProduct,
           isActive: true,
+          isDemo: true,
           categoryId: category!.id,
         },
       });
@@ -212,34 +211,34 @@ export class AdminService {
     return key;
   }
 
-  async clearDemoData(confirmationToken: string) {
-    const expected = this.configService.get<string>('CLEAR_DEMO_TOKEN');
+  async clearDemoData() {
+    const demoProductIds = await this.prisma.product.findMany({
+      where: { isDemo: true },
+      select: { id: true },
+    }).then((products) => products.map((p) => p.id));
 
-    if (!expected || confirmationToken !== expected) {
-      throw new ForbiddenException('Invalid or missing confirmation token.');
-    }
+    const keysDeleted = await this.prisma.key.deleteMany({
+      where: { productId: { in: demoProductIds } },
+    });
 
-    // Delete in order to avoid FK issues — wrapped in a transaction for atomicity
-    // Excludes ADMIN and SUPERADMIN users for safety
-    await this.prisma.$transaction([
-      this.prisma.fraudLog.deleteMany(),
-      this.prisma.notification.deleteMany(),
-      this.prisma.walletTransaction.deleteMany(),
-      this.prisma.wallet.deleteMany(),
-      this.prisma.payment.deleteMany(),
-      this.prisma.orderItem.deleteMany(),
-      this.prisma.order.deleteMany(),
-      this.prisma.key.deleteMany(),
-      this.prisma.product.deleteMany(),
-      this.prisma.category.deleteMany(),
-      this.prisma.seller.deleteMany(),
-      this.prisma.refreshToken.deleteMany(),
-      this.prisma.user.deleteMany({
-        where: { role: { notIn: ['ADMIN', 'SUPERADMIN'] } },
-      }),
-    ]);
+    await this.prisma.cartItem.deleteMany({
+      where: { productId: { in: demoProductIds } },
+    });
 
-    return { message: 'Demo data cleared' };
+    const productsDeleted = await this.prisma.product.deleteMany({
+      where: { isDemo: true },
+    });
+
+    const categoriesDeleted = await this.prisma.category.deleteMany({
+      where: { isDemo: true },
+    });
+
+    return {
+      message: 'Demo data cleared',
+      categories: categoriesDeleted.count,
+      products: productsDeleted.count,
+      keys: keysDeleted.count,
+    };
   }
 
   // ─── Sellers ────────────────────────────────────────────────

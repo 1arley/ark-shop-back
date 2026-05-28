@@ -322,9 +322,9 @@ export class AdminController {
   @UseGuards(...AdminGuard())
   @Roles('SUPERADMIN')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Clear all demo data (DANGER)' })
+  @ApiOperation({ summary: 'Clear all demo data (safe — only deletes isDemo flagged data)' })
   @ApiResponse({ status: 200, description: 'Demo data cleared' })
-  clearDemo(@Body('confirmationToken') confirmationToken: string) {
-    return this.adminService.clearDemoData(confirmationToken);
+  clearDemo() {
+    return this.adminService.clearDemoData();
   }
 }

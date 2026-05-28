@@ -20,8 +20,10 @@ describe('OrdersRepository', () => {
     },
     product: {
       findMany: jest.fn(),
+      update: jest.fn(),
     },
     key: {
+      count: jest.fn(),
       updateMany: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
@@ -85,6 +87,7 @@ describe('OrdersRepository', () => {
     keysEncryption = module.get<KeysEncryptionProvider>(KeysEncryptionProvider);
 
     jest.clearAllMocks();
+    mockPrismaService.key.count.mockResolvedValue(0);
   });
 
   // ─── create ───────────────────────────────────────────────────────
@@ -717,8 +720,12 @@ describe('OrdersRepository', () => {
           update: jest.fn().mockResolvedValue({ ...mockOrder, status: OrderStatus.DELIVERED }),
         },
         key: {
+          count: jest.fn().mockResolvedValue(0),
           findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        product: {
+          update: jest.fn().mockResolvedValue({}),
         },
         orderItem: {
           update: jest.fn().mockResolvedValue({}),
@@ -750,6 +757,10 @@ describe('OrdersRepository', () => {
         data: { status: OrderStatus.DELIVERED },
         include: { items: true, payment: true },
       });
+      expect(mockTx.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
+      });
       expect(result.status).toBe(OrderStatus.DELIVERED);
     });
 
@@ -767,7 +778,12 @@ describe('OrdersRepository', () => {
           findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
           update: jest.fn(),
         },
-        key: { findFirst: jest.fn().mockResolvedValue(null), updateMany: jest.fn() },
+        key: {
+          count: jest.fn(),
+          findFirst: jest.fn().mockResolvedValue(null),
+          updateMany: jest.fn(),
+        },
+        product: { update: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
@@ -794,9 +810,11 @@ describe('OrdersRepository', () => {
           update: jest.fn(),
         },
         key: {
+          count: jest.fn(),
           findFirst: jest.fn().mockResolvedValue({ id: 'key-id-1' }),
           updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         },
+        product: { update: jest.fn() },
         orderItem: { update: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
@@ -829,7 +847,8 @@ describe('OrdersRepository', () => {
           findUnique: jest.fn().mockResolvedValue({ status: OrderStatus.PAID }),
           update: jest.fn().mockResolvedValue({ ...mockOrder, status: OrderStatus.DELIVERED }),
         },
-        key: { findFirst: jest.fn(), updateMany: jest.fn() },
+        key: { count: jest.fn(), findFirst: jest.fn(), updateMany: jest.fn() },
+        product: { update: jest.fn() },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
 
@@ -837,6 +856,7 @@ describe('OrdersRepository', () => {
 
       expect(mockTx.key.findFirst).not.toHaveBeenCalled();
       expect(mockTx.key.updateMany).not.toHaveBeenCalled();
+      expect(mockTx.product.update).not.toHaveBeenCalled();
       expect(mockTx.order.update).toHaveBeenCalled();
     });
   });

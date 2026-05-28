@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { OrderStatus, KeyStatus } from '@prisma/client';
+import { OrderStatus, KeyStatus, Prisma } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { KeysEncryptionProvider } from '@/modules/keys/keys-encryption.provider';
 import { userPublicSelect } from '@/common/prisma/user-public.select';
@@ -12,6 +12,20 @@ export class OrdersRepository {
     private readonly prisma: PrismaService,
     private readonly keysEncryption: KeysEncryptionProvider,
   ) {}
+
+  private async syncProductStock(productId: string, tx: Prisma.TransactionClient) {
+    const availableKeys = await tx.key.count({
+      where: {
+        productId,
+        status: KeyStatus.AVAILABLE,
+      },
+    });
+
+    await tx.product.update({
+      where: { id: productId },
+      data: { stock: availableKeys },
+    });
+  }
 
   async create(
     createOrderDto: CreateOrderDto,
@@ -403,6 +417,8 @@ export class OrdersRepository {
         throw new BadRequestException('Order must be in PAID status to deliver');
       }
 
+      const affectedProductIds = new Set<string>();
+
       for (const item of items) {
         if (!item.key) {
           // Find ONE available key first
@@ -446,7 +462,13 @@ export class OrdersRepository {
             where: { id: item.id },
             data: { keyId: availableKey.id },
           });
+
+          affectedProductIds.add(item.productId);
         }
+      }
+
+      for (const productId of affectedProductIds) {
+        await this.syncProductStock(productId, tx);
       }
 
       // Update order status to delivered

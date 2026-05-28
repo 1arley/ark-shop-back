@@ -11,6 +11,9 @@ describe('KeysRepository', () => {
   let encryptionProvider: KeysEncryptionProvider;
 
   const mockPrismaService = {
+    product: {
+      update: jest.fn(),
+    },
     key: {
       create: jest.fn(),
       createMany: jest.fn(),
@@ -61,6 +64,14 @@ describe('KeysRepository', () => {
     encryptionProvider = module.get<KeysEncryptionProvider>(KeysEncryptionProvider);
 
     jest.clearAllMocks();
+    mockPrismaService.key.count.mockResolvedValue(0);
+    mockPrismaService.$transaction.mockImplementation(async cb => {
+      if (typeof cb === 'function') {
+        return cb(mockPrismaService);
+      }
+
+      return cb;
+    });
   });
 
   // ─── create ───────────────────────────────────────────────────────
@@ -79,6 +90,10 @@ describe('KeysRepository', () => {
           status: KeyStatus.AVAILABLE,
         },
         include: { product: true },
+      });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
       });
       expect(result).toEqual(mockKey);
     });
@@ -108,6 +123,10 @@ describe('KeysRepository', () => {
       expect(result.imported).toBe(3);
       expect(result.failed).toBe(0);
       expect(result.errors).toEqual([]);
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
+      });
     });
 
     it('deve contabilizar falhas de criptografia', async () => {
@@ -126,6 +145,7 @@ describe('KeysRepository', () => {
       expect(result.imported).toBe(2);
       expect(result.failed).toBe(1);
       expect(result.errors).toContain('Failed to encrypt key: Encryption failed');
+      expect(prisma.product.update).toHaveBeenCalled();
     });
 
     it('deve usar fallback createMany quando createMany falha', async () => {
@@ -141,6 +161,7 @@ describe('KeysRepository', () => {
       expect(prisma.key.createMany).toHaveBeenCalled();
       expect(prisma.key.create).toHaveBeenCalledTimes(2);
       expect(result.imported).toBe(2);
+      expect(prisma.product.update).toHaveBeenCalled();
     });
 
     it('deve retornar resultado vazio quando todas criptografias falham', async () => {
@@ -154,6 +175,7 @@ describe('KeysRepository', () => {
       expect(result.imported).toBe(0);
       expect(result.failed).toBe(2);
       expect(prisma.key.createMany).not.toHaveBeenCalled();
+      expect(prisma.product.update).not.toHaveBeenCalled();
     });
   });
 
@@ -251,9 +273,14 @@ describe('KeysRepository', () => {
   describe('reserveKey', () => {
     it('deve reservar chave com sucesso', async () => {
       const reservedKey = { ...mockKey, status: KeyStatus.RESERVED, orderItemId: 'item-id-1' };
+      mockPrismaService.key.findUnique
+        .mockResolvedValueOnce({
+          id: 'key-id-1',
+          productId: 'product-id-1',
+          status: KeyStatus.AVAILABLE,
+        })
+        .mockResolvedValueOnce(reservedKey);
       mockPrismaService.key.updateMany.mockResolvedValue({ count: 1 });
-      mockPrismaService.key.findUnique.mockResolvedValue(reservedKey);
-      mockPrismaService.key.update.mockResolvedValue(reservedKey);
 
       const result = await repository.reserveKey('key-id-1', 'item-id-1');
 
@@ -266,13 +293,20 @@ describe('KeysRepository', () => {
       });
       expect(prisma.key.findUnique).toHaveBeenCalledWith({
         where: { id: 'key-id-1' },
+        select: { id: true, productId: true, status: true },
+      });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
+      });
+      expect(prisma.key.findUnique).toHaveBeenCalledWith({
+        where: { id: 'key-id-1' },
         include: { product: true },
       });
       expect(result).toEqual(reservedKey);
     });
 
     it('deve lancar NotFoundException quando chave nao existe', async () => {
-      mockPrismaService.key.updateMany.mockResolvedValue({ count: 0 });
       mockPrismaService.key.findUnique.mockResolvedValue(null);
 
       await expect(repository.reserveKey('nonexistent', 'item-id-1')).rejects.toThrow(
@@ -281,11 +315,12 @@ describe('KeysRepository', () => {
       await expect(repository.reserveKey('nonexistent', 'item-id-1')).rejects.toThrow(
         'Key with ID nonexistent not found',
       );
-      expect(prisma.key.updateMany).toHaveBeenCalled();
+      expect(prisma.key.updateMany).not.toHaveBeenCalled();
     });
 
     it('deve lancar BadRequestException quando chave nao esta disponivel', async () => {
       const reservedKey = { ...mockKey, status: KeyStatus.RESERVED };
+      mockPrismaService.key.updateMany.mockResolvedValue({ count: 0 });
       mockPrismaService.key.findUnique.mockResolvedValue(reservedKey);
 
       await expect(repository.reserveKey('key-id-1', 'item-id-1')).rejects.toThrow(
@@ -294,10 +329,12 @@ describe('KeysRepository', () => {
       await expect(repository.reserveKey('key-id-1', 'item-id-1')).rejects.toThrow(
         'Key is not available (current status: RESERVED)',
       );
+      expect(prisma.product.update).not.toHaveBeenCalled();
     });
 
     it('deve lancar BadRequestException quando chave esta DELIVERED', async () => {
       const deliveredKey = { ...mockKey, status: KeyStatus.DELIVERED };
+      mockPrismaService.key.updateMany.mockResolvedValue({ count: 0 });
       mockPrismaService.key.findUnique.mockResolvedValue(deliveredKey);
 
       await expect(repository.reserveKey('key-id-1', 'item-id-1')).rejects.toThrow(
@@ -374,6 +411,10 @@ describe('KeysRepository', () => {
           deliveredAt: expect.any(Date),
         },
       });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
+      });
       expect(result.status).toBe(KeyStatus.DELIVERED);
       expect(result.deliveredAt).toBeDefined();
     });
@@ -439,6 +480,7 @@ describe('KeysRepository', () => {
     it('deve atualizar status da chave', async () => {
       const updatedKey = { ...mockKey, status: KeyStatus.RESERVED };
       mockPrismaService.key.findUnique.mockResolvedValue(mockKey);
+      mockPrismaService.key.count.mockResolvedValue(0);
       mockPrismaService.key.update.mockResolvedValue(updatedKey);
 
       const result = await repository.update('key-id-1', { status: KeyStatus.RESERVED });
@@ -447,6 +489,10 @@ describe('KeysRepository', () => {
         where: { id: 'key-id-1' },
         data: { status: KeyStatus.RESERVED },
         include: { product: true },
+      });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
       });
       expect(result.status).toBe(KeyStatus.RESERVED);
     });
@@ -465,6 +511,7 @@ describe('KeysRepository', () => {
         data: { keyData: 'v2:new-encrypted-data' },
         include: { product: true },
       });
+      expect(prisma.product.update).not.toHaveBeenCalled();
       expect(result.keyData).toBe('v2:new-encrypted-data');
     });
   });
@@ -479,6 +526,10 @@ describe('KeysRepository', () => {
 
       expect(prisma.key.findUnique).toHaveBeenCalledWith({ where: { id: 'key-id-1' } });
       expect(prisma.key.delete).toHaveBeenCalledWith({ where: { id: 'key-id-1' } });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
+      });
       expect(result).toEqual(mockKey);
     });
 
