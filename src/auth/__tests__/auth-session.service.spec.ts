@@ -6,9 +6,9 @@ import { PrismaService } from '@/prisma/prisma.service';
 
 describe('AuthSessionService', () => {
   let service: AuthSessionService;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   let _prisma: PrismaService;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   let _authTokenService: AuthTokenService;
 
   const mockPrismaService = {
