@@ -1,3 +1,19 @@
+# [1.28.0](https://github.com/1arley/ark-shop-back/compare/v1.27.0...v1.28.0) (2026-05-29)
+
+
+### Bug Fixes
+
+* **auth:** tidy auth session test formatting ([a5bc239](https://github.com/1arley/ark-shop-back/commit/a5bc239060ae9e24ebf7a547aa941780ac6e78e0))
+* **payments:** ensure idempotency key is passed and adjust e2e checkout flow tests ([75027f5](https://github.com/1arley/ark-shop-back/commit/75027f5e03104c95e62d239fe8e8194b98af5177))
+
+
+### Features
+
+* **admin/email:** adicionar suporte para isDemo e envio de e-mails de mudança de e-mail ([d54c6ab](https://github.com/1arley/ark-shop-back/commit/d54c6abd3c253be07a00d4010b92f1a1c01e1dcb))
+* **auth:** implementar endpoints e serviços para mudança de e-mail ([08420e2](https://github.com/1arley/ark-shop-back/commit/08420e28cf82408e76c84d734516e49a343a3f0b))
+* **payments/orders/products:** melhorias em pagamentos, estoque e testes ([7223e1b](https://github.com/1arley/ark-shop-back/commit/7223e1b4d396da2077f681adbe1849ea8687f9e4))
+* **prisma:** adicionar EmailChangeRequest, UserDeletionLog e campos isDemo ([397e463](https://github.com/1arley/ark-shop-back/commit/397e4634b9a0f28483d09e72e46d662ebdfd3d74))
+
 # [1.27.0](https://github.com/1arley/ark-shop-back/compare/v1.26.0...v1.27.0) (2026-05-28)
 
 
