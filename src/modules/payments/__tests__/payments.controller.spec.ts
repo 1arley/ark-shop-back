@@ -74,6 +74,7 @@ describe('PaymentsController', () => {
         PaymentMethod.PIX,
         undefined,
         undefined,
+        undefined,
       );
       expect(result).toEqual(mockPayment);
     });
@@ -97,6 +98,7 @@ describe('PaymentsController', () => {
         50,
         PaymentProvider.ASAAS,
         PaymentMethod.PIX,
+        undefined,
         undefined,
         undefined,
       );
@@ -124,6 +126,7 @@ describe('PaymentsController', () => {
         PaymentMethod.PIX,
         '123.456.789-00',
         '1990-05-15',
+        undefined,
       );
     });
   });

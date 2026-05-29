@@ -72,7 +72,7 @@ describe('Checkout Flow (e2e)', () => {
       .expect(200);
     userToken = (userLogin.body as LoginResponse).access_token;
 
-    // Create a product (admin)
+    // Create a product (admin) - initially inactive to pass inventory validation
     const productRes = await request(app.getHttpServer())
       .post('/products')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -81,7 +81,7 @@ describe('Checkout Flow (e2e)', () => {
         description: 'Full game key for Steam',
         price: 199.9,
         stock: 10,
-        isActive: true,
+        isActive: false, // Start as inactive to pass validation
       })
       .expect(201);
     productId = (productRes.body as ProductResponse).id;
@@ -92,6 +92,13 @@ describe('Checkout Flow (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ keys: ['KEY-001-XXXX', 'KEY-002-YYYY', 'KEY-003-ZZZZ'] })
       .expect(201);
+
+    // Now activate the product (since we have keys)
+    await request(app.getHttpServer())
+      .patch(`/products/${productId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isActive: true })
+      .expect(200);
 
     // Create a coupon (admin)
     const couponRes = await request(app.getHttpServer())
