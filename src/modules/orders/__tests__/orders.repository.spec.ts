@@ -20,6 +20,7 @@ describe('OrdersRepository', () => {
     },
     product: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
       update: jest.fn(),
     },
     key: {
@@ -96,6 +97,7 @@ describe('OrdersRepository', () => {
     jest.clearAllMocks();
     mockPrismaService.key.count.mockResolvedValue(0);
     mockPrismaService.account.count.mockResolvedValue(0);
+    mockPrismaService.product.findUnique.mockResolvedValue({ productType: 'KEY' });
   });
 
   // ─── create ───────────────────────────────────────────────────────
@@ -539,6 +541,10 @@ describe('OrdersRepository', () => {
           orderItemId: null,
         },
       });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
+      });
     });
 
     it('deve liberar chaves reservadas ao fazer refund', async () => {
@@ -566,6 +572,44 @@ describe('OrdersRepository', () => {
           status: KeyStatus.AVAILABLE,
           orderItemId: null,
         },
+      });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
+      });
+    });
+
+    it('deve liberar accounts reservadas e sincronizar estoque ao cancelar pedido', async () => {
+      const orderWithReservedAccount = {
+        ...mockOrder,
+        status: OrderStatus.PROCESSING,
+        items: [
+          {
+            ...mockOrder.items[0],
+            keyId: null,
+            accountId: 'account-id-1',
+          },
+        ],
+      };
+      mockPrismaService.product.findUnique.mockResolvedValue({ productType: 'ACCOUNT' });
+      mockPrismaService.order.findUnique.mockResolvedValue(orderWithReservedAccount);
+      mockPrismaService.order.update.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.CANCELLED,
+      });
+
+      await repository.updateStatus('order-id-1', OrderStatus.CANCELLED);
+
+      expect(prisma.account.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['account-id-1'] } },
+        data: {
+          status: KeyStatus.AVAILABLE,
+          orderItemId: null,
+        },
+      });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'product-id-1' },
+        data: { stock: 0 },
       });
     });
 
@@ -609,7 +653,7 @@ describe('OrdersRepository', () => {
         include: {
           items: {
             where: { OR: [{ keyId: { not: null } }, { accountId: { not: null } }] },
-            select: { id: true, keyId: true, accountId: true },
+            select: { id: true, productId: true, keyId: true, accountId: true },
           },
         },
       });

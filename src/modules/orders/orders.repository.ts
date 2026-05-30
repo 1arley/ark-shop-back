@@ -38,7 +38,10 @@ export class OrdersRepository {
     private readonly keysEncryption: KeysEncryptionProvider,
   ) {}
 
-  private async syncProductStock(productId: string, tx: Prisma.TransactionClient) {
+  private async syncProductStock(
+    productId: string,
+    tx: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
     const product = await tx.product.findUnique({
       where: { id: productId },
       select: { productType: true },
@@ -271,7 +274,7 @@ export class OrdersRepository {
       include: {
         items: {
           where: { OR: [{ keyId: { not: null } }, { accountId: { not: null } }] },
-          select: { id: true, keyId: true, accountId: true },
+          select: { id: true, productId: true, keyId: true, accountId: true },
         },
       },
     });
@@ -295,6 +298,7 @@ export class OrdersRepository {
     }
 
     if (status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED) {
+      const affectedProductIds = [...new Set(order.items.map(item => item.productId))];
       const reservedKeyIds = order.items.flatMap(item => (item.keyId ? [item.keyId] : []));
       const reservedAccountIds = order.items.flatMap(item =>
         item.accountId ? [item.accountId] : [],
@@ -312,6 +316,10 @@ export class OrdersRepository {
           where: { id: { in: reservedAccountIds } },
           data: { status: KeyStatus.AVAILABLE, orderItemId: null },
         });
+      }
+
+      for (const productId of affectedProductIds) {
+        await this.syncProductStock(productId);
       }
     }
 
