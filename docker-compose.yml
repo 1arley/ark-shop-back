@@ -19,6 +19,8 @@ services:
       target: production
     container_name: ark-shop-api
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: '0.25'
     ports:
       - '${PORT:-3000}:3000'
     env_file:
@@ -50,6 +52,8 @@ services:
     image: postgres:16-alpine
     container_name: ark-shop-postgres
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: '0.25'
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     environment:
