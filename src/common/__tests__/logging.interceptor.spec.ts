@@ -30,7 +30,7 @@ describe('LoggingInterceptor', () => {
     } as unknown as ExecutionContext;
     mockCallHandler = {
       handle: jest.fn(),
-    } as unknown as CallHandler;
+    };
   });
 
   afterEach(() => {

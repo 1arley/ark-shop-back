@@ -18,7 +18,7 @@
     "test:unit": "jest --config jest.config.mjs",
     "test:unit:cov": "jest --config jest.config.mjs --coverage",
     "test:e2e": "node test/utils/setup-test.js",
-    "test:e2e:checkout": "node -e \"const {execSync}=require('child_process');try{execSync('docker compose -f docker-compose.test.yml rm -sf',{stdio:'inherit'});}catch{};execSync('docker compose -f docker-compose.test.yml up -d --wait',{stdio:'inherit'});try{execSync('npx dotenv-cli -e .env.test -- npx prisma generate',{stdio:'inherit'});execSync('npx dotenv-cli -e .env.test -- npx prisma db push --force-reset',{stdio:'inherit'});execSync('npx dotenv-cli -e .env.test -- npx jest --config ./test/jest-e2e.json --runInBand --forceExit test/e2e/checkout-flow.e2e-spec.ts',{stdio:'inherit'});}finally{execSync('docker compose -f docker-compose.test.yml rm -sf',{stdio:'inherit'});}\"",
+    "test:e2e:checkout": "node -e \"const {execSync}=require('child_process');const env={...process.env,NODE_ENV:'test'};const run=cmd=>execSync(cmd,{stdio:'inherit',env});try{run('docker compose -f docker-compose.test.yml rm -sf');}catch{};run('docker compose -f docker-compose.test.yml up -d --wait');try{run('npx prisma generate');run('npx prisma db push --force-reset');run('npx jest --config ./test/jest-e2e.json --runInBand --forceExit test/e2e/checkout-flow.e2e-spec.ts');}finally{run('docker compose -f docker-compose.test.yml rm -sf');}\"",
     "test:all": "npm run test:unit && npm run test:e2e:checkout",
     "test:all:cov": "npm run test:unit:cov && npm run test:e2e:checkout",
     "test:watch": "jest --config jest.config.mjs --watch",

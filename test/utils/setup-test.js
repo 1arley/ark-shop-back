@@ -6,55 +6,43 @@ function checkRequirements() {
   const errors = [];
 
   if (!existsSync('./docker-compose.test.yml')) {
-    errors.push('docker-compose.test.yml não foi encontrado na raiz');
+    errors.push('docker-compose.test.yml was not found at the project root');
   }
 
   if (!existsSync('./.env.test')) {
-    errors.push('.env.test não foi encontrado na raiz');
+    errors.push('.env.test was not found at the project root');
   }
 
   try {
     execSync('docker --version', { stdio: 'pipe' });
   } catch {
-    errors.push(
-      'docker não encontrado — instale em https://docs.docker.com/get-docker',
-    );
-  }
-
-  try {
-    execSync('npx dotenv-cli --help', { stdio: 'pipe' });
-  } catch {
-    errors.push(
-      'dotenv-cli não encontrado — instale com: npm install -g dotenv-cli',
-    );
+    errors.push('Docker was not found. Install it from https://docs.docker.com/get-docker');
   }
 
   if (errors.length > 0) {
-    console.error('\n🚨 Pré-requisitos não atendidos:\n');
-    errors.forEach((e) => console.error(` ❌ ${e} `));
-    console.error('\nCorrija os problemas acima e tente novamente.\n');
+    console.error('\nTest prerequisites were not met:\n');
+    errors.forEach(error => console.error(` - ${error}`));
+    console.error('\nFix the issues above and try again.\n');
     process.exit(1);
   }
 
-  console.log('✅ Todos os pré-requisitos atendidos.\n');
+  console.log('All test prerequisites were met.\n');
 }
 
-const run = (cmd) => execSync(cmd, { stdio: 'inherit' });
+const run = command =>
+  execSync(command, {
+    stdio: 'inherit',
+    env: { ...process.env, NODE_ENV: 'test' },
+  });
 
 checkRequirements();
 
 try {
   run('docker compose -f ./docker-compose.test.yml rm -sf ark-shop-db-test');
-
   run('docker compose -f ./docker-compose.test.yml up --build -d --wait');
-
-  run('npx dotenv-cli -e .env.test -- npx prisma generate');
-
-  run('npx dotenv-cli -e .env.test -- npx prisma db push --force-reset');
-
-  run(
-    'npx dotenv-cli -e .env.test -- npx jest --config ./test/jest-e2e.json --runInBand --forceExit',
-  );
+  run('npx prisma generate');
+  run('npx prisma db push --force-reset');
+  run('npx jest --config ./test/jest-e2e.json --runInBand --forceExit');
 } finally {
   run('docker compose -f ./docker-compose.test.yml rm -sf');
 }

@@ -395,7 +395,7 @@ describe('PaymentsService', () => {
         'order-id-1',
         'user-id-1',
         100,
-        'MERCADO_PAGO' as PaymentProvider,
+        'MERCADO_PAGO',
         PaymentMethod.PIX,
       );
 
@@ -497,13 +497,7 @@ describe('PaymentsService', () => {
       });
       mockPaymentsRepository.createPixPayment.mockResolvedValue(mockPayment);
 
-      await service.createPayment(
-        'order-id-1',
-        'user-id-1',
-        100,
-        'STRIPE' as PaymentProvider,
-        PaymentMethod.PIX,
-      );
+      await service.createPayment('order-id-1', 'user-id-1', 100, 'STRIPE', PaymentMethod.PIX);
 
       expect(mockProviderFactory.getProvider).toHaveBeenCalledWith(PaymentProvider.ASAAS);
     });

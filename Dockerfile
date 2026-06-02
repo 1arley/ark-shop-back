@@ -30,7 +30,6 @@ RUN npm ci --ignore-scripts
 COPY prisma ./prisma/
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate --schema=./prisma/schema.prisma
-ENV DATABASE_URL=""
 
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY prisma.config.ts ./

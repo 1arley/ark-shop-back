@@ -61,11 +61,9 @@ describe('PaymentProviderFactory', () => {
     });
 
     it('should throw BadRequestException for unknown provider', () => {
-      expect(() => factory.getProvider('MERCADO_PAGO' as PaymentProvider)).toThrow(
-        BadRequestException,
-      );
+      expect(() => factory.getProvider('MERCADO_PAGO')).toThrow(BadRequestException);
 
-      expect(() => factory.getProvider('MERCADO_PAGO' as PaymentProvider)).toThrow(
+      expect(() => factory.getProvider('MERCADO_PAGO')).toThrow(
         'Payment provider MERCADO_PAGO not available',
       );
     });

@@ -92,50 +92,45 @@ jobs:
       - name: Pull Docker image
         run: docker pull ${{ env.DOCKER_IMAGE }}:${{ needs.determine-env.outputs.image-tag }}
 
-      # - name: Deploy via Render
-      #   if: ${{ needs.determine-env.outputs.environment == 'production' }}
-      #   env:
-      #     RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-      #   run: |
-      #     if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
-      #       HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$RENDER_DEPLOY_HOOK_URL")
-      #       if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
-      #         echo "✅ Deploy triggered on Render (HTTP $HTTP_CODE)"
-      #       else
-      #         echo "❌ Render deploy hook returned HTTP $HTTP_CODE"
-      #         exit 1
-      #       fi
-      #     else
-      #       echo "⚠️  RENDER_DEPLOY_HOOK_URL not set"
-      #       exit 1
-      #     fi
+      - name: Trigger Render deploy
+        id: render
+        env:
+          ENVIRONMENT: ${{ needs.determine-env.outputs.environment }}
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_STAGING_DEPLOY_HOOK_URL: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK_URL }}
+        run: |
+          if [ "$ENVIRONMENT" = "production" ]; then
+            HOOK_URL="$RENDER_DEPLOY_HOOK_URL"
+          else
+            HOOK_URL="$RENDER_STAGING_DEPLOY_HOOK_URL"
+          fi
 
-      # - name: Deploy to Staging (Render)
-      #   if: ${{ needs.determine-env.outputs.environment == 'staging' }}
-      #   env:
-      #     RENDER_STAGING_DEPLOY_HOOK_URL: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK_URL }}
-      #   run: |
-      #     if [ -n "$RENDER_STAGING_DEPLOY_HOOK_URL" ]; then
-      #       HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$RENDER_STAGING_DEPLOY_HOOK_URL")
-      #       if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
-      #         echo "✅ Staging deploy triggered on Render (HTTP $HTTP_CODE)"
-      #       else
-      #         echo "⚠️  Render staging deploy hook returned HTTP $HTTP_CODE"
-      #       fi
-      #     else
-      #       echo "⚠️  RENDER_STAGING_DEPLOY_HOOK_URL not set — skipping"
-      #     fi
+          if [ -z "$HOOK_URL" ]; then
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "Render deploy hook is not configured for $ENVIRONMENT; skipping deploy."
+            exit 0
+          fi
+
+          HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$HOOK_URL")
+          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
+            echo "deployed=true" >> "$GITHUB_OUTPUT"
+            echo "Deploy triggered on Render (HTTP $HTTP_CODE)"
+          else
+            echo "Render deploy hook returned HTTP $HTTP_CODE"
+            exit 1
+          fi
 
       - name: Health check after deploy
+        if: steps.render.outputs.deployed == 'true'
         run: |
-          URL="${{ needs.determine-env.outputs.environment == 'production' && 'https://api.arkshop.com' || 'https://staging.api.arkshop.com' }}"
+          URL="${{ needs.determine-env.outputs.environment == 'production' && 'https://api.arkshop.com' || 'https://staging.api.arkshop.com' }}/api/health/ready"
           echo "Waiting 30s for deployment..."
           sleep 30
 
           MAX_RETRIES=10
           RETRY=0
           while [ $RETRY -lt $MAX_RETRIES ]; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/api/v1/health" || echo "000")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
             if [ "$STATUS" = "200" ]; then
               echo "✅ Health check passed (HTTP $STATUS)"
               exit 0
@@ -155,7 +150,11 @@ jobs:
         run: |
           if [ -n "$DISCORD_WEBHOOK_URL" ]; then
             STATUS="${{ job.status }}"
-            EMOJI="${STATUS == 'success' && '✅' || '❌'}"
+            if [ "$STATUS" = "success" ]; then
+              EMOJI="OK"
+            else
+              EMOJI="FAILED"
+            fi
             curl -X POST "$DISCORD_WEBHOOK_URL" \
               -H "Content-Type: application/json" \
               -d '{

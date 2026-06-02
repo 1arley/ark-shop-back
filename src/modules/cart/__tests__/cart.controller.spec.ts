@@ -98,7 +98,7 @@ describe('CartController', () => {
       const dto = {};
       mockCartService.getCart.mockResolvedValue(mockCartResult);
 
-      const result = await controller.updateItem('product-id-1', dto as any, mockUser);
+      const result = await controller.updateItem('product-id-1', dto, mockUser);
 
       expect(cartService.updateItem).not.toHaveBeenCalled();
       expect(cartService.getCart).toHaveBeenCalledWith(mockUser.id);

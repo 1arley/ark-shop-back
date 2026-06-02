@@ -28,7 +28,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const message =
       typeof errorResponse === 'object' && errorResponse !== null && 'message' in errorResponse
-        ? (errorResponse as { message: unknown }).message
+        ? errorResponse.message
         : errorResponse;
 
     // Log all errors

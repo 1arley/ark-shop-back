@@ -41,7 +41,7 @@ describe('ProductsController', () => {
 
       mockProductsService.create.mockResolvedValue(createdProduct);
 
-      const result = await controller.create(createDto as any);
+      const result = await controller.create(createDto);
 
       expect(result).toEqual(createdProduct);
       expect(productsService.create).toHaveBeenCalledWith(createDto);
@@ -61,7 +61,7 @@ describe('ProductsController', () => {
 
       mockProductsService.create.mockResolvedValue(created);
 
-      await controller.create(createDto as any);
+      await controller.create(createDto);
 
       expect(productsService.create).toHaveBeenCalledWith(createDto);
     });
@@ -223,7 +223,7 @@ describe('ProductsController', () => {
       const updated = { id: 'prod-1', ...updateDto };
       mockProductsService.update.mockResolvedValue(updated);
 
-      const result = await controller.update('prod-1', updateDto as any);
+      const result = await controller.update('prod-1', updateDto);
 
       expect(result).toEqual(updated);
       expect(productsService.update).toHaveBeenCalledWith('prod-1', updateDto);
@@ -234,7 +234,7 @@ describe('ProductsController', () => {
       const updated = { id: 'prod-1', isActive: false };
       mockProductsService.update.mockResolvedValue(updated);
 
-      const result = await controller.update('prod-1', updateDto as any);
+      const result = await controller.update('prod-1', updateDto);
 
       expect(result).toEqual(updated);
       expect(productsService.update).toHaveBeenCalledWith('prod-1', { isActive: false });
@@ -288,7 +288,7 @@ describe('ProductsController', () => {
       };
       mockProductsService.importFromCsv.mockResolvedValue(importResult);
 
-      const result = await controller.importFromCsv(body as any);
+      const result = await controller.importFromCsv(body);
 
       expect(result).toEqual(importResult);
       expect(productsService.importFromCsv).toHaveBeenCalledWith(body.csvContent, {
@@ -316,7 +316,7 @@ describe('ProductsController', () => {
         products: [],
       });
 
-      await controller.importFromCsv(body as any);
+      await controller.importFromCsv(body);
 
       expect(productsService.importFromCsv).toHaveBeenCalledWith(body.csvContent, {
         categoryId: undefined,
