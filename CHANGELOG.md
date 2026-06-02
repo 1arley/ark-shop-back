@@ -1,3 +1,10 @@
+## [1.28.1](https://github.com/1arley/ark-shop-back/compare/v1.28.0...v1.28.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* bump eslint from ^9.18.0 to ^10.0.0 to resolve peer dep conflict with @eslint/js@10.0.1 ([773012e](https://github.com/1arley/ark-shop-back/commit/773012eb5e11d5518b0d2f819463d81467bec26a))
+
 # [1.28.0](https://github.com/1arley/ark-shop-back/compare/v1.27.0...v1.28.0) (2026-05-29)
 
 
