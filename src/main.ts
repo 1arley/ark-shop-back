@@ -11,18 +11,32 @@ import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'express';
+import { runMigrations } from './migrate';
 
 // Logger declared BEFORE process handlers to avoid ReferenceError on startup crashes
 const logger = new Logger('Bootstrap');
 
-// Safety net: log unhandled rejections instead of crashing
+// Run database migrations before app startup (same Node process, no extra RAM spike)
+if (process.env.NODE_ENV === 'production') {
+  runMigrations();
+}
+
+// Safety net: log unhandled rejections and initiate graceful shutdown
 process.on('unhandledRejection', reason => {
   const message = reason instanceof Error ? reason.message : String(reason);
   logger.error(`Unhandled Promise Rejection: ${message}`);
+  if (reason instanceof Error && reason.stack) {
+    logger.error(reason.stack);
+  }
 });
 
 process.on('uncaughtException', error => {
   logger.error(`Uncaught Exception: ${String(error)}`);
+  if (error.stack) {
+    logger.error(error.stack);
+  }
+  // Give time for logs to flush, then exit
+  setTimeout(() => process.exit(1), 10_000);
 });
 
 export async function createApp(): Promise<INestApplication> {
