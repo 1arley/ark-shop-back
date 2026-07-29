@@ -136,7 +136,7 @@ describe('PaymentsController', () => {
     it('should return payment by ID', async () => {
       mockPaymentsService.getPayment.mockResolvedValue(mockPayment);
 
-      const result = await controller.getPayment('payment-id-1');
+      const result = await controller.getPayment('payment-id-1', { id: 'user-id-1', role: 'USER' });
 
       expect(paymentsService.getPayment).toHaveBeenCalledWith('payment-id-1');
       expect(result).toEqual(mockPayment);
@@ -207,7 +207,10 @@ describe('PaymentsController', () => {
     it('should return payment by order ID', async () => {
       mockPaymentsService.getPaymentByOrderId.mockResolvedValue(mockPayment);
 
-      const result = await controller.getPaymentByOrder('order-id-1');
+      const result = await controller.getPaymentByOrder('order-id-1', {
+        id: 'user-id-1',
+        role: 'USER',
+      });
 
       expect(paymentsService.getPaymentByOrderId).toHaveBeenCalledWith('order-id-1');
       expect(result).toEqual(mockPayment);
@@ -216,9 +219,9 @@ describe('PaymentsController', () => {
     it('should throw NotFoundException when no payment exists for order', async () => {
       mockPaymentsService.getPaymentByOrderId.mockResolvedValue(null);
 
-      await expect(controller.getPaymentByOrder('order-id-999')).rejects.toThrow(
-        'Payment not found for this order',
-      );
+      await expect(
+        controller.getPaymentByOrder('order-id-999', { id: 'user-id-1', role: 'USER' }),
+      ).rejects.toThrow('Payment not found for this order');
     });
   });
 

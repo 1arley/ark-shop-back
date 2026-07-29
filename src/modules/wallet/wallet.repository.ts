@@ -28,7 +28,7 @@ export class WalletNotFoundError extends Error {
 export class WalletRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findWalletByUserId(userId: string): Promise<Wallet | null> {
+  findWalletByUserId(userId: string): Promise<Wallet | null> {
     return this.prisma.wallet.findUnique({
       where: { userId },
       include: {
@@ -39,7 +39,7 @@ export class WalletRepository {
     });
   }
 
-  async createWallet(userId: string): Promise<Wallet> {
+  createWallet(userId: string): Promise<Wallet> {
     // Use upsert to prevent race condition between check and create
     return this.prisma.wallet.upsert({
       where: { userId },
@@ -56,7 +56,7 @@ export class WalletRepository {
    * Atomically add balance and record the transaction in a single database transaction.
    * Both operations succeed or fail together, preserving the financial audit trail.
    */
-  async addBalance(
+  addBalance(
     userId: string,
     amount: number,
     type: string = 'credit',
@@ -111,7 +111,7 @@ export class WalletRepository {
    * Both operations succeed or fail together, preserving the financial audit trail.
    * Throws InsufficientFundsError if balance is too low.
    */
-  async deductBalance(
+  deductBalance(
     userId: string,
     amount: number,
     type: string = 'debit',
@@ -170,7 +170,7 @@ export class WalletRepository {
    * Atomically add cashback and record the transaction in a single database transaction.
    * Both operations succeed or fail together, preserving the financial audit trail.
    */
-  async addCashback(
+  addCashback(
     userId: string,
     amount: number,
     type: string = 'cashback',
@@ -220,7 +220,7 @@ export class WalletRepository {
     });
   }
 
-  async updateBalance(userId: string, balance: number, cashback: number): Promise<Wallet> {
+  updateBalance(userId: string, balance: number, cashback: number): Promise<Wallet> {
     return this.prisma.wallet.update({
       where: { userId },
       data: {
@@ -273,6 +273,7 @@ export class WalletRepository {
 }
 
 // Helper function to convert Decimal to number
+
 function toNumber(value: number | Prisma.Decimal | null | undefined): number | null {
   if (value === null || value === undefined) {
     return null;

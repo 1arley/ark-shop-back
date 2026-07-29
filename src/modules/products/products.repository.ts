@@ -186,7 +186,7 @@ export class ProductsRepository {
     return { ...product, price: toNumber(product.price) };
   }
 
-  async delete(id: string) {
+  delete(id: string) {
     return this.prisma.product.delete({
       where: { id },
     });
@@ -222,7 +222,7 @@ export class ProductsRepository {
     };
   }
 
-  async findByName(name: string) {
+  findByName(name: string) {
     return this.prisma.product.findFirst({
       where: {
         name: {
@@ -233,7 +233,7 @@ export class ProductsRepository {
     });
   }
 
-  async createMany(
+  createMany(
     products: Array<{
       name: string;
       description?: string | null;

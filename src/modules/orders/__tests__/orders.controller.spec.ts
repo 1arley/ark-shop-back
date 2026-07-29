@@ -80,9 +80,10 @@ describe('OrdersController', () => {
       };
       mockOrdersService.create.mockResolvedValue(mockOrder);
 
-      const result = await controller.create(createOrderDto, mockUser);
+      const mockReq = { ip: '127.0.0.1', connection: { remoteAddress: '127.0.0.1' } };
+      const result = await controller.create(createOrderDto, mockUser, mockReq);
 
-      expect(ordersService.create).toHaveBeenCalledWith(createOrderDto, mockUser.id);
+      expect(ordersService.create).toHaveBeenCalledWith(createOrderDto, mockUser.id, '127.0.0.1');
       expect(result).toEqual(mockOrder);
     });
 
@@ -99,9 +100,10 @@ describe('OrdersController', () => {
       };
       mockOrdersService.create.mockResolvedValue(orderWithCoupon);
 
-      const result = await controller.create(createOrderDto, mockUser);
+      const mockReq = { ip: '127.0.0.1', connection: { remoteAddress: '127.0.0.1' } };
+      const result = await controller.create(createOrderDto, mockUser, mockReq);
 
-      expect(ordersService.create).toHaveBeenCalledWith(createOrderDto, mockUser.id);
+      expect(ordersService.create).toHaveBeenCalledWith(createOrderDto, mockUser.id, '127.0.0.1');
       expect(result).toEqual(orderWithCoupon);
     });
 
@@ -111,7 +113,8 @@ describe('OrdersController', () => {
       };
       mockOrdersService.create.mockRejectedValue(new BadRequestException('Product not found'));
 
-      await expect(controller.create(createOrderDto, mockUser)).rejects.toThrow(
+      const mockReq = { ip: '127.0.0.1', connection: { remoteAddress: '127.0.0.1' } };
+      await expect(controller.create(createOrderDto, mockUser, mockReq)).rejects.toThrow(
         BadRequestException,
       );
     });

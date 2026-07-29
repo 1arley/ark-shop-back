@@ -29,6 +29,9 @@ describe('ProductsService', () => {
     category: {
       findUnique: jest.fn(),
     },
+    orderItem: {
+      count: jest.fn().mockResolvedValue(0),
+    },
   };
 
   beforeEach(async () => {

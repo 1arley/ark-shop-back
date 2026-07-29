@@ -320,7 +320,7 @@ export class AdminService {
     return this.sellersService.update(id, dto);
   }
 
-  async deleteSeller(id: string) {
+  deleteSeller(id: string) {
     return this.sellersService.delete(id);
   }
 }

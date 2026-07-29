@@ -163,9 +163,7 @@ export class AsaasWebhookHandler {
     const providerPaymentId = String(payment.id);
     this.logger.log(`Payment refunded: ${providerPaymentId}`);
 
-    // Deixa o erro propagar — o handleEvent retorna authorizationStatus: 'REJECTED'
-    // e o Asaas retenta o webhook automaticamente
-    await this.paymentsService.refundPaymentByProviderTxId(providerPaymentId);
+    await this.paymentsService.markAsRefundedByProviderTxId(providerPaymentId);
   }
 
   private async handlePaymentCancelled(payment: any) {

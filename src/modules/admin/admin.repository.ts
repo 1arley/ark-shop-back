@@ -338,6 +338,7 @@ export class AdminRepository {
             include: { product: true },
           },
           payment: true,
+          coupon: { select: { id: true, code: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -350,6 +351,8 @@ export class AdminRepository {
         total: toNumber(order.total),
         subtotal: toNumber(order.subtotal),
         discountAmount: toNumber(order.discountAmount),
+        discount: toNumber(order.discountAmount),
+        couponCode: order.coupon?.code ?? null,
         user: order.user,
         items: order.items.map(item => ({
           ...item,

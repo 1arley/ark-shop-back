@@ -181,6 +181,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do j
 
   @Get()
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({ summary: 'Get all products' })
   @ApiResponse({ status: 200, description: 'List of products' })
   @ApiQuery({
@@ -230,6 +231,7 @@ Carimbo de data/hora,Nome do jogo,preço de venda,Carimbo de data/hora,Nome do j
 
   @Get(':id')
   @Public()
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @ApiOperation({ summary: 'Get product by ID' })
   @ApiResponse({ status: 200, description: 'Product found' })
   @ApiResponse({ status: 404, description: 'Product not found' })

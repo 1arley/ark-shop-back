@@ -3,6 +3,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { toNumber } from '@/common/decimal';
+import type { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CouponsRepository {
@@ -156,7 +157,6 @@ export class CouponsRepository {
    */
   async incrementUsageIfAvailable(id: string, maxUses: number | null): Promise<boolean> {
     if (maxUses === null) {
-      // Unlimited uses — just increment
       await this.prisma.coupon.update({
         where: { id },
         data: { usedCount: { increment: 1 } },
@@ -164,8 +164,28 @@ export class CouponsRepository {
       return true;
     }
 
-    // Atomic conditional increment: only succeeds if usedCount < maxUses
     const result = await this.prisma.coupon.updateMany({
+      where: { id, usedCount: { lt: maxUses } },
+      data: { usedCount: { increment: 1 } },
+    });
+
+    return result.count > 0;
+  }
+
+  async incrementUsageIfAvailableTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    maxUses: number | null,
+  ): Promise<boolean> {
+    if (maxUses === null) {
+      await tx.coupon.update({
+        where: { id },
+        data: { usedCount: { increment: 1 } },
+      });
+      return true;
+    }
+
+    const result = await tx.coupon.updateMany({
       where: { id, usedCount: { lt: maxUses } },
       data: { usedCount: { increment: 1 } },
     });

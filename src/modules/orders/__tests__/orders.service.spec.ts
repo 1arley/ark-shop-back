@@ -5,6 +5,8 @@ import { OrdersRepository } from '../orders.repository';
 import { KeysService } from '@/modules/keys/keys.service';
 import { AccountsService } from '@/modules/accounts/accounts.service';
 import { CouponsService } from '@/modules/coupons/coupons.service';
+import { AntifraudService } from '@/modules/antifraud/antifraud.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { OrderStatus, KeyStatus } from '@prisma/client';
 
 describe('OrdersService', () => {
@@ -65,7 +67,7 @@ describe('OrdersService', () => {
     updateStatus: jest.fn(),
     cancel: jest.fn(),
     getRecentOrders: jest.fn(),
-    getProductsByIds: jest.fn(),
+    getProductsByIds: jest.fn().mockResolvedValue([]),
     deliverOrderAtomic: jest.fn(),
   };
 
@@ -81,6 +83,15 @@ describe('OrdersService', () => {
     validateAndCalculate: jest.fn(),
     markAsUsed: jest.fn(),
     markAsUsedIfAvailable: jest.fn().mockResolvedValue(true),
+    markAsUsedIfAvailableTx: jest.fn().mockResolvedValue(true),
+  };
+
+  const mockAntifraudService = {
+    analyzeRisk: jest.fn().mockResolvedValue({ decision: 'APPROVED', reason: '' }),
+  };
+
+  const mockPrismaService = {
+    $transaction: jest.fn(async (fn: any) => fn(mockPrismaService)),
   };
 
   beforeEach(async () => {
@@ -91,6 +102,8 @@ describe('OrdersService', () => {
         { provide: KeysService, useValue: mockKeysService },
         { provide: AccountsService, useValue: mockAccountsService },
         { provide: CouponsService, useValue: mockCouponsService },
+        { provide: AntifraudService, useValue: mockAntifraudService },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 
@@ -104,6 +117,9 @@ describe('OrdersService', () => {
 
   describe('create', () => {
     it('should create order without coupon', async () => {
+      mockOrdersRepository.getProductsByIds.mockResolvedValue([
+        { id: 'product-id-1', name: 'Game', price: 100, isActive: true },
+      ]);
       mockOrdersRepository.create.mockResolvedValue(mockOrder);
 
       const result = await service.create(
@@ -117,6 +133,7 @@ describe('OrdersService', () => {
         }),
         'user-id-1',
         undefined,
+        expect.anything(),
       );
       expect(couponsService.validateAndCalculate).not.toHaveBeenCalled();
       expect(result).toEqual(mockOrder);
@@ -156,12 +173,16 @@ describe('OrdersService', () => {
         code: 'PROMO10',
         subtotal: 100,
       });
-      expect(couponsService.markAsUsedIfAvailable).toHaveBeenCalledWith('coupon-id-1', null);
-      expect(ordersRepository.create).toHaveBeenCalledWith(expect.any(Object), 'user-id-1', {
-        couponId: 'coupon-id-1',
-        discountAmount: 10,
-        maxUses: null,
-      });
+      expect(couponsService.markAsUsedIfAvailableTx).toHaveBeenCalled();
+      expect(ordersRepository.create).toHaveBeenCalledWith(
+        expect.any(Object),
+        'user-id-1',
+        {
+          couponId: 'coupon-id-1',
+          discountAmount: 10,
+        },
+        expect.anything(),
+      );
     });
 
     it('should throw if coupon is invalid', async () => {

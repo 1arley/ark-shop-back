@@ -98,6 +98,7 @@ describe('OrdersRepository', () => {
     mockPrismaService.key.count.mockResolvedValue(0);
     mockPrismaService.account.count.mockResolvedValue(0);
     mockPrismaService.product.findUnique.mockResolvedValue({ productType: 'KEY' });
+    mockPrismaService.$transaction.mockImplementation(async cb => cb(mockPrismaService));
   });
 
   // ─── create ───────────────────────────────────────────────────────
@@ -238,6 +239,7 @@ describe('OrdersRepository', () => {
       };
 
       mockPrismaService.product.findMany.mockResolvedValue([lowStockProduct]);
+      mockPrismaService.product.findUnique.mockResolvedValue(lowStockProduct);
 
       await expect(repository.create(createOrderDto, 'user-id-1')).rejects.toThrow(
         BadRequestException,
@@ -321,10 +323,13 @@ describe('OrdersRepository', () => {
             },
           },
           payment: true,
+          coupon: { select: { id: true, code: true } },
         },
       });
       expect(result).toEqual({
         ...mockOrder,
+        discount: 0,
+        couponCode: null,
         items: mockOrder.items.map(item => ({ ...item, account: null })),
       });
     });
@@ -351,6 +356,8 @@ describe('OrdersRepository', () => {
       expect(result.data).toEqual([
         {
           ...mockOrder,
+          discount: 0,
+          couponCode: null,
           items: mockOrder.items.map(item => ({ ...item, account: null })),
         },
       ]);
@@ -543,7 +550,7 @@ describe('OrdersRepository', () => {
       });
       expect(prisma.product.update).toHaveBeenCalledWith({
         where: { id: 'product-id-1' },
-        data: { stock: 0 },
+        data: { stock: 0, isActive: false },
       });
     });
 
@@ -575,7 +582,7 @@ describe('OrdersRepository', () => {
       });
       expect(prisma.product.update).toHaveBeenCalledWith({
         where: { id: 'product-id-1' },
-        data: { stock: 0 },
+        data: { stock: 0, isActive: false },
       });
     });
 
@@ -609,7 +616,7 @@ describe('OrdersRepository', () => {
       });
       expect(prisma.product.update).toHaveBeenCalledWith({
         where: { id: 'product-id-1' },
-        data: { stock: 0 },
+        data: { stock: 0, isActive: false },
       });
     });
 
@@ -691,12 +698,15 @@ describe('OrdersRepository', () => {
               },
             },
           },
+          coupon: { select: { id: true, code: true } },
         },
         orderBy: { createdAt: 'desc' },
       });
       expect(result).toEqual([
         {
           ...mockOrder,
+          discount: 0,
+          couponCode: null,
           items: mockOrder.items.map(item => ({ ...item, account: null })),
         },
       ]);
@@ -919,11 +929,11 @@ describe('OrdersRepository', () => {
       expect(mockTx.order.update).toHaveBeenCalledWith({
         where: { id: 'order-id-1' },
         data: { status: OrderStatus.DELIVERED },
-        include: { items: true, payment: true },
+        include: { items: true, payment: true, coupon: { select: { id: true, code: true } } },
       });
       expect(mockTx.product.update).toHaveBeenCalledWith({
         where: { id: 'product-id-1' },
-        data: { stock: 0 },
+        data: { stock: 0, isActive: false },
       });
       expect(result.status).toBe(OrderStatus.DELIVERED);
     });
@@ -989,7 +999,7 @@ describe('OrdersRepository', () => {
       });
       expect(mockTx.product.update).toHaveBeenCalledWith({
         where: { id: 'product-id-1' },
-        data: { stock: 0 },
+        data: { stock: 0, isActive: false },
       });
       expect(result.status).toBe(OrderStatus.DELIVERED);
     });

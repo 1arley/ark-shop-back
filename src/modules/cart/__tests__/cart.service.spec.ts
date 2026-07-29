@@ -62,6 +62,7 @@ describe('CartService', () => {
     prisma = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
+    mockPrismaService.$transaction.mockImplementation(async cb => cb(mockPrismaService));
   });
 
   // ─── getCart ──────────────────────────────────────────────────────
@@ -175,6 +176,9 @@ describe('CartService', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn().mockResolvedValue(mockCartItem),
         },
+        product: {
+          findUnique: jest.fn().mockResolvedValue(mockProduct),
+        },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));
       mockPrismaService.cart.findUnique
@@ -211,6 +215,9 @@ describe('CartService', () => {
         cartItem: {
           findFirst: jest.fn().mockResolvedValue(existingItem),
           update: jest.fn().mockResolvedValue({ ...existingItem, quantity: 5 }),
+        },
+        product: {
+          findUnique: jest.fn().mockResolvedValue(mockProduct),
         },
       };
       mockPrismaService.$transaction.mockImplementation(async cb => cb(mockTx));

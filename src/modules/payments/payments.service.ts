@@ -259,15 +259,23 @@ export class PaymentsService {
         this.logger.log(`Order ${order.id} delivered successfully`);
       }
     } catch (error) {
-      this.logger.error('Failed to deliver order after payment approval', error);
-      // Don't throw - payment was already approved, delivery failure should not rollback
+      this.logger.error(
+        `Failed to deliver order ${payment.orderId} after payment approval. ` +
+          'Order remains in PAID status for manual retry.',
+        error,
+      );
+      try {
+        await this.ordersService.updateStatus(payment.orderId, OrderStatus.PROCESSING);
+      } catch (statusError) {
+        this.logger.error('Failed to set order to PROCESSING for retry', statusError);
+      }
     }
   }
 
   /**
    * Reject payment
    */
-  async rejectPayment(paymentId: string, reason?: string) {
+  rejectPayment(paymentId: string, reason?: string) {
     return this.paymentsRepository.rejectPayment(paymentId, reason);
   }
 
@@ -313,14 +321,17 @@ export class PaymentsService {
     // Notify active seller about the split payment (if any)
     if (this.prisma && this.emailService) {
       try {
-        const seller = await this.prisma.seller.findFirst({
+        const sellers = await this.prisma.seller.findMany({
           where: { isActive: true, asaasWalletId: { not: null } },
           include: { user: { select: { email: true, name: true } } },
         });
-        if (seller?.user?.email) {
+
+        const paymentAmount = toNumber(approvedPayment.amount) ?? 0;
+
+        for (const seller of sellers) {
+          if (!seller.user.email) continue;
           const platformCommission = toNumber(seller.commission) ?? 10;
           const sellerPercent = 100 - platformCommission;
-          const paymentAmount = toNumber(approvedPayment.amount) ?? 0;
           const sellerAmount = (paymentAmount * sellerPercent) / 100;
           const emailHtml =
             `<p>Olá ${seller.user.name || ''},</p>` +
@@ -362,5 +373,19 @@ export class PaymentsService {
     }
 
     return this.refundPayment(payment.id, amount);
+  }
+
+  async markAsRefundedByProviderTxId(providerTxId: string) {
+    const payment = await this.paymentsRepository.findByProviderTxId(providerTxId);
+    if (!payment) {
+      throw new BadRequestException('Payment not found');
+    }
+
+    if (payment.status === PaymentStatus.REFUNDED) {
+      this.logger.log(`Payment ${providerTxId} already marked as refunded — skipping`);
+      return payment;
+    }
+
+    return this.paymentsRepository.markPaymentRefunded(payment.id);
   }
 }

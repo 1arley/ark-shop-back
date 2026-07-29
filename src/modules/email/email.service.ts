@@ -12,7 +12,9 @@ export interface EmailOptions {
 
 interface OrderWithRelations extends Order {
   user: { id: string; email: string; name: string | null };
+
   items: Array<OrderItem & { product: Product }>;
+
   payment: Payment | null;
 }
 
@@ -377,7 +379,9 @@ Sua conta permanecera segura com o email atual.
 
   async sendPaymentReceipt(
     to: string,
+
     payment: Payment & { order?: Order },
+
     order: Order & { items?: OrderItem[] },
   ): Promise<boolean> {
     const html = `

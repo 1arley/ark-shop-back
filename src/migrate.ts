@@ -18,8 +18,13 @@ function waitForDatabase(maxRetries = 30, delayMs = 2000): void {
       });
       logger.log('Database connection established.');
       return;
-    } catch {
-      logger.log(`Waiting for database... (${i + 1}/${maxRetries})`);
+    } catch (error) {
+      const stderr =
+        error instanceof Error && 'stderr' in error
+          ? String((error as { stderr?: Buffer }).stderr)
+          : '';
+      const message = error instanceof Error ? error.message : String(error);
+      logger.log(`Waiting for database... (${i + 1}/${maxRetries}) ${message} ${stderr}`);
       execSync(`sleep ${delayMs / 1000}`);
     }
   }

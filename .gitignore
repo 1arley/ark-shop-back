@@ -43,6 +43,7 @@ lerna-debug.log*
 .env.me
 !.env.vault
 .env.project
+.env.prod
 
 # Prisma
 prisma/.env

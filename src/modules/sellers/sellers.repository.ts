@@ -121,7 +121,7 @@ export class SellersRepository {
     };
   }
 
-  async delete(id: string) {
+  delete(id: string) {
     return this.prisma.seller.delete({ where: { id } });
   }
 }

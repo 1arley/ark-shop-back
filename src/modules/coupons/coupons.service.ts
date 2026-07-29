@@ -4,6 +4,7 @@ import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { ApplyCouponDto } from './dto/apply-coupon.dto';
 import { toNumber } from '@/common/decimal';
+import type { Prisma } from '@prisma/client';
 
 // Coupon type as string literal to avoid Prisma client dependency issues
 type CouponType = 'PERCENTAGE' | 'FIXED';
@@ -71,6 +72,9 @@ export class CouponsService {
 
     // Discount cannot exceed subtotal
     if (discountAmount > dto.subtotal) {
+      this.logger.warn(
+        `Coupon ${coupon.code} discount R$ ${discountAmount.toFixed(2)} exceeds subtotal R$ ${dto.subtotal.toFixed(2)}, capping`,
+      );
       discountAmount = dto.subtotal;
     }
 
@@ -107,5 +111,16 @@ export class CouponsService {
   async markAsUsedIfAvailable(couponId: string, maxUses: number | null): Promise<boolean> {
     this.logger.log(`Attempting to mark coupon ${couponId} as used (maxUses: ${maxUses})`);
     return this.couponsRepository.incrementUsageIfAvailable(couponId, maxUses);
+  }
+
+  async markAsUsedIfAvailableTx(
+    tx: Prisma.TransactionClient,
+    couponId: string,
+    maxUses: number | null,
+  ): Promise<boolean> {
+    this.logger.log(
+      `Attempting to mark coupon ${couponId} as used in transaction (maxUses: ${maxUses})`,
+    );
+    return this.couponsRepository.incrementUsageIfAvailableTx(tx, couponId, maxUses);
   }
 }

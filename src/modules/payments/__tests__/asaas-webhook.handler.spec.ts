@@ -15,6 +15,7 @@ describe('AsaasWebhookHandler', () => {
   const mockPaymentsService = {
     approvePaymentByProviderTxId: jest.fn(),
     refundPaymentByProviderTxId: jest.fn(),
+    markAsRefundedByProviderTxId: jest.fn(),
     rejectPaymentByProviderTxId: jest.fn(),
     verifyPaymentWithProvider: jest.fn(),
   };
@@ -217,11 +218,11 @@ describe('AsaasWebhookHandler', () => {
         payment: { id: 'pay-3', status: 'REFUNDED' },
       };
 
-      mockPaymentsService.refundPaymentByProviderTxId.mockResolvedValue({});
+      mockPaymentsService.markAsRefundedByProviderTxId.mockResolvedValue({});
 
       const result = await handler.handleEvent(event);
 
-      expect(mockPaymentsService.refundPaymentByProviderTxId).toHaveBeenCalledWith('pay-3');
+      expect(mockPaymentsService.markAsRefundedByProviderTxId).toHaveBeenCalledWith('pay-3');
       expect(result).toEqual({ processed: true });
     });
 
@@ -231,11 +232,11 @@ describe('AsaasWebhookHandler', () => {
         payment: { id: 'pay-4' },
       };
 
-      mockPaymentsService.refundPaymentByProviderTxId.mockResolvedValue({});
+      mockPaymentsService.markAsRefundedByProviderTxId.mockResolvedValue({});
 
       const result = await handler.handleEvent(event);
 
-      expect(mockPaymentsService.refundPaymentByProviderTxId).toHaveBeenCalledWith('pay-4');
+      expect(mockPaymentsService.markAsRefundedByProviderTxId).toHaveBeenCalledWith('pay-4');
       expect(result).toEqual({ processed: true });
     });
 
@@ -370,29 +371,29 @@ describe('AsaasWebhookHandler', () => {
   // ─── handlePaymentRefunded ───────────────────────────────────────
   describe('handlePaymentRefunded', () => {
     it('should refund payment with payment ID', async () => {
-      mockPaymentsService.refundPaymentByProviderTxId.mockResolvedValue({});
+      mockPaymentsService.markAsRefundedByProviderTxId.mockResolvedValue({});
 
       await (handler as any).handlePaymentRefunded({ id: 'pay-refund' });
 
-      expect(mockPaymentsService.refundPaymentByProviderTxId).toHaveBeenCalledWith('pay-refund');
+      expect(mockPaymentsService.markAsRefundedByProviderTxId).toHaveBeenCalledWith('pay-refund');
     });
 
     it('should return early when payment ID is missing', async () => {
       await (handler as any).handlePaymentRefunded({});
 
-      expect(mockPaymentsService.refundPaymentByProviderTxId).not.toHaveBeenCalled();
+      expect(mockPaymentsService.markAsRefundedByProviderTxId).not.toHaveBeenCalled();
     });
 
     it('should return early when payment is null', async () => {
       await (handler as any).handlePaymentRefunded(null);
 
-      expect(mockPaymentsService.refundPaymentByProviderTxId).not.toHaveBeenCalled();
+      expect(mockPaymentsService.markAsRefundedByProviderTxId).not.toHaveBeenCalled();
     });
 
     it('should return early when payment is undefined', async () => {
       await (handler as any).handlePaymentRefunded(undefined);
 
-      expect(mockPaymentsService.refundPaymentByProviderTxId).not.toHaveBeenCalled();
+      expect(mockPaymentsService.markAsRefundedByProviderTxId).not.toHaveBeenCalled();
     });
   });
 

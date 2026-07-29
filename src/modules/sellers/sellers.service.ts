@@ -68,7 +68,7 @@ export class SellersService {
     return this.repository.update(id, dto);
   }
 
-  async delete(id: string) {
+  delete(id: string) {
     return this.repository.delete(id);
   }
 }

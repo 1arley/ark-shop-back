@@ -26,7 +26,7 @@ export class KeysService {
     return this.keysRepository.findAvailableKey(productId);
   }
 
-  async reserveKeyForOrder(keyId: string, orderItemId: string) {
+  reserveKeyForOrder(keyId: string, orderItemId: string) {
     return this.keysRepository.reserveKey(keyId, orderItemId);
   }
 

@@ -96,10 +96,6 @@ export class CartService {
       throw new BadRequestException('Product is not available');
     }
 
-    if (product.stock !== null && product.stock < dto.quantity) {
-      throw new BadRequestException(`Only ${product.stock} items available`);
-    }
-
     const MAX_QUANTITY = 99;
     if (dto.quantity > MAX_QUANTITY) {
       throw new BadRequestException(`Maximum ${MAX_QUANTITY} items per product`);
@@ -113,10 +109,30 @@ export class CartService {
         where: { cartId: cart!.id, productId: dto.productId },
       });
 
+      const currentProduct = await tx.product.findUnique({
+        where: { id: dto.productId },
+      });
+
+      if (!currentProduct || !currentProduct.isActive) {
+        throw new BadRequestException('Product is not available');
+      }
+
+      const totalQuantity = (existingItem?.quantity ?? 0) + dto.quantity;
+
+      if (currentProduct.stock < totalQuantity) {
+        throw new BadRequestException(
+          `Only ${currentProduct.stock} items available (already ${existingItem?.quantity ?? 0} in cart)`,
+        );
+      }
+
+      if (totalQuantity > MAX_QUANTITY) {
+        throw new BadRequestException(`Maximum ${MAX_QUANTITY} items per product`);
+      }
+
       if (existingItem) {
         await tx.cartItem.update({
           where: { id: existingItem.id },
-          data: { quantity: existingItem.quantity + dto.quantity },
+          data: { quantity: totalQuantity },
         });
       } else {
         await tx.cartItem.create({
@@ -151,7 +167,6 @@ export class CartService {
       return this.removeItem(userId, productId);
     }
 
-    // Validate stock availability before updating quantity
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
     });
@@ -164,13 +179,36 @@ export class CartService {
       throw new BadRequestException('Product is not available');
     }
 
-    if (product.stock !== null && product.stock < quantity) {
-      throw new BadRequestException(`Only ${product.stock} items available`);
+    const MAX_QUANTITY = 99;
+    if (quantity > MAX_QUANTITY) {
+      throw new BadRequestException(`Maximum ${MAX_QUANTITY} items per product`);
     }
 
-    await this.prisma.cartItem.update({
-      where: { id: item.id },
-      data: { quantity },
+    await this.prisma.$transaction(async tx => {
+      const existingItem = await tx.cartItem.findFirst({
+        where: { cartId: cart.id, productId },
+      });
+
+      if (!existingItem) {
+        throw new NotFoundException('Item not found in cart');
+      }
+
+      const currentProduct = await tx.product.findUnique({
+        where: { id: productId },
+      });
+
+      if (!currentProduct || !currentProduct.isActive) {
+        throw new BadRequestException('Product is not available');
+      }
+
+      if (currentProduct.stock < quantity) {
+        throw new BadRequestException(`Only ${currentProduct.stock} items available`);
+      }
+
+      await tx.cartItem.update({
+        where: { id: existingItem.id },
+        data: { quantity },
+      });
     });
 
     return this.getCart(userId);

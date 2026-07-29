@@ -48,6 +48,14 @@ export class ProductsService {
   }
 
   async delete(id: string) {
+    const orderCount = await this.prisma.orderItem.count({
+      where: { productId: id },
+    });
+    if (orderCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete product with ${orderCount} associated order(s). Deactivate it instead.`,
+      );
+    }
     return this.productsRepository.delete(id);
   }
 

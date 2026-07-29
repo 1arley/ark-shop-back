@@ -22,6 +22,7 @@ export class KeysRepository {
 
   private async syncProductStock(
     productId: string,
+
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
     const availableKeys = await client.key.count({
@@ -176,7 +177,7 @@ export class KeysRepository {
     return key;
   }
 
-  async reserveKey(keyId: string, orderItemId: string) {
+  reserveKey(keyId: string, orderItemId: string) {
     return this.prisma.$transaction(async tx => {
       const existingKey = await tx.key.findUnique({
         where: { id: keyId },

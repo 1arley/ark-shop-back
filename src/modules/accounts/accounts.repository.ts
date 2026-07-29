@@ -36,6 +36,7 @@ export class AccountsRepository {
 
     const secondColon = rest.indexOf(':');
     let password: string;
+
     let metadata: Prisma.InputJsonValue | undefined;
 
     if (secondColon === -1) {
@@ -58,6 +59,7 @@ export class AccountsRepository {
 
   private async ensureAccountProduct(
     productId: string,
+
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
     const product = await client.product.findUnique({
@@ -76,6 +78,7 @@ export class AccountsRepository {
 
   private async syncProductStock(
     productId: string,
+
     tx: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
     const availableAccounts = await tx.account.count({

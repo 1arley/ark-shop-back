@@ -5,6 +5,8 @@ import { OrderStatus, KeyStatus } from '@prisma/client';
 import { KeysService } from '@/modules/keys/keys.service';
 import { AccountsService } from '@/modules/accounts/accounts.service';
 import { CouponsService } from '@/modules/coupons/coupons.service';
+import { AntifraudService } from '@/modules/antifraud/antifraud.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { toNumber } from '@/common/decimal';
 
 @Injectable()
@@ -16,9 +18,11 @@ export class OrdersService {
     private readonly keysService: KeysService,
     private readonly accountsService: AccountsService,
     private readonly couponsService: CouponsService,
+    private readonly antifraudService: AntifraudService,
+    private readonly prisma: PrismaService,
   ) {}
 
-  async create(createOrderDto: CreateOrderDto, userId: string) {
+  async create(createOrderDto: CreateOrderDto, userId: string, ipAddress?: string) {
     let couponData:
       | { couponId: string; discountAmount: number; maxUses: number | null }
       | undefined;
@@ -42,24 +46,46 @@ export class OrdersService {
       };
     }
 
-    const order = await this.ordersRepository.create(createOrderDto, userId, couponData);
+    const riskAnalysis = await this.antifraudService.analyzeRisk({
+      userId,
+      amount: await this.calculateSubtotal(createOrderDto),
+      ipAddress,
+    });
 
-    if (couponData) {
-      const incremented = await this.couponsService.markAsUsedIfAvailable(
-        couponData.couponId,
-        couponData.maxUses,
+    if (riskAnalysis.decision === 'REJECTED') {
+      this.logger.warn(`Order rejected by antifraud for user ${userId}: ${riskAnalysis.reason}`);
+      throw new BadRequestException('Order could not be processed');
+    }
+
+    const order = await this.prisma.$transaction(async tx => {
+      const created = await this.ordersRepository.create(
+        createOrderDto,
+        userId,
+        couponData
+          ? { couponId: couponData.couponId, discountAmount: couponData.discountAmount }
+          : undefined,
+        tx,
       );
-      if (!incremented) {
-        this.logger.warn(
-          `Coupon ${createOrderDto.couponCode} reached maxUses during order ${order.id} — ` +
-            'discount was applied but usage count could not be incremented',
+
+      if (couponData) {
+        const incremented = await this.couponsService.markAsUsedIfAvailableTx(
+          tx,
+          couponData.couponId,
+          couponData.maxUses,
         );
-      } else {
+        if (!incremented) {
+          this.logger.warn(
+            `Coupon ${createOrderDto.couponCode} reached maxUses during order ${created.id}`,
+          );
+          throw new BadRequestException('Coupon is no longer available');
+        }
         this.logger.log(
-          `Coupon ${createOrderDto.couponCode} used for order ${order.id} — discount: R$ ${couponData.discountAmount.toFixed(2)}`,
+          `Coupon ${createOrderDto.couponCode} used for order ${created.id} — discount: R$ ${couponData.discountAmount.toFixed(2)}`,
         );
       }
-    }
+
+      return created;
+    });
 
     return order;
   }
@@ -123,7 +149,7 @@ export class OrdersService {
   async downloadItems(orderId: string, userId: string) {
     const order = await this.ordersRepository.findById(orderId);
 
-    if ((order as any).user?.id !== userId) {
+    if (order.user.id !== userId) {
       throw new ForbiddenException('You can only download items from your own orders');
     }
 

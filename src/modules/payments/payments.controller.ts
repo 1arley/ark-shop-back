@@ -22,6 +22,7 @@ import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/roles.guard';
 import { Roles } from '@/auth/roles.decorators';
+import { EmailVerifiedGuard } from '@/auth/email-verified.guard';
 import { AsaasWebhookHandler } from './webhooks/asaas-webhook.handler';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { RawBody } from '@/common/decorators/raw-body.decorator';
@@ -38,7 +39,7 @@ export class PaymentsController {
 
   @Post(':orderId')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, EmailVerifiedGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create payment for order' })
   @ApiResponse({ status: 201, description: 'Payment created' })
@@ -107,8 +108,13 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get payment by ID' })
   @ApiResponse({ status: 200, description: 'Payment found' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
-  getPayment(@Param('id') id: string) {
-    return this.paymentsService.getPayment(id);
+  @ApiResponse({ status: 403, description: 'Forbidden - Not your payment' })
+  async getPayment(@Param('id') id: string, @CurrentUser() user: { id: string; role: string }) {
+    const payment = await this.paymentsService.getPayment(id);
+    if (payment.userId !== user.id && user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
+      throw new UnauthorizedException('You can only view your own payments');
+    }
+    return payment;
   }
 
   @Get('order/:orderId')
@@ -117,10 +123,17 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get payment by order ID' })
   @ApiResponse({ status: 200, description: 'Payment found' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
-  async getPaymentByOrder(@Param('orderId') orderId: string) {
+  @ApiResponse({ status: 403, description: 'Forbidden - Not your order' })
+  async getPaymentByOrder(
+    @Param('orderId') orderId: string,
+    @CurrentUser() user: { id: string; role: string },
+  ) {
     const payment = await this.paymentsService.getPaymentByOrderId(orderId);
     if (!payment) {
       throw new NotFoundException('Payment not found for this order');
+    }
+    if (payment.userId !== user.id && user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
+      throw new UnauthorizedException('You can only view payments for your own orders');
     }
     return payment;
   }

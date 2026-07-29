@@ -40,11 +40,12 @@ export class OrdersRepository {
 
   private async syncProductStock(
     productId: string,
+
     tx: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
     const product = await tx.product.findUnique({
       where: { id: productId },
-      select: { productType: true },
+      select: { productType: true, isActive: true },
     });
 
     let availableCount: number;
@@ -60,7 +61,10 @@ export class OrdersRepository {
 
     await tx.product.update({
       where: { id: productId },
-      data: { stock: availableCount },
+      data: {
+        stock: availableCount,
+        isActive: availableCount > 0 && (product?.isActive ?? true),
+      },
     });
   }
 
@@ -68,6 +72,7 @@ export class OrdersRepository {
     createOrderDto: CreateOrderDto,
     userId: string,
     couponData?: { couponId: string; discountAmount: number },
+    externalTx?: Prisma.TransactionClient,
   ) {
     const { items } = createOrderDto;
     const requestedByProduct = new Map<string, number>();
@@ -98,14 +103,6 @@ export class OrdersRepository {
         throw new BadRequestException(`Product ${product.name} is not active`);
       }
 
-      const requestedQuantity = requestedByProduct.get(item.productId) ?? item.quantity;
-      if (product.stock < requestedQuantity) {
-        throw new BadRequestException(
-          `Insufficient stock for product ${product.name}. ` +
-            `Available: ${product.stock}, requested: ${requestedQuantity}`,
-        );
-      }
-
       subtotal += toNumber(product.price)! * item.quantity;
     }
 
@@ -120,26 +117,57 @@ export class OrdersRepository {
       })),
     );
 
-    const order = await this.prisma.order.create({
-      data: {
-        userId,
-        status: OrderStatus.PENDING,
-        subtotal,
-        total,
-        discountAmount,
-        couponId: couponData?.couponId ?? null,
-        items: {
-          create: orderItems,
+    const affectedProductIds = [...new Set(items.map(i => i.productId))];
+
+    const executeCreate = async (tx: Prisma.TransactionClient | PrismaService) => {
+      for (const [productId, requestedQuantity] of requestedByProduct) {
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+        });
+
+        if (!product) {
+          throw new NotFoundException(`Product ${productId} not found`);
+        }
+
+        if (product.stock < requestedQuantity) {
+          throw new BadRequestException(
+            `Insufficient stock for product ${product.name}. ` +
+              `Available: ${product.stock}, requested: ${requestedQuantity}`,
+          );
+        }
+      }
+
+      const created = await tx.order.create({
+        data: {
+          userId,
+          status: OrderStatus.PENDING,
+          subtotal,
+          total,
+          discountAmount,
+          couponId: couponData?.couponId ?? null,
+          items: {
+            create: orderItems,
+          },
         },
-      },
-      include: {
-        items: {
-          include: { product: true },
+        include: {
+          items: {
+            include: { product: true },
+          },
+          payment: true,
+          coupon: true,
         },
-        payment: true,
-        coupon: true,
-      },
-    });
+      });
+
+      for (const productId of affectedProductIds) {
+        await this.syncProductStock(productId, tx);
+      }
+
+      return created;
+    };
+
+    const order = externalTx
+      ? await executeCreate(externalTx)
+      : await this.prisma.$transaction(async tx => executeCreate(tx));
 
     return {
       ...order,
@@ -185,6 +213,7 @@ export class OrdersRepository {
           },
         },
         payment: true,
+        coupon: { select: { id: true, code: true } },
       },
     });
 
@@ -197,6 +226,8 @@ export class OrdersRepository {
       total: toNumber(order.total),
       subtotal: toNumber(order.subtotal),
       discountAmount: toNumber(order.discountAmount),
+      discount: toNumber(order.discountAmount),
+      couponCode: order.coupon?.code ?? null,
       items: order.items.map(item => ({
         ...item,
         price: toNumber(item.price),
@@ -241,6 +272,7 @@ export class OrdersRepository {
             },
           },
           payment: true,
+          coupon: { select: { id: true, code: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -253,6 +285,8 @@ export class OrdersRepository {
         total: toNumber(order.total),
         subtotal: toNumber(order.subtotal),
         discountAmount: toNumber(order.discountAmount),
+        discount: toNumber(order.discountAmount),
+        couponCode: order.coupon?.code ?? null,
         items: order.items.map(item => ({
           ...item,
           price: toNumber(item.price),
@@ -345,7 +379,7 @@ export class OrdersRepository {
     return this.updateStatus(id, OrderStatus.CANCELLED);
   }
 
-  async countByUser(userId: string) {
+  countByUser(userId: string) {
     return this.prisma.order.count({ where: { userId } });
   }
 
@@ -365,6 +399,7 @@ export class OrdersRepository {
             },
           },
         },
+        coupon: { select: { id: true, code: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -374,6 +409,8 @@ export class OrdersRepository {
       total: toNumber(order.total),
       subtotal: toNumber(order.subtotal),
       discountAmount: toNumber(order.discountAmount),
+      discount: toNumber(order.discountAmount),
+      couponCode: order.coupon?.code ?? null,
       items: order.items.map(item => ({
         ...item,
         price: toNumber(item.price),
@@ -384,7 +421,7 @@ export class OrdersRepository {
     }));
   }
 
-  async getProductsByIds(ids: string[]) {
+  getProductsByIds(ids: string[]) {
     return this.prisma.product.findMany({ where: { id: { in: ids } } });
   }
 
@@ -535,7 +572,7 @@ export class OrdersRepository {
       const delivered = await tx.order.update({
         where: { id: orderId },
         data: { status: OrderStatus.DELIVERED },
-        include: { items: true, payment: true },
+        include: { items: true, payment: true, coupon: { select: { id: true, code: true } } },
       });
 
       return {
@@ -543,6 +580,8 @@ export class OrdersRepository {
         total: toNumber(delivered.total),
         subtotal: toNumber(delivered.subtotal),
         discountAmount: toNumber(delivered.discountAmount),
+        discount: toNumber(delivered.discountAmount),
+        couponCode: delivered.coupon?.code ?? null,
         items: delivered.items.map(item => ({ ...item, price: toNumber(item.price) })),
         payment: delivered.payment
           ? { ...delivered.payment, amount: toNumber(delivered.payment.amount) }

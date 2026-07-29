@@ -173,12 +173,7 @@ export class PaymentsRepository {
     };
   }
 
-  async updatePaymentStatus(
-    id: string,
-    status: PaymentStatus,
-    providerTxId?: string,
-    webhookData?: any,
-  ) {
+  updatePaymentStatus(id: string, status: PaymentStatus, providerTxId?: string, webhookData?: any) {
     return this.prisma.payment
       .update({
         where: { id },
@@ -197,7 +192,7 @@ export class PaymentsRepository {
       }));
   }
 
-  async approvePayment(id: string, providerTxId: string, webhookData?: any) {
+  approvePayment(id: string, providerTxId: string, webhookData?: any) {
     return this.prisma.$transaction(async tx => {
       // Fetch payment inside transaction for atomicity
       const payment = await tx.payment.findUnique({
@@ -238,7 +233,7 @@ export class PaymentsRepository {
     });
   }
 
-  async rejectPayment(id: string, reason?: string) {
+  rejectPayment(id: string, reason?: string) {
     return this.prisma.$transaction(async tx => {
       const payment = await tx.payment.findUnique({
         where: { id },
@@ -266,6 +261,14 @@ export class PaymentsRepository {
         ...updatedPayment,
         amount: toNumber(updatedPayment.amount),
       };
+    });
+  }
+
+  markPaymentRefunded(id: string) {
+    return this.prisma.payment.update({
+      where: { id },
+      data: { status: PaymentStatus.REFUNDED },
+      include: { order: true },
     });
   }
 
