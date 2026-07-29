@@ -3,8 +3,32 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('Migrator');
 
+function waitForDatabase(maxRetries = 30, delayMs = 2000): void {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      execSync('./node_modules/.bin/prisma validate --schema=./prisma/schema.prisma', {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=512' },
+      });
+
+      execSync('./node_modules/.bin/prisma db execute --schema=./prisma/schema.prisma --stdin', {
+        input: 'SELECT 1',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=512' },
+      });
+      logger.log('Database connection established.');
+      return;
+    } catch {
+      logger.log(`Waiting for database... (${i + 1}/${maxRetries})`);
+      execSync(`sleep ${delayMs / 1000}`);
+    }
+  }
+  throw new Error('Database not reachable after multiple retries');
+}
+
 export function runMigrations(): void {
   try {
+    waitForDatabase();
     logger.log('Checking database migration status...');
 
     const status = execSync(
